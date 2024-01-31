@@ -1,0 +1,14 @@
+{
+  "name": "mytabs-client-web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "",
+  "scripts": {
+    "install": "cd client && npm i",
+    "start": "cd client && npm start",
+    "build": "cd client && npm run build",
+    "deploy": "cd client && npm run deploy"
+  },
+  "author": "",
+  "license": "ISC"
+}

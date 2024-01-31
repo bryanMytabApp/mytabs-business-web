@@ -1,0 +1,21 @@
+version: 0.2
+env:
+  variables:
+    # TODO: Chnage API URL
+    API_URL: "https://TODO/testing"
+phases:
+  install:
+    runtime-versions:
+      nodejs: 16
+  pre_build:
+    commands:
+      # instalar dependencias del client
+      - npm install
+      - npm install --global --unsafe-perm serverless
+  build: 
+    commands:
+      # Sustituir endpoint de API Gateway en client
+      - sed -i -e "s|NODE_ENV\=.*|NODE_ENV\=testing|g" client/.env
+      - sed -i -e "s|REACT_APP_ROOT_API\=.*|REACT_APP_ROOT_API\=$API_URL|g" client/.env
+      - npm run build
+      - npm run deploy
