@@ -1,0 +1,128 @@
+.MTB-input {
+  display: flex;
+  align-items: center;
+
+  flex-direction: column;
+  gap: 2px;
+}
+
+.MTB-input>img {
+  align-self: flex-start;
+  margin-right: 12px;
+  padding: 12px 0;
+}
+
+.MTB-input>span {
+  align-self: flex-start;
+  margin-right: 12px;
+  padding: 12px 0;
+}
+
+.MTB-input input {
+  display: flex;
+  padding: 12px 24px;
+  border-radius: 30px;
+  background: #FFF;
+  box-shadow: 0px 0px 7px 0px rgba(0, 0, 0, 0.15) inset;
+  color: #959595;
+  font-size: 16px !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  line-height: normal;
+  align-self: stretch;
+  text-align: center;
+  border: 1px solid #BABABA;
+}
+
+.MTB-input.start {
+  flex-direction: unset;
+}
+
+.MTB-input.start input {
+  text-align: start;
+  width: -webkit-fill-available;
+}
+
+div.MTB-input input:focus-visible {
+  outline: 3px solid #E090AD;
+  color: #403F3F;
+}
+
+.MTB-input input:disabled {
+  background: #DADADA;
+}
+
+.MTB-input .Helper-text {
+  display: flex;
+  padding: 0px 8px;
+  align-items: center;
+  gap: 8px;
+}
+
+.MTB-input .Helper-text span {
+  font-size: 14px !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  line-height: normal !important;
+}
+
+.MTB-input.warning span,
+.MTB-input.warning input {
+  color: #FF3D3D;
+}
+
+.MTB-input.warning input {
+  outline: 1px solid #FF3D3D;
+}
+
+.MTB-input.success span,
+.MTB-input.success input {
+  color: #006975;
+}
+
+.MTB-input.success input {
+  outline: 1px solid #006975;
+}
+
+.MTB-input.info span,
+.MTB-input.info input {
+  color: #959595;
+}
+
+.MTB-input.info input {
+  outline: 1px solid #959595;
+}
+
+
+.input-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.input-container input {
+  width: calc(100% - 30px);
+  padding: 8px;
+  padding-right: 30px;
+}
+
+.view-icon {
+  position: absolute;
+  right: 0;
+  height: 20px;
+  width: 30px;
+  cursor: pointer;
+  background-color: transparent;
+  border: none;
+}
+
+.Helper-text {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.Helper-text img {
+  margin-right: 4px;
+}

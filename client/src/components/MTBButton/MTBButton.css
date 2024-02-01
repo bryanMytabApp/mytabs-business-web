@@ -1,0 +1,48 @@
+.MTB-button {
+  display: flex;
+  padding: 16px 24px;
+  justify-content: center;
+  align-items: center;
+  flex: 1 0 0;
+  border-radius: 30px;
+  background: #bada55;
+  cursor: pointer;
+  border: none;
+  color: #FFF;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: normal;
+  height: 50px;
+}
+
+.MTB-button.secondary {
+  background: none;
+  border: 1px solid #403F3F;
+  color: #403F3F;
+  font-weight: 400;
+}
+
+.MTB-button:focus-visible {
+  background: #F5EAEC;
+  border: none;
+  outline: 3px solid #D4EBE5;
+  color: #403F3F;
+  font-weight: 400;
+}
+
+button.MTB-button:active {
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.20) 0%, rgba(0, 0, 0, 0.20) 100%), #bada55;
+  box-shadow: 3px 2px 22px 1px rgba(0, 0, 0, 0.24);
+  color: #FFF;
+  font-weight: 700;
+}
+
+button.MTB-button:disabled {
+  background: #DADADA;
+  border: none;
+  box-shadow: none;
+  color: #FFF;
+  font-weight: 700;
+  cursor: default;
+}
