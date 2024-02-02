@@ -64,10 +64,10 @@ export default function LoginView() {
       // await authService.login({ email: username.trim(), password: password });
       let res = validatePassword();
       if (!res) {
-        toast.error( "invalid password" );
+        toast.error("invalid password");
       } else {
-        toast.success( "passwords agree." );
-        navigate()
+        toast.success("passwords agree.");
+        navigate();
       }
       navigate("/admin/dashboards");
     } catch (error) {
@@ -77,7 +77,7 @@ export default function LoginView() {
   };
 
   const handleSignUp = () => {
-    navigate("/register")
+    navigate("/register");
   };
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -87,22 +87,19 @@ export default function LoginView() {
 
   return (
     <div className='Login-view'>
-      <img style={{borderRadius: 20, overflow: "hidden"}} src={logo} alt='logo' />
-      {/* <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "flex-end",
-          width: "35%",
-        }}>
-        <span>Log In</span>
-      </div> */}
+      <img
+        style={{borderRadius: 20, top: "10%", left: "5%", position: "absolute"}}
+        src={logo}
+        alt='logo'
+      />
       <div className='Container-box'>
         <div className='Headers'>
-          <div className="Sign-up-account-text">Don't have an account?<span className="Sign-up-underline" onClick={handleSignUp}>Sign up</span></div>
-          <MTBButton style={{backgroundColor: "red"}} onClick={handleSignUp} isLoading={isLoading}>
-            Sign Up
-          </MTBButton>
+          <div className='Sign-up-account-text'>
+            Don't have an account? &nbsp; &nbsp;
+            <span className='Sign-up-underline' onClick={handleSignUp}>
+              Sign up
+            </span>
+          </div>
         </div>
         <form
           className='Body'
@@ -110,8 +107,7 @@ export default function LoginView() {
             e.preventDefault();
             handleLogin();
           }}>
-
-          <div className="Account-details">Your account details</div>
+          <div className='Account-details'>Your account details</div>
           <MTBInput
             placeholder='Email or phone'
             autoComplete='username'
@@ -142,13 +138,16 @@ export default function LoginView() {
               }
             }
           />
-          <div className="Forgot-password">Forgot your password?</div>
+          <div className='Forgot-password'>Forgot your password?</div>
         </form>
 
         <div className='Actions'></div>
         <div className='Footer'>
-          By continuing, you agree in the Tabs terms and service and privacy notice.
-          <MTBButton onClick={handleLogin} isLoading={isLoading}>
+          <div style={{display:'flex', flex: 5}}>By continuing, you agree in the Tabs terms and service and privacy notice.</div>
+          <MTBButton
+            style={{borderRadius: "16px", width: "10px", flex:1}}
+            onClick={handleLogin}
+            isLoading={isLoading}>
             Log In
           </MTBButton>
         </div>

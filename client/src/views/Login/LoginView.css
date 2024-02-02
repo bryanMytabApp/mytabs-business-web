@@ -16,9 +16,6 @@
   width: 100%;
   height: 100%;
   z-index: -1;
-  /* background-image: url(../../assets/background-login.jpg);
-  background-repeat: no-repeat;
-  background-size: cover; */
   opacity: 0.5;
   background: linear-gradient(0deg,
       rgba(191, 244, 255, 1) 0%,
@@ -30,9 +27,10 @@
 .Login-view .Container-box {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  /* gap: 24px; */
   width: 65%;
   height: 90%; 
+  bottom:0;
   padding: 32px 16px 48px 16px; 
   border-radius: 24px;
   background: linear-gradient(0deg,
@@ -41,13 +39,16 @@
       rgba(255, 251, 240, 0.9) 100%);
   box-shadow: 0px 4px 32px 0px rgba(0, 0, 0, 0.15);
   justify-content: space-between;
-
+  position: absolute;
+  right:0;
 }
 
 .Login-view .Headers {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
+  justify-content: flex-end ;
+  margin: 10px;
   gap: 40px;
 }
 
@@ -67,6 +68,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  margin: 16%;
 }
 
 .Login-view .Actions {
@@ -78,11 +80,10 @@
   display: flex;
   justify-content: space-between;
   background: #ffffffff;
-  width: 64%;
+  width: 97.5%;
   bottom: 0;
   position: absolute;
   padding: 32px 16px 48px 16px;
-  justify-self: start;
   z-index:0;
   right: 0;
   box-shadow: 0px 4px 32px 0px rgba(0, 0, 0, 0.15);
@@ -116,7 +117,7 @@
   line-height: 48px;
   font-weight: 700;
   position: absolute;
-  left: 80px;
+  left: 5%;
   top: 20%;
   width: 10%;
 }
@@ -129,8 +130,8 @@
   line-height: 41.78px;
   font-weight: 400;
   position: absolute;
-  left: 77px;
-  top: 233px;
+  left: 5%;
+  top: 25%;
   width: 344px;
 }
 
