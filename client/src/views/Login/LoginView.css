@@ -1,8 +1,11 @@
 .Login-view {
   display: flex;
   flex: 1;
-  justify-content: center;
+  justify-content: right;
   align-items: center;
+  padding:10px;
+  position: relative;
+  overflow: hidden;
 }
 
 .Login-view::before {
@@ -17,19 +20,28 @@
   background-repeat: no-repeat;
   background-size: cover; */
   opacity: 0.5;
-  background: linear-gradient(to right, #7FFFD4, #baee76, #66CDAA);
-    
+  background: linear-gradient(0deg,
+      rgba(191, 244, 255, 1) 0%,
+      rgba(255, 255, 255, 1) 100%);
+  ;
+
 }
 
 .Login-view .Container-box {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  width: 393px;
-  padding: 32px 16px 48px 16px;
+  width: 65%;
+  height: 90%; 
+  padding: 32px 16px 48px 16px; 
   border-radius: 24px;
-  background: #FFF;
-  box-shadow: 0px 4px 10px 0px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(0deg,
+      rgba(207, 245, 255, 0.9) 0%,
+      rgba(255, 255, 255, 0.9) 49.67639744281769%,
+      rgba(255, 251, 240, 0.9) 100%);
+  box-shadow: 0px 4px 32px 0px rgba(0, 0, 0, 0.15);
+  justify-content: space-between;
+
 }
 
 .Login-view .Headers {
@@ -62,6 +74,20 @@
 
 }
 
+.Login-view .Footer {
+  display: flex;
+  justify-content: space-between;
+  background: #ffffffff;
+  width: 64%;
+  bottom: 0;
+  position: absolute;
+  padding: 32px 16px 48px 16px;
+  justify-self: start;
+  z-index:0;
+  right: 0;
+  box-shadow: 0px 4px 32px 0px rgba(0, 0, 0, 0.15);
+}
+
 .input-container {
   position: relative;
   display: flex;
@@ -80,4 +106,66 @@
   /* Adjust based on your design */
   cursor: pointer;
   /* Optional: if you want to make it clickable */
+}
+
+.welcome-back {
+  color: var(--base-dark, #2c2c2c);
+  text-align: left;
+  font-family: "Outfit-Bold", sans-serif;
+  font-size: 21px;
+  line-height: 48px;
+  font-weight: 700;
+  position: absolute;
+  left: 80px;
+  top: 20%;
+  width: 10%;
+}
+
+.log-in-to-your-account {
+  color: var(--base-dark, #2c2c2c);
+  text-align: left;
+  font-family: "Outfit-Regular", sans-serif;
+  font-size: 35.251129150390625px;
+  line-height: 41.78px;
+  font-weight: 400;
+  position: absolute;
+  left: 77px;
+  top: 233px;
+  width: 344px;
+}
+
+.Sign-up-account-test {
+    color: var(--Base-Dark, #2C2C2C);
+    font-family: Outfit;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 45.921px;
+    /* 287.009% */
+}
+
+.Sign-up-underline {
+    font-weight: 700;
+    text-decoration-line: underline;
+}
+
+.Account-details {
+  color: var(--Base-Dark, #2C2C2C);
+    font-family: Outfit;
+    font-size: 20.091px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 45.921px;
+    /* 228.571% */
+}
+
+.Forgot-password {
+  color: var(--Base-Dark, #2C2C2C);
+    font-family: Outfit;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 45.921px;
+    /* 287.009% */
+    text-decoration-line: underline;
 }

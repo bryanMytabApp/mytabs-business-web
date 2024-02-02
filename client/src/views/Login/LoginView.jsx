@@ -5,11 +5,7 @@ import logo from "../../assets/logo.png";
 import {getCookie} from "../../utils/Tools.ts";
 import "./LoginView.css";
 import {MTBButton, MTBInput} from "../../components/";
-// import IconButton from "@mui/material/IconButton";
-// import VisibilityIcon from "@mui/icons-material/Visibility";
-// import Visibility from "@mui/icons-material/Visibility";
-// import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import viewIcon from "../../assets/view.svg";
+
 export const LoaderLogin = () => {
   const isLoggedIn = getCookie("token") !== null;
 
@@ -68,9 +64,10 @@ export default function LoginView() {
       // await authService.login({ email: username.trim(), password: password });
       let res = validatePassword();
       if (!res) {
-        toast.error("invalid password");
+        toast.error( "invalid password" );
       } else {
-        toast.success("passwords agree.");
+        toast.success( "passwords agree." );
+        navigate()
       }
       navigate("/admin/dashboards");
     } catch (error) {
@@ -79,7 +76,9 @@ export default function LoginView() {
     }
   };
 
-  const handleSignUp = () => {};
+  const handleSignUp = () => {
+    navigate("/register")
+  };
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
@@ -88,20 +87,33 @@ export default function LoginView() {
 
   return (
     <div className='Login-view'>
+      <img style={{borderRadius: 20, overflow: "hidden"}} src={logo} alt='logo' />
+      {/* <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-end",
+          width: "35%",
+        }}>
+        <span>Log In</span>
+      </div> */}
       <div className='Container-box'>
-        <img style={{borderRadius: 20}} src={logo} alt='logo' />
         <div className='Headers'>
-          <span>Log In</span>
+          <div className="Sign-up-account-text">Don't have an account?<span className="Sign-up-underline" onClick={handleSignUp}>Sign up</span></div>
+          <MTBButton style={{backgroundColor: "red"}} onClick={handleSignUp} isLoading={isLoading}>
+            Sign Up
+          </MTBButton>
         </div>
-
         <form
           className='Body'
           onSubmit={(e) => {
             e.preventDefault();
             handleLogin();
           }}>
+
+          <div className="Account-details">Your account details</div>
           <MTBInput
-            placeholder='Username'
+            placeholder='Email or phone'
             autoComplete='username'
             value={username}
             disabled={isLoading}
@@ -130,17 +142,19 @@ export default function LoginView() {
               }
             }
           />
+          <div className="Forgot-password">Forgot your password?</div>
         </form>
 
-        <div className='Actions'>
+        <div className='Actions'></div>
+        <div className='Footer'>
+          By continuing, you agree in the Tabs terms and service and privacy notice.
           <MTBButton onClick={handleLogin} isLoading={isLoading}>
-            Login
-          </MTBButton>
-          <MTBButton style={{backgroundColor: "red"}} onClick={handleSignUp} isLoading={isLoading}>
-            Sign Up
+            Log In
           </MTBButton>
         </div>
       </div>
+      <div class='welcome-back'>Welcome back!</div>
+      <div class='log-in-to-your-account'>Log in to your account</div>
     </div>
   );
 }
