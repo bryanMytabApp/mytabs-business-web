@@ -29,9 +29,12 @@
   font-style: normal !important;
   font-weight: 400 !important;
   line-height: normal;
-  align-self: stretch;
-  text-align: center;
+  align-self: normal;
+  text-align: left;
+  padding-right: 10px;
   border: 1px solid #BABABA;
+  height: 55px;
+  font-family: 'Outfit';
 }
 
 .MTB-input.start {
