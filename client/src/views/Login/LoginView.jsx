@@ -92,6 +92,7 @@ export default function LoginView() {
         src={logo}
         alt='logo'
       />
+
       <div className='Container-box'>
         <div className='Headers'>
           <div className='Sign-up-account-text'>
@@ -143,9 +144,18 @@ export default function LoginView() {
 
         <div className='Actions'></div>
         <div className='Footer'>
-          <div style={{display:'flex', flex: 5}}>By continuing, you agree in the Tabs terms and service and privacy notice.</div>
+          <div style={{display: "flex", flex: 5, marginLeft: "10px", boxSizing:"border-box"}}>
+            <span>
+              <span class='agree-text'>By continuing, you agree to the Tabs{ " "}</span>
+              <span class='agree-text-underline'>terms of service</span>
+              <span class='agree-text'>{" "}</span>
+              <span class='agree-text'>and{" " }</span>
+              <span class='agree-text-underline'> privacy notice</span>
+              <span class='agree-text'>.</span>
+            </span>
+          </div>
           <MTBButton
-            style={{borderRadius: "16px", width: "10px", flex:1}}
+            style={{borderRadius: "16px", width: "10px", flex: 1}}
             onClick={handleLogin}
             isLoading={isLoading}>
             Log In
