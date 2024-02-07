@@ -1,24 +1,102 @@
 import React, {useState, useEffect} from "react";
 import logo from "../../assets/logo.png";
 import "./LoginView.css";
-import {MTBButton, MTBInput} from "../../components";
+import {MTBButton, MTBInput, MTBSelector} from "../../components";
+import MTBDropZone from "../../components/MTBDropZone/MTBDropZone";
+import { toast } from "react-toastify";
+import { useNavigate} from "react-router-dom";
 
-export default function RegistrationView() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastNAme] = useState("");
-  const [zipcode, setZipcode] = useState("");
-  const [city, setCity] = useState("");
-  const [invalid, setInvalid] = useState({});
+export default function RegistrationView () {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    email: "",
+    username: "",
+    password: "",
+    confirmPassword: "",
+    firstName: "",
+    lastName: "",
+    zipcode: "",
+    city: "",
+    category: "",
+    subcategory: "",
+  });
+  const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [part, setPart] = useState(0);
   const firstHeaderText = ["Your account details", "Personal Info", "Business information"];
   const secondHeaderText = "Where are you located";
+  const cityList = [
+    {value: 0, name: "Dallas"},
+    {value: 1, name: "Austin"},
+    {value: 2, name: "Houston"},
+    {value: 3, name: "Los Angeles"},
+  ];
+  const categoryList = [
+    {value: 0, name: "music"},
+    {value: 1, name: "Education"},
+    {value: 2, name: "Night Life"},
+    {value: 3, name: "Concert"},
+  ];
 
-  const handleRegister = () => {
-    setPart(part + 1);
+  const subCategoryList = [
+    {value: 0, name: "restaurant"},
+    {value: 1, name: "hard rock"},
+    {value: 2, name: "soft Rock"},
+    {value: 3, name: "Jazz"},
+  ];
+
+
+  const handleInputChange = (value, name) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
+
+  const validateForm = () => {
+    let errors = {};
+
+    // Example validation rule: username must not be empty
+    if (!formData.username.trim()) {
+      errors.username = "Username is required.";
+    }
+
+    // Add other validation rules as needed
+    if (!formData.password) {
+      errors.password = "Password is required.";
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = "Passwords must match.";
+    }
+
+
+
+    return errors;
+  };
+  const handleNextPart = () => {
+    const newErrors = validateForm();
+    setErrors( newErrors );
+    
+    if (Object.keys(newErrors).length === 0 && part < 2) {
+      setPart(part + 1);
+      console.log("PART", part);
+    }
+  };
+
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const newErrors = validateForm();
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length === 0) {
+      console.log("Form data is valid. Submitting form...", formData);
+      toast.success("Congratulations!")
+      navigate("/admin/dashboards");
+    }
+  };
+
   //  const handleRegister = async () => {
   //    if (isLoading) {
   //      return;
@@ -49,6 +127,7 @@ export default function RegistrationView() {
   //      setIsLoading(false);
   //    }
   //  };
+
   const info = {
     uuid: "1a469f18-dfcc-49c7-90d4-4baf9fddcbca",
     email: "esaldana@bluepeople.com",
@@ -84,96 +163,64 @@ export default function RegistrationView() {
             <>
               <div style={{display: "flex", flexDirection: "row", justifyContent: "space-between"}}>
                 <MTBInput
+                  name='email'
                   style={{flex: 1}}
                   placeholder='Email or phone'
-                  autoComplete='username'
-                  value={username}
-                  // disabled={isLoading}
-                  // onChange={handleUsername}
-                  // onEnterPress={handleLogin}
-                  // helper={
-                  //   invalid.username && {
-                  //     type: "warning",
-                  //     text: invalid.username,
-                  //   }
-                  // }
+                  autoComplete='email'
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  helper={errors.email && {type: "warning", text: errors.email}}
                 />
                 <MTBInput
-                  style={{flex: 1}}
+                  name='username'
                   placeholder='Username'
                   autoComplete='username'
-                  value={username}
-                  // disabled={isLoading}
-                  // onChange={handleUsername}
-                  // onEnterPress={handleLogin}
-                  // helper={
-                  //   invalid.username && {
-                  //     type: "warning",
-                  //     text: invalid.username,
-                  //   }
-                  // }
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  helper={errors.username && {type: "warning", text: errors.username}}
                 />
               </div>
 
               <MTBInput
+                name='password'
                 placeholder='Password'
                 autoComplete='current-password'
                 type='password'
-                value={password}
-                // disabled={isLoading}
-                // onChange={handlePassword}
-                // onEnterPress={handleLogin}
-                // helper={
-                //   invalid.password && {
-                //     type: "warning",
-                //     text: invalid.password,
-                //   }
-                // }
+                value={formData.password}
+                onChange={handleInputChange}
+                helper={errors.password && {type: "warning", text: errors.password}}
               />
               <MTBInput
+                name='confirmPassword'
                 placeholder='Confirm Password'
                 autoComplete='current-password'
                 type='password'
-                value={password}
-                // disabled={isLoading}
-                // onChange={handlePassword}
-                // onEnterPress={handleLogin}
-                // helper={
-                //   invalid.password && {
-                //     type: "warning",
-                //     text: invalid.password,
-                //   }
-                // }
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                helper={errors.confirmPassword && {type: "warning", text: errors.confirmPassword}}
               />
             </>
           )}
           {part === 1 && (
             <>
               <MTBInput
+                name='firstName'
                 placeholder='First Name'
-                autoComplete='firstname'
-                value={firstName}
-                // disabled={isLoading}
-                // onChange={handleFirstName}
-                // onEnterPress={handleRegister}
-                helper={
-                  invalid.firstName && {
-                    type: "warning",
-                    text: invalid.firstName,
-                  }
-                }
+                autoComplete='given-name'
+                value={formData.firstName}
+                onChange={handleInputChange}
+                helper={errors.firstName ? {type: "warning", text: errors.firstName} : undefined}
               />
               <MTBInput
+                name='lastName'
                 placeholder='Last Name'
-                autoComplete='firstname'
-                value={firstName}
-                // disabled={isLoading}
-                // onChange={handleFirstName}
-                // onEnterPress={handleRegister}
+                autoComplete='lastName'
+                value={formData.lastName}
+                onChange={handleInputChange}
                 helper={
-                  invalid.firstName && {
+                  errors.lastName && {
                     type: "warning",
-                    text: invalid.firstName,
+                    text: errors.lastName,
                   }
                 }
               />
@@ -183,30 +230,31 @@ export default function RegistrationView() {
               </div>
 
               <MTBInput
+                name='zipcode'
                 placeholder='Zip code'
-                autoComplete='firstname'
-                value={firstName}
-                // disabled={isLoading}
-                // onChange={handleFirstName}
-                // onEnterPress={handleRegister}
+                autoComplete='zipcode'
+                value={formData.zipcode}
+                onChange={handleInputChange}
                 helper={
-                  invalid.firstName && {
+                  errors.zipcode && {
                     type: "warning",
-                    text: invalid.firstName,
+                    text: errors.zipcode,
                   }
                 }
               />
-              <MTBInput
+              <MTBSelector
+                name={"city"}
                 placeholder='City'
-                autoComplete='firstname'
-                value={firstName}
-                // disabled={isLoading}
-                // onChange={handleFirstName}
-                // onEnterPress={handleRegister}
+                autoComplete='city'
+                value={formData.city}
+                itemName={"name"}
+                itemValue={"value"}
+                onChange={handleInputChange}
+                options={cityList}
                 helper={
-                  invalid.firstName && {
+                  errors.city && {
                     type: "warning",
-                    text: invalid.firstName,
+                    text: errors.city,
                   }
                 }
               />
@@ -214,67 +262,28 @@ export default function RegistrationView() {
           )}
           {part === 2 && (
             <>
-              <MTBInput
-                placeholder='First Name'
-                autoComplete='firstname'
-                value={firstName}
-                // disabled={isLoading}
-                // onChange={handleFirstName}
-                // onEnterPress={handleRegister}
-                helper={
-                  invalid.firstName && {
-                    type: "warning",
-                    text: invalid.firstName,
-                  }
-                }
+              <MTBSelector
+                name={"category"}
+                placeholder='Type the catgory of your business'
+                autoComplete='category'
+                itemName={"name"}
+                itemValue={"value"}
+                value={formData.category}
+                onChange={handleInputChange}
+                options={categoryList}
               />
-              <MTBInput
-                placeholder='Last Name'
-                autoComplete='firstname'
-                value={firstName}
-                // disabled={isLoading}
-                // onChange={handleFirstName}
-                // onEnterPress={handleRegister}
-                helper={
-                  invalid.firstName && {
-                    type: "warning",
-                    text: invalid.firstName,
-                  }
-                }
+              <MTBSelector
+                name={"subcategory"}
+                placeholder='Subcategory'
+                autoComplete='subcategory'
+                itemName={"name"}
+                itemValue={"value"}
+                value={formData.subcategory}
+                onChange={handleInputChange}
+                options={subCategoryList}
               />
 
-              <div className='Account-details' style={{color: "black"}}>
-                {secondHeaderText}
-              </div>
-
-              <MTBInput
-                placeholder='Zip code'
-                autoComplete='firstname'
-                value={firstName}
-                // disabled={isLoading}
-                // onChange={handleFirstName}
-                // onEnterPress={handleRegister}
-                helper={
-                  invalid.firstName && {
-                    type: "warning",
-                    text: invalid.firstName,
-                  }
-                }
-              />
-              <MTBInput
-                placeholder='City'
-                autoComplete='firstname'
-                value={firstName}
-                // disabled={isLoading}
-                // onChange={handleFirstName}
-                // onEnterPress={handleRegister}
-                helper={
-                  invalid.firstName && {
-                    type: "warning",
-                    text: invalid.firstName,
-                  }
-                }
-              />
+              <MTBDropZone fileType={"logo"}></MTBDropZone>
             </>
           )}
         </form>
@@ -282,12 +291,19 @@ export default function RegistrationView() {
         <div className='Actions'></div>
         <div className='Footer'>
           <div style={{display: "flex", flex: 5}}></div>
-          <MTBButton
-            style={{borderRadius: "16px", width: "10px", flex: 1, backgroundColor: "#F18926"}}
-            onClick={handleRegister}
-            isLoading={false}>
-            Continue
-          </MTBButton>
+          {part < 2 && (
+            <MTBButton
+              style={{borderRadius: "16px", width: "10px", flex: 1, backgroundColor: "#F18926"}}
+              onClick={handleNextPart}
+              isLoading={isLoading}>
+              Continue
+            </MTBButton>
+          )}
+          {part === 2 && (
+            <MTBButton onClick={handleSubmit} isLoading={isLoading}>
+              Submit
+            </MTBButton>
+          )}
         </div>
       </div>
       <div className='welcome-back'>Welcome!</div>
