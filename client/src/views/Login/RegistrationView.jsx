@@ -56,12 +56,10 @@ export default function RegistrationView () {
   const validateForm = () => {
     let errors = {};
 
-    // Example validation rule: username must not be empty
     if (!formData.username.trim()) {
       errors.username = "Username is required.";
     }
 
-    // Add other validation rules as needed
     if (!formData.password) {
       errors.password = "Password is required.";
     }
@@ -70,17 +68,15 @@ export default function RegistrationView () {
       errors.confirmPassword = "Passwords must match.";
     }
 
-
-
     return errors;
   };
+
   const handleNextPart = () => {
     const newErrors = validateForm();
     setErrors( newErrors );
     
     if (Object.keys(newErrors).length === 0 && part < 2) {
       setPart(part + 1);
-      console.log("PART", part);
     }
   };
 
@@ -91,42 +87,13 @@ export default function RegistrationView () {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      console.log("Form data is valid. Submitting form...", formData);
+
       toast.success("Congratulations!")
       navigate("/admin/dashboards");
     }
   };
 
-  //  const handleRegister = async () => {
-  //    if (isLoading) {
-  //      return;
-  //    }
-
-  //    const _invalid = {
-  //      username: username.trim() ? undefined : "Please enter your email",
-  //      password: password ? undefined : "Please enter your password",
-  //    };
-
-  //    if (_invalid.username || _invalid.password) {
-  //      return setInvalid(_invalid);
-  //    }
-
-  //    setIsLoading(true);
-  //    try {
-  //      // await authService.login({ email: username.trim(), password: password });
-  //      let res = validatePassword();
-  //      if (!res) {
-  //        toast.error("invalid password");
-  //      } else {
-  //        toast.success("passwords agree.");
-  //        navigate();
-  //      }
-  //      navigate("/admin/dashboards");
-  //    } catch (error) {
-  //      toast.error(error);
-  //      setIsLoading(false);
-  //    }
-  //  };
+ 
 
   const info = {
     uuid: "1a469f18-dfcc-49c7-90d4-4baf9fddcbca",
