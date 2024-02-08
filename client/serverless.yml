@@ -1,4 +1,4 @@
-service: mytabs-client-client
+service: mytabs-client-web
 
 provider:
   name: aws

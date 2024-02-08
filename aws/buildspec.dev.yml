@@ -2,7 +2,7 @@ version: 0.2
 env:
   variables:
     # TODO: Chnage API URL
-    API_URL: "https://7gwwat7uwc.execute-api.us-east-1.amazonaws.com/dev"
+    API_URL: "https://7gwwat7uwc.execute-api.us-east-1.amazonaws.com/dev/"
 phases:
   install:
     runtime-versions:
@@ -15,6 +15,9 @@ phases:
   build:
     commands:
       # Sustituir endpoint de API Gateway en client
+      - sed -i -e 's|"backendUrl":.*|"backendUrl":\ "https://7gwwat7uwc.execute-api.us-east-1.amazonaws.com/dev/",|g' ./client/config.json
+      - sed -i -e 's|"env":.*|"env":\ "dev",|g' ./client/config.json
+      # - sed -i -e "s|REACT_APP_ROOT_API\=.*|REACT_APP_ROOT_API\=$API_URL|g" client/.env
       - sed -i -e "s|NODE_ENV\=.*|NODE_ENV\=dev|g" client/.env
       - sed -i -e "s|REACT_APP_ROOT_API\=.*|REACT_APP_ROOT_API\=$API_URL|g" client/.env
       - npm run build
