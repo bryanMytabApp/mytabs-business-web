@@ -2,7 +2,7 @@ version: 0.2
 env:
   variables:
     # TODO: Chnage API URL
-    API_URL: "https://TODO/testing"
+    API_URL: "https://jqkcpejsv7.execute-api.us-east-1.amazonaws.com/testing/"
 phases:
   install:
     runtime-versions:

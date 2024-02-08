@@ -1,12 +1,12 @@
 import React, {useState, useEffect} from "react";
 import logo from "../../assets/logo.png";
 import "./LoginView.css";
-import {MTBButton, MTBInput, MTBSelector} from "../../components";
+import {MTBButton, MTBInput, MTBSelector, MTBInputValidator} from "../../components";
 import MTBDropZone from "../../components/MTBDropZone/MTBDropZone";
-import { toast } from "react-toastify";
-import { useNavigate} from "react-router-dom";
+import {toast} from "react-toastify";
+import {useNavigate} from "react-router-dom";
 
-export default function RegistrationView () {
+export default function RegistrationView() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
@@ -20,6 +20,7 @@ export default function RegistrationView () {
     category: "",
     subcategory: "",
   });
+  const [imageFile, setImageFile] = useState();
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [part, setPart] = useState(0);
@@ -44,7 +45,6 @@ export default function RegistrationView () {
     {value: 2, name: "soft Rock"},
     {value: 3, name: "Jazz"},
   ];
-
 
   const handleInputChange = (value, name) => {
     setFormData((prev) => ({
@@ -73,13 +73,12 @@ export default function RegistrationView () {
 
   const handleNextPart = () => {
     const newErrors = validateForm();
-    setErrors( newErrors );
-    
+    setErrors(newErrors);
+
     if (Object.keys(newErrors).length === 0 && part < 2) {
       setPart(part + 1);
     }
   };
-
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -87,13 +86,10 @@ export default function RegistrationView () {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-
-      toast.success("Congratulations!")
+      toast.success("Congratulations!");
       navigate("/admin/dashboards");
     }
   };
-
- 
 
   const info = {
     uuid: "1a469f18-dfcc-49c7-90d4-4baf9fddcbca",
@@ -122,6 +118,14 @@ export default function RegistrationView () {
       />
       <div className='Headers'>Registration</div>
       <div className='Container-box'>
+        <div class='already-have-an-account-log-in'>
+          <span>
+            <span class='already-have-an-account-log-in-span'>Already have an account?</span>
+            <span class='already-have-an-account-log-in-span2' onClick={() => navigate("/login")}>
+              Log in
+            </span>
+          </span>
+        </div>
         <form className='Body'>
           <div className='Account-details' style={{color: "black"}}>
             {firstHeaderText[part]}
@@ -166,6 +170,26 @@ export default function RegistrationView () {
                 onChange={handleInputChange}
                 helper={errors.confirmPassword && {type: "warning", text: errors.confirmPassword}}
               />
+              <table>
+                <tr colspan='2'>
+                  <td>
+                    <MTBInputValidator
+                      textRequirement={"Presence of at least one uppercase letter"}
+                    />
+                  </td>
+                  <td>
+                    <MTBInputValidator textRequirement={"Presence of at least one symbol"} />
+                  </td>
+                </tr>
+                <tr colspan='2'>
+                  <td>
+                    <MTBInputValidator textRequirement={"Presence of at least one number"} />
+                  </td>
+                  <td>
+                    <MTBInputValidator textRequirement={"Minimum number of 8 characters"} />
+                  </td>
+                </tr>
+              </table>
             </>
           )}
           {part === 1 && (
@@ -250,7 +274,7 @@ export default function RegistrationView () {
                 options={subCategoryList}
               />
 
-              <MTBDropZone fileType={"logo"}></MTBDropZone>
+              <MTBDropZone fileType={"image"} setFile={setImageFile}></MTBDropZone>
             </>
           )}
         </form>
@@ -275,6 +299,9 @@ export default function RegistrationView () {
       </div>
       <div className='welcome-back'>Welcome!</div>
       <div className='log-in-to-your-account'>Lets create your first account in Tabs</div>
+      <div class='log-in-to-your-account-subtext'>
+        We’re here to guide you every step of the way
+      </div>
     </div>
   );
 }

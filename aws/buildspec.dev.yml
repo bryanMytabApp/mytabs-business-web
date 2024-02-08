@@ -2,7 +2,7 @@ version: 0.2
 env:
   variables:
     # TODO: Chnage API URL
-    API_URL: "https://TODO/dev"
+    API_URL: "https://7gwwat7uwc.execute-api.us-east-1.amazonaws.com/dev/"
 phases:
   install:
     runtime-versions:

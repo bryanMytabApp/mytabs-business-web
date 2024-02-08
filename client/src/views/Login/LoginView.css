@@ -212,3 +212,42 @@
   text-decoration: underline;
   font-weight: 500;
 }
+
+.already-have-an-account-log-in {
+  color: var(--base-dark, #2c2c2c);
+  text-align: right;
+  font-family: "-", sans-serif;
+  font-size: 16px;
+  line-height: 45.92px;
+  font-weight: 400;
+  position: relative;
+}
+
+.already-have-an-account-log-in-span {
+  color: var(--base-dark, #2c2c2c);
+  font-family: "Outfit-Regular", sans-serif;
+  font-size: 16px;
+  line-height: 45.92px;
+  font-weight: 400;
+}
+
+.already-have-an-account-log-in-span2 {
+  color: var(--base-dark, #2c2c2c);
+  font-family: "Outfit-Bold", sans-serif;
+  font-size: 16px;
+  line-height: 45.92px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.log-in-to-your-account-subtext {
+  color: #ffffff;
+  text-align: left;
+  font-family: "Outfit-SemiBold", sans-serif;
+  font-size: 16px;
+  line-height: 49px;
+  font-weight: 600;
+  position: absolute;
+  left: 5%;
+  top: 35%;
+  width: 30%
+}

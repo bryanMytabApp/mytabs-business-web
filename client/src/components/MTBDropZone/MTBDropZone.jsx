@@ -3,21 +3,25 @@ import React, {useMemo, useState} from "react";
 import {useDropzone} from "react-dropzone";
 
 import fileIcon from "../../assets/file.svg";
+import dragNdropIcon from "../../assets/components/dragNdrop.svg";
 
+import "./MTBDropZone.css";
 const baseStyle = {
   flex: 1,
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  padding: "20px",
+  padding: "16px",
   borderWidth: 2,
-  borderRadius: 2,
-  borderColor: "#eeeeee",
+  borderRadius: 20,
+  borderColor: "#bebdbd",
   borderStyle: "dashed",
-  backgroundColor: "#fafafa",
+  backgroundColor: "#fafafa22",
   color: "#bdbdbd",
   outline: "none",
   transition: "border .24s ease-in-out",
+  justifyContent: "center",
+  height: "256px",
 };
 
 const focusedStyle = {
@@ -107,36 +111,47 @@ export default function MTBDropZone({fileType, setData, setFile}) {
   );
 
   const files = acceptedFiles.map((file) => (
-    <li
+    <div
       key={file.path}
       className='Geo-create-li-files'
-      style={{display: "flex", justifyContent: "flex-start", gap: 16}}>
+      style={{
+        ...baseStyle,
+        display: "flex",
+        justifyContent: "flex-start",
+        gap: 16,
+        justifyContent: "center",
+      }}>
       {uploadedImage ? (
-        <img
-          src={uploadedImage}
-          alt='Editar'
-          style={{width: "50px", height: "50px", borderRadius: "10px"}}
-        />
+        <img src={uploadedImage} alt='Editar' />
       ) : (
         <img src={fileIcon} alt='Editar' />
       )}
       <span>
         {file.path} - {file.size} bytes
       </span>
-    </li>
+    </div>
   ));
 
   return (
-    <div className='container'>
-      <div {...getRootProps({style})}>
-        <input {...getInputProps()} />
-        <p>Add {fileType}</p>
-      </div>
+    <div className='drag-and-drop'>
+      {acceptedFiles.length === 0 && (
+        <div {...getRootProps({style})}>
+          <input {...getInputProps()} />
+          <div className='drag-and-drop-labels'>
+            <img src={dragNdropIcon} alt='dragNdrop' />
+            <div className=''>Drag and drop</div>
+            <div className='drag-and-drop-secondary-label'>
+              <div className='drag-and-drop-text'>your logo here or</div>
+              <div className='drag-and-drop-browse'>browse</div>
+            </div>
+          </div>
+        </div>
+      )}
       <aside>
         {acceptedFiles.length > 0 && (
-          <>
+          <div className='drag-and-drop-labels'>
             <ul>{files}</ul>
-          </>
+          </div>
         )}
       </aside>
     </div>
