@@ -2,7 +2,7 @@ version: 0.2
 env:
   variables:
     # TODO: Chnage API URL
-    API_URL: "https://TODO/dev"
+    API_URL: "https://7gwwat7uwc.execute-api.us-east-1.amazonaws.com/dev"
 phases:
   install:
     runtime-versions:
@@ -12,7 +12,7 @@ phases:
       # instalar dependencias del client
       - npm install
       - npm install --global --unsafe-perm serverless
-  build: 
+  build:
     commands:
       # Sustituir endpoint de API Gateway en client
       - sed -i -e "s|NODE_ENV\=.*|NODE_ENV\=dev|g" client/.env
