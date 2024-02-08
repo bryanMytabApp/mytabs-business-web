@@ -19,6 +19,7 @@ custom:
 
 plugins:
   - serverless-s3-sync
+  - serverless-deployment-bucket
 
 resources:
   Resources:
