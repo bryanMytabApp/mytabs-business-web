@@ -1,0 +1,53 @@
+service: mytabs-client-web
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  stage: ${self:custom.currentStage}
+
+custom:
+  currentStage: dev
+  sitename: ${self:service}-${self:custom.currentStage}
+  s3Sync:
+    - bucketName: ${self:custom.sitename}
+      localDir: build
+
+plugins:
+  - serverless-s3-sync
+
+resources:
+  Resources:
+    StaticSite:
+      Type: AWS::S3::Bucket
+      Properties:
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+        BucketName: ${self:custom.sitename}
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: index.html
+    StaticSiteS3BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket:
+          Ref: StaticSite
+        PolicyDocument:
+          Statement:
+            - Sid: PublicReadGetObject
+              Effect: Allow
+              Principal: "*"
+              Action:
+              - s3:GetObject
+              Resource:
+                Fn::Join: [
+                  "", [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "StaticSite"
+                    },
+                    "/*"
+                  ]
+                ]
+  Outputs:
+    AdminBucket:
+      Value: !Ref StaticSite

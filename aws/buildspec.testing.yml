@@ -17,5 +17,7 @@ phases:
       # Sustituir endpoint de API Gateway en client
       - sed -i -e 's|"backendUrl":.*|"backendUrl":\ "https://jqkcpejsv7.execute-api.us-east-1.amazonaws.com/testing/",|g' ./client/config.json
       - sed -i -e 's|"env":.*|"env":\ "testing",|g' ./client/config.json
+      - sed -i -e "s|NODE_ENV\=.*|NODE_ENV\=dev|g" client/.env
+      - sed -i -e "s|REACT_APP_ROOT_API\=.*|REACT_APP_ROOT_API\=$API_URL|g" client/.env
       - npm run build
       - npm run deploy
