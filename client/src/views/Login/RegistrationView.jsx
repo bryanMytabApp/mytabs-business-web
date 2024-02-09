@@ -20,6 +20,14 @@ export default function RegistrationView() {
     category: "",
     subcategory: "",
   });
+  const [validationState, setValidationState] = useState({
+    hasUppercase: false,
+    hasSymbol: false,
+    hasAtLeastNumCharacters: false,
+    hasLowercase: false,
+    hasNumber: false,
+  });
+
   const [imageFile, setImageFile] = useState();
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +54,23 @@ export default function RegistrationView() {
     {value: 3, name: "Jazz"},
   ];
 
+  const validatePassword = (password) => {
+    let newState = {
+      ...validationState,
+      hasUppercase: /[A-Z]/.test(password),
+      hasSymbol: /[@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(password),
+      hasAtLeastNumCharacters: /.{11,}/.test(password),
+      hasLowercase: /[a-z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+    };
+
+    setValidationState(newState);
+  };
+
+  useEffect(() => {
+    validatePassword(formData.password);
+  }, [formData.password]);
+
   const handleInputChange = (value, name) => {
     setFormData((prev) => ({
       ...prev,
@@ -55,28 +80,59 @@ export default function RegistrationView() {
 
   const validateForm = () => {
     let errors = {};
+    if (part === 0) {
+      if (!formData.username.trim()) {
+        errors.username = "Username is required.";
+      }
 
-    if (!formData.username.trim()) {
-      errors.username = "Username is required.";
+      if (!formData.password) {
+        errors.password = "Password is required.";
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        errors.confirmPassword = "Passwords must match.";
+      }
     }
-
-    if (!formData.password) {
-      errors.password = "Password is required.";
+    if (part === 1) {
+      if (!formData.firstName) {
+        errors.firstName = "Please enter your first name";
+      }
+      if (!formData.city) {
+        errors.city = "A city must be selected";
+      }
+      if (!formData.zipcode) {
+        errors.zipcode = "Enter a valid zipcode";
+      }
+      if (!formData.lastName) {
+        errors.lastName = "Please enter your last name";
+      }
     }
+    if (part === 2) {
+      if (!formData.category) {
+        errors.category = "Must have a category";
+      }
 
-    if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = "Passwords must match.";
+      if (!formData.subcategory) {
+        errors.subcategory = "Select a subcategory";
+      }
     }
-
     return errors;
   };
 
   const handleNextPart = () => {
+    console.log("Current part before update:", part); // Debug current part
     const newErrors = validateForm();
+    console.log("Validation errors:", newErrors); // Debug validation errors
+
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0 && part < 2) {
-      setPart(part + 1);
+      setPart((prevPart) => {
+        console.log("Updating part from:", prevPart, "to:", prevPart + 1); // Debug part update
+        return prevPart + 1;
+      });
+    } else {
+      console.log("Not updating part due to errors or max part reached");
     }
   };
 
@@ -174,19 +230,37 @@ export default function RegistrationView() {
                 <tr colspan='2'>
                   <td>
                     <MTBInputValidator
-                      textRequirement={"Presence of at least one uppercase letter"}
+                      textRequirement={"One uppercase letter"}
+                      isValid={validationState.hasUppercase}
                     />
                   </td>
                   <td>
-                    <MTBInputValidator textRequirement={"Presence of at least one symbol"} />
+                    <MTBInputValidator
+                      textRequirement={"One special character"}
+                      isValid={validationState.hasSymbol}
+                    />
                   </td>
                 </tr>
                 <tr colspan='2'>
                   <td>
-                    <MTBInputValidator textRequirement={"Presence of at least one number"} />
+                    <MTBInputValidator
+                      textRequirement={"One number"}
+                      isValid={validationState.hasNumber}
+                    />
                   </td>
                   <td>
-                    <MTBInputValidator textRequirement={"Minimum number of 8 characters"} />
+                    <MTBInputValidator
+                      textRequirement={"11+ characters"}
+                      isValid={validationState.hasAtLeastNumCharacters}
+                    />
+                  </td>
+                </tr>
+                <tr colspan='2'>
+                  <td>
+                    <MTBInputValidator
+                      textRequirement={"One lowercase letter"}
+                      isValid={validationState.hasLowercase}
+                    />
                   </td>
                 </tr>
               </table>
@@ -255,7 +329,7 @@ export default function RegistrationView() {
             <>
               <MTBSelector
                 name={"category"}
-                placeholder='Type the catgory of your business'
+                placeholder='Type the category of your business'
                 autoComplete='category'
                 itemName={"name"}
                 itemValue={"value"}
