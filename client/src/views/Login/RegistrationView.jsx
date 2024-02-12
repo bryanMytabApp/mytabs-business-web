@@ -27,7 +27,7 @@ export default function RegistrationView() {
     hasLowercase: false,
     hasNumber: false,
   });
-
+  const [selectedValue, setSelectedValue] = useState("");
   const [imageFile, setImageFile] = useState();
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -35,11 +35,12 @@ export default function RegistrationView() {
   const firstHeaderText = ["Your account details", "Personal Info", "Business information"];
   const secondHeaderText = "Where are you located";
   const cityList = [
-    {value: 0, name: "Dallas"},
-    {value: 1, name: "Austin"},
-    {value: 2, name: "Houston"},
-    {value: 3, name: "Los Angeles"},
+    {value: 0, name: "Dallas", color: "#fff"},
+    {value: 1, name: "Austin", color: "#fff"},
+    {value: 2, name: "Houston",color:"#fff"},
+    {value: 3, name: "Los Angeles", color: "#fff"},
   ];
+ 
   const categoryList = [
     {value: 0, name: "music"},
     {value: 1, name: "Education"},
@@ -71,7 +72,7 @@ export default function RegistrationView() {
     validatePassword(formData.password);
   }, [formData.password]);
 
-  const handleInputChange = (value, name) => {
+  const handleInputChange = ( value, name ) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -120,15 +121,15 @@ export default function RegistrationView() {
   };
 
   const handleNextPart = () => {
-    console.log("Current part before update:", part); // Debug current part
+    console.log("Current part before update:", part); 
     const newErrors = validateForm();
-    console.log("Validation errors:", newErrors); // Debug validation errors
+    console.log("Validation errors:", newErrors); 
 
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0 && part < 2) {
       setPart((prevPart) => {
-        console.log("Updating part from:", prevPart, "to:", prevPart + 1); // Debug part update
+        console.log("Updating part from:", prevPart, "to:", prevPart + 1);
         return prevPart + 1;
       });
     } else {
@@ -176,7 +177,10 @@ export default function RegistrationView() {
       <div className='Container-box'>
         <div class='already-have-an-account-log-in'>
           <span>
-            <span class='already-have-an-account-log-in-span'>Already have an account?</span>
+            <span class='already-have-an-account-log-in-span'>
+              Already have an account?{"        "}{" "}
+            </span>
+            <span>{"   "}</span>
             <span class='already-have-an-account-log-in-span2' onClick={() => navigate("/login")}>
               Log in
             </span>
@@ -314,8 +318,10 @@ export default function RegistrationView() {
                 value={formData.city}
                 itemName={"name"}
                 itemValue={"value"}
-                onChange={handleInputChange}
                 options={cityList}
+                onChange={(selected, fieldName) => {
+                  handleInputChange(selected, fieldName);
+                }}
                 helper={
                   errors.city && {
                     type: "warning",
@@ -372,7 +378,7 @@ export default function RegistrationView() {
         </div>
       </div>
       <div className='welcome-back'>Welcome!</div>
-      <div className='log-in-to-your-account'>Lets create your first account in Tabs</div>
+      <div className='log-in-to-your-account'>Let's create your first account in Tabs</div>
       <div class='log-in-to-your-account-subtext'>
         We’re here to guide you every step of the way
       </div>

@@ -10,6 +10,13 @@
 
 }
 
+.edit-delete-icons {
+  display: flex;
+  justify-content: flex-end;
+  margin-right: 10px;
+  width: 100%;
+}
+
 .drag-and-drop-container {
   border-radius: 8px;
   border-style: dashed;
@@ -77,4 +84,11 @@
   justify-content: flex-start;
   flex: 1;
   position: relative;
+}
+
+@media (max-width: 768px) {
+  .Geo-create-li-files>div {
+    max-height: 60vh; 
+    max-width: 100%; 
+  }
 }

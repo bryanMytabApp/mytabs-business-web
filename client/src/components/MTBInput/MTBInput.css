@@ -8,7 +8,7 @@
 
 .MTB-input>img {
   align-self: flex-start;
-  margin-right: 12px;
+  margin-right: 20px;
   padding: 12px 0;
 }
 
@@ -55,10 +55,18 @@ div.MTB-input input:focus-visible {
   background: #DADADA;
 }
 
+.Helper-text {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: 4px;
+  width: 100%;
+}
 .MTB-input .Helper-text {
   display: flex;
   padding: 0px 8px;
-  align-items: center;
+  align-items:center;
+  justify-self: flex-end;
   gap: 8px;
 }
 
@@ -73,6 +81,7 @@ div.MTB-input input:focus-visible {
 .MTB-input.warning input {
   color: #FF3D3D;
 }
+
 
 .MTB-input.warning input {
   outline: 1px solid #FF3D3D;
@@ -107,24 +116,19 @@ div.MTB-input input:focus-visible {
 .input-container input {
   width: calc(100% - 30px);
   padding: 8px;
-  padding-right: 30px;
+  padding-right: 50px;
+  padding-left: 24px;
 }
 
 .view-icon {
-  position: absolute;
-  right: 0;
+
+  right: 20px;
   height: 20px;
-  width: 30px;
   cursor: pointer;
   background-color: transparent;
   border: none;
 }
 
-.Helper-text {
-  display: flex;
-  align-items: center;
-  margin-top: 4px;
-}
 
 .Helper-text img {
   margin-right: 4px;
