@@ -1,94 +1,45 @@
-.MTB-select {
-  display: flex;
-  align-items: center;
-  
-  flex-direction: column;
-  gap: 2px;
+.mtb-selector-container {
+  cursor: pointer;
+  user-select: none;
+  border-radius: 16px;
+  font-family: Outfit;
 }
 
-.MTB-select>img {
-  align-self: flex-start;
-  margin-right: 22px;
-  padding: 10px 16px 10px 36px;
-}
-
-.MTB-select>span {
-  align-self: flex-start;
-  margin-right: 12px;
-  padding: 10px 16px 10px 36px;
-}
-
-.MTB-select select {
-  display: flex;
-  padding: 12px 24px;
+.mtb-selector-value {
+  padding: 10px;
+  border: 1px solid #ccc;
+  background-color: #fff;
   border-radius: 8px;
-  background: #FFF;
-  box-shadow: 0px 0px 7px 0px rgba(0, 0, 0, 0.15) inset;
-  color: #959595;
-  font-size: 16px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: normal;
-  align-self: stretch;
-  text-align: center;
-  border: 1px solid #BABABA;
 }
 
-.MTB-select.start {
-  flex-direction: unset;
+.mtb-selector-options {
+  position: absolute;
+  width: 100%;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  z-index: 10;
+  border-radius: 8px;
 }
 
-.MTB-select.start select {
-  text-align: start;
-  padding-left: 58px;
-}
-
-div.MTB-select select:focus-visible {
-  outline: 1px solidvar(--primary-dark, #2d81df);
-  color: #403F3F;
-}
-
-.MTB-select select:disabled {
-  background: #DADADA;
-}
-
-.MTB-select .Helper-text {
+.mtb-selector-option {
+  padding: 10px;
   display: flex;
-  padding: 0px 8px;
   align-items: center;
-  gap: 8px;
+  cursor: pointer;
 }
 
-.MTB-select .Helper-text span {
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: normal;
+.mtb-selector-option:hover {
+  background-color: #bada55;
+  border-radius: 8px;
+  color: white;
+  font-family: Outfit;
 }
 
-.MTB-select.warning span,
-.MTB-select.warning select {
-  color: #FF3D3D;
-}
-
-.MTB-select.warning select {
-  outline: 1px solid #FF3D3D;
-}
-
-.MTB-select.success span,
-.MTB-select.success select {
-  color: #006975;
-}
-
-.MTB-select.success select {
-  outline: 1px solid #006975;
-}
-
-.MTB-select.info span,
-.MTB-select.info select {
-  color: #959595;
-}
-
-.MTB-select.info select {
-  outline: 1px solid #959595;
+.mtb-selector-square {
+  border-radius: 0px;
+  width: 15px;
+  height: 15px;
+  margin-right: 10px;
+  outline:auto;
+  outline-color: #bababa;
 }

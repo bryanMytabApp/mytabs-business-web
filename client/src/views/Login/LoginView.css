@@ -7,7 +7,6 @@
   position: relative;
   overflow: hidden;
   min-height: 900px;
-  /* min-width: 1440px;  */
   background-size: cover;
   background: url("../../assets/Rectangle.png") 0px -538px / 100% 160% no-repeat, linear-gradient(0deg,
       rgba(191, 244, 255, 1) 0%,
@@ -24,15 +23,7 @@
   transform: rotate(0deg) scale(1, 1);
 }
 
-/* .Left-banner {
-  content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 35%;
-    height: 100%;
-   background: url("../../assets/Rectangle.png") 0px -538px / 100% 160% no-repeat, linear-gradient(0deg, #BFF4FF 0%, #FFF 100%), lightgray; 
-} */
+
 .Login-view::before {
   content: "";
   position: absolute;
@@ -40,14 +31,13 @@
   left: 0;
   width: 100%;
   height: 100%;
-  /* background-image: url("../../assets/RegistrationBackground.png"); */
   opacity: 0.5;
 }
 
 .Login-view .Container-box {
   display: flex;
   flex-direction: column;
-  height: 90%;
+
   bottom: 0;
   background: linear-gradient(0deg,
       rgba(207, 245, 255, 0.9) 0%,
@@ -94,11 +84,11 @@
   flex-direction: column;
   gap: 16px;
   margin: 16%;
+  justify-content: center;
 }
 
 .Login-view .Actions {
   display: flex;
-
 }
 
 .Login-view .Footer {
@@ -124,34 +114,31 @@
 .input-container input {
   width: 100%;
   padding-right: 30px;
-  /* Adjust padding to prevent text from hiding behind the icon */
 }
 
 .view-icon {
   position: absolute;
   right: 10px;
-  /* Adjust based on your design */
   cursor: pointer;
-  /* Optional: if you want to make it clickable */
 }
 
 .welcome-back {
   color: var(--base-light, #fff);
   text-align: left;
-  font-family: "Outfit-Bold", sans-serif;
-  font-size: 21px;
+  font-family: Outfit, sans-serif;
+  font-size: 30px;
   line-height: 48px;
   font-weight: 700;
   position: absolute;
   left: 5%;
   top: 20%;
-  width: 10%;
+  white-space: nowrap;
 }
 
 .log-in-to-your-account {
   color: var(--base-light, #fff);
   text-align: left;
-  font-family: "Outfit-Regular", sans-serif;
+  font-family: Outfit, sans-serif;
   font-size: 35.251129150390625px;
   line-height: 41.78px;
   font-weight: 400;
@@ -168,7 +155,6 @@
   font-style: normal;
   font-weight: 400;
   line-height: 45.921px;
-  /* 287.009% */
 }
 
 .Sign-up-underline {
@@ -183,7 +169,6 @@
   font-style: normal;
   font-weight: 400;
   line-height: 45.921px;
-  /* 228.571% */
 }
 
 .Forgot-password {
@@ -193,22 +178,22 @@
   font-style: normal;
   font-weight: 400;
   line-height: 45.921px;
-  /* 287.009% */
   text-decoration-line: underline;
 }
+
 .agree-text {
   color: var(--base-dark, #2c2c2c);
-    font-family: "Outfit-Regular", sans-serif;
-    font-size: 16px;
-    line-height: 45.92px;
-    font-weight: 400;
+  font-family: "Outfit-Regular", sans-serif;
+  font-size: 16px;
+  line-height: 45.92px;
+  font-weight: 400;
 }
 
 .agree-text-underline {
   color: var(--base-dark, #2c2c2c);
-    font-family: "Outfit-Regular", sans-serif;
-    font-size: 16px;
-    line-height: 45.92px;
+  font-family: "Outfit-Regular", sans-serif;
+  font-size: 16px;
+  line-height: 45.92px;
   text-decoration: underline;
   font-weight: 500;
 }
@@ -220,7 +205,8 @@
   font-size: 16px;
   line-height: 45.92px;
   font-weight: 400;
-  position: relative;
+  position: absolute;
+  right: 20px;
 }
 
 .already-have-an-account-log-in-span {
@@ -229,6 +215,7 @@
   font-size: 16px;
   line-height: 45.92px;
   font-weight: 400;
+
 }
 
 .already-have-an-account-log-in-span2 {
@@ -238,7 +225,9 @@
   line-height: 45.92px;
   font-weight: 700;
   text-decoration: underline;
+  margin-left: 10px;
 }
+
 .log-in-to-your-account-subtext {
   color: #ffffff;
   text-align: left;

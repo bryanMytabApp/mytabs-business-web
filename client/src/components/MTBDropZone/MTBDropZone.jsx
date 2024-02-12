@@ -3,6 +3,8 @@ import React, {useMemo, useState} from "react";
 import {useDropzone} from "react-dropzone";
 
 import fileIcon from "../../assets/file.svg";
+import trashIcon from "../../assets/trashIcon.svg";
+import editIcon from "../../assets/editIcon.svg";
 import dragNdropIcon from "../../assets/components/dragNdrop.svg";
 
 import "./MTBDropZone.css";
@@ -36,6 +38,37 @@ const rejectStyle = {
   borderColor: "#eeeeee",
 };
 
+
+
+export const processImage = async (imageSrc) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = imageSrc;
+    img.crossOrigin = "Anonymous"; 
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i] > 200 && data[i + 1] > 200 && data[i + 2] > 200) {
+          data[i + 3] = 0; 
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+
+      resolve(canvas.toDataURL());
+    };
+    img.onerror = reject;
+  });
+};
+
 export default function MTBDropZone({fileType, setData, setFile}) {
   const [uploadedImage, setUploadedImage] = useState(null);
   const acceptObj =
@@ -48,8 +81,10 @@ export default function MTBDropZone({fileType, setData, setFile}) {
   const onDrop = async (acceptedFiles) => {
     if (acceptedFiles[0]) {
       setFile(acceptedFiles[0]);
-      if (fileType === "image") {
-        setUploadedImage(URL.createObjectURL(acceptedFiles[0]));
+      if ( fileType === "image" ) {
+        const processedImageUrl = await processImage(URL.createObjectURL(acceptedFiles[0]));
+        // setUploadedImage(URL.createObjectURL(acceptedFiles[0]));
+        setUploadedImage(processedImageUrl);
       }
 
       if (fileType === "kml") {
@@ -115,25 +150,41 @@ export default function MTBDropZone({fileType, setData, setFile}) {
       key={file.path}
       className='Geo-create-li-files'
       style={{
-        ...baseStyle,
         display: "flex",
-        justifyContent: "flex-start",
-        gap: 16,
+        alignItems: "center",
         justifyContent: "center",
+        gap: 16,
+        width: "100%",
+        minHeight: "100px",
       }}>
-      {uploadedImage ? (
-        <img src={uploadedImage} alt='Editar' />
-      ) : (
-        <img src={fileIcon} alt='Editar' />
-      )}
-      <span>
-        {file.path} - {file.size} bytes
-      </span>
+      <div
+        style={{
+          maxHeight: "90%",
+          maxWidth: "90%",
+          overflow: "hidden",
+        }}>
+        {uploadedImage ? (
+          <img
+            src={uploadedImage}
+            alt='Uploaded'
+            style={{
+              maxHeight: "350px",
+              objectFit: "contain",
+            }}
+          />
+        ) : (
+          <img src={fileIcon} alt='File Icon' />
+        )}
+      </div>
     </div>
   ));
 
   return (
     <div className='drag-and-drop'>
+      <div className='edit-delete-icons'>
+        <img src={editIcon} alt='editIcon' onClick={() => acceptedFiles.length = 0} />
+        <img src={trashIcon} alt='trashIcon' onClick={() => setUploadedImage(false)} />
+      </div>
       {acceptedFiles.length === 0 && (
         <div {...getRootProps({style})}>
           <input {...getInputProps()} />

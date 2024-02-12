@@ -11,5 +11,5 @@ export {
   MTBLoading,
   MTBSelector,
   MTBDropZone,
-  MTBInputValidator
+  MTBInputValidator,
 }
