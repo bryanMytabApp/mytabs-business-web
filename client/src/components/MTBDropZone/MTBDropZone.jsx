@@ -45,6 +45,7 @@ export const processImage = async (imageSrc) => {
     const img = new Image();
     img.src = imageSrc;
     img.crossOrigin = "Anonymous"; 
+    img.onload = () => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
 

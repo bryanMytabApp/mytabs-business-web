@@ -6,10 +6,12 @@
 }
 
 .mtb-selector-value {
+  display: flex;
   padding: 10px;
   border: 1px solid #ccc;
   background-color: #fff;
   border-radius: 8px;
+  justify-content: space-between;
 }
 
 .mtb-selector-options {

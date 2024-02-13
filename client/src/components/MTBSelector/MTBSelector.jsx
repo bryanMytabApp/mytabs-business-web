@@ -1,5 +1,7 @@
 import React, {useState} from "react";
-import "./MTBSelector.css"; 
+import "./MTBSelector.css";
+import chevronIcon from "../../assets/atoms/chevron.svg";
+
 export default function MTBSelector({
   name,
   placeholder = "Select...",
@@ -23,6 +25,15 @@ export default function MTBSelector({
     <div className='mtb-selector-container' style={{position: "relative"}}>
       <div className='mtb-selector-value' onClick={() => setIsOpen(!isOpen)}>
         {displayValue}
+        <div
+          style={{
+            width: "16px",
+            height: "16px",
+            transform: isOpen ? "rotate(180deg)" : null,
+            flexShrink: 0,
+          }}>
+          <img src={chevronIcon} />
+        </div>
       </div>
       {isOpen && (
         <div className='mtb-selector-options'>
