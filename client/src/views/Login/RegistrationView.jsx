@@ -37,10 +37,10 @@ export default function RegistrationView() {
   const cityList = [
     {value: 0, name: "Dallas", color: "#fff"},
     {value: 1, name: "Austin", color: "#fff"},
-    {value: 2, name: "Houston",color:"#fff"},
+    {value: 2, name: "Houston", color: "#fff"},
     {value: 3, name: "Los Angeles", color: "#fff"},
   ];
- 
+
   const categoryList = [
     {value: 0, name: "music"},
     {value: 1, name: "Education"},
@@ -72,7 +72,7 @@ export default function RegistrationView() {
     validatePassword(formData.password);
   }, [formData.password]);
 
-  const handleInputChange = ( value, name ) => {
+  const handleInputChange = (value, name) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -120,10 +120,24 @@ export default function RegistrationView() {
     return errors;
   };
 
+  const calculateCompletionPercentage = () => {
+    const totalFields = Object.keys(formData).length;
+    const filledFields = Object.values(formData).reduce((acc, value) => {
+      if (typeof value === "string" ? value.trim() !== "" : value !== undefined) {
+        acc++;
+      }
+      return acc;
+    }, 0);
+
+    return (filledFields / totalFields) * 100;
+  };
+
+  const completionPercentage = calculateCompletionPercentage();
+
   const handleNextPart = () => {
-    console.log("Current part before update:", part); 
+    console.log("Current part before update:", part);
     const newErrors = validateForm();
-    console.log("Validation errors:", newErrors); 
+    console.log("Validation errors:", newErrors);
 
     setErrors(newErrors);
 
@@ -358,10 +372,15 @@ export default function RegistrationView() {
             </>
           )}
         </form>
+        <div
+          className='progress-bar'
+          style={{width: `${completionPercentage}%`, backgroundColor: "orange"}}></div>
 
         <div className='Actions'></div>
+
         <div className='Footer'>
           <div style={{display: "flex", flex: 5}}></div>
+
           {part < 2 && (
             <MTBButton
               style={{borderRadius: "16px", width: "10px", flex: 1, backgroundColor: "#F18926"}}

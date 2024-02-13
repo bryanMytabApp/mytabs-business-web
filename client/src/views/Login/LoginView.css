@@ -171,6 +171,15 @@
   line-height: 45.921px;
 }
 
+.progress-bar {
+  position: absolute;
+  bottom: 128px;
+  height: 8px;
+  background-color: orange;
+  margin-left: -33px;
+  transition: width 0.3s ease;
+}
+
 .Forgot-password {
   color: var(--Base-Dark, #2C2C2C);
   font-family: Outfit;
