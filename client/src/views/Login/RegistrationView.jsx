@@ -5,7 +5,7 @@ import {MTBButton, MTBInput, MTBSelector, MTBInputValidator} from "../../compone
 import MTBDropZone from "../../components/MTBDropZone/MTBDropZone";
 import {toast} from "react-toastify";
 import {useNavigate} from "react-router-dom";
-import { signUp } from "../../services/authService";
+import {signUp} from "../../services/authService";
 import {parsePhoneNumberFromString} from "libphonenumber-js";
 export default function RegistrationView() {
   const navigate = useNavigate();
@@ -74,7 +74,7 @@ export default function RegistrationView() {
     validatePassword(formData.password);
   }, [formData.password]);
 
-  const handleInputChange = ( value, name ) => {
+  const handleInputChange = (value, name) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -98,8 +98,8 @@ export default function RegistrationView() {
       if (formData.password !== formData.confirmPassword) {
         errors.confirmPassword = "Passwords must match.";
       }
-      if ( !Object.values(validationState).every(value => value === true) ) {
-        errors.password ="password not secure enough"
+      if (!Object.values(validationState).every((value) => value === true)) {
+        errors.password = "password not secure enough";
         errors.confirmPassword = "password not secure enough";
       }
     }
@@ -107,7 +107,7 @@ export default function RegistrationView() {
       if (!formData.firstName) {
         errors.firstName = "Please enter your first name";
       }
-      if (!(formData.city).toString()) {
+      if (!formData.city.toString()) {
         errors.city = "A city must be selected";
       }
       if (!formData.zipcode) {
@@ -118,11 +118,11 @@ export default function RegistrationView() {
       }
     }
     if (part === 2) {
-      if (!(formData.category).toString()) {
+      if (!formData.category.toString()) {
         errors.category = "Must have a category";
       }
 
-      if (!(formData.subcategory).toString()) {
+      if (!formData.subcategory.toString()) {
         errors.subcategory = "Select a subcategory";
       }
     }
@@ -160,45 +160,27 @@ export default function RegistrationView() {
     }
   };
 
- const handleSubmit = async (e) => {
-   e.preventDefault(); 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-   const phoneNumberInput = formData.phoneNumber
-  let phoneNumberWithPlus =`+${formData.phoneNumber}`;
-   const phoneNumber = parsePhoneNumberFromString(phoneNumberInput);
+    const phoneNumberInput = formData.phoneNumber;
+    let phoneNumberWithPlus = `+${formData.phoneNumber}`;
+    const phoneNumber = parsePhoneNumberFromString(phoneNumberInput);
 
-   let signUpPayload = {
-     ...formData,
-     phoneNumber: `+${formData.phoneNumber}`, 
-   };
+    let signUpPayload = {
+      ...formData,
+      phoneNumber: `+${formData.phoneNumber}`,
+    };
 
-
-   try {
-     const response = await signUp( signUpPayload );
-     toast.success("welcome!")
+    try {
+      const response = await signUp(signUpPayload);
+      toast.success("welcome!");
       navigate("/login");
-   } catch (error) {
-
-     console.log(error)
-   }
- };
-
-
-  const info = {
-    uuid: "1a469f18-dfcc-49c7-90d4-4baf9fddcbca",
-    email: "esaldana@bluepeople.com",
-    password: "!123213",
-    username: "mulder",
-    firstName: "Eduardo",
-    lastName: "Escamilla",
-    phoneNumber: 12314123,
-    address: "Rio Grande 142, Col Zapata ",
-    zipcode: 78031,
-    createdAt: "02/01/2024, 0:00:01AM",
-    businessImage: require("../../assets/businessImage.png"),
-    category: "music",
-    status: true,
+    } catch (error) {
+      console.log(error);
+    }
   };
+
   document.title = "My Tabs - Registration";
 
   return (
@@ -228,14 +210,34 @@ export default function RegistrationView() {
           </div>
           {part === 0 && (
             <>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  gap: "20px",
-                }}>
-                <MTBInput
+              <table style={{gap: "20px"}}>
+                <tr colspan='2'>
+                  <td>
+                    <MTBInput
+                      style={{marginRight: "10px"}}
+                      name='email'
+                      placeholder='Email'
+                      autoComplete='email'
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      helper={errors.email && {type: "warning", text: errors.email}}
+                    />
+                  </td>
+
+                  <td>
+                    <MTBInput
+                      style={{marginLeft: "10px"}}
+                      name='username'
+                      placeholder='Username'
+                      autoComplete='username'
+                      value={formData.username}
+                      onChange={handleInputChange}
+                      helper={errors.username && {type: "warning", text: errors.username}}
+                    />
+                  </td>
+                </tr>
+              </table>
+              {/* <MTBInput
                   name='email'
                   style={{flex: 1, minWidth: "calc(50% - 10px)"}}
                   placeholder='Email'
@@ -252,17 +254,16 @@ export default function RegistrationView() {
                   value={formData.username}
                   onChange={handleInputChange}
                   helper={errors.username && {type: "warning", text: errors.username}}
-                />
-              </div>
+                /> */}
+
               <MTBInput
-                type="number"
+                type='number'
                 name='phoneNumber'
                 placeholder='Phone'
                 autoComplete='phone'
                 value={formData.phoneNumber}
                 onChange={handleInputChange}
-                helper={errors.phoneNumber && { type: "warning", text: errors.phoneNumber }}
-                // pattern="\d*"
+                helper={errors.phoneNumber && {type: "warning", text: errors.phoneNumber}}
               />
               <MTBInput
                 name='password'
@@ -271,7 +272,7 @@ export default function RegistrationView() {
                 type='password'
                 value={formData.password}
                 onChange={handleInputChange}
-                helper={errors.password && { type: "warning", text: errors.password }}
+                helper={errors.password && {type: "warning", text: errors.password}}
               />
               <MTBInput
                 name='confirmPassword'
@@ -332,7 +333,7 @@ export default function RegistrationView() {
                   gap: "20px",
                 }}>
                 <MTBInput
-                  style={{flex: 1, minWidth: "calc(50% - 20px)"}}
+                  style={{flex: 1, minWidth: "calc(90% - 20px)"}}
                   name='firstName'
                   placeholder='First Name'
                   autoComplete='given-name'
@@ -341,7 +342,7 @@ export default function RegistrationView() {
                   helper={errors.firstName ? {type: "warning", text: errors.firstName} : undefined}
                 />
                 <MTBInput
-                  style={{flex: 1, minWidth: "calc(50% - 20px)"}}
+                  style={{flex: 1, minWidth: "calc(30% - 20px)"}}
                   name='lastName'
                   placeholder='Last Name'
                   autoComplete='lastName'
