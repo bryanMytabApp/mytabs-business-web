@@ -28,9 +28,6 @@ export default function LoginView() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const validatePassword = () => {
-    return username === tempValid.username && password === tempValid.password;
-  };
   const handleUsername = (value) => {
     if (invalid.username) {
       setInvalid({...invalid, username: undefined});
