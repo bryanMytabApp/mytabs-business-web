@@ -5,7 +5,7 @@ import logo from "../../assets/logo.png";
 import {getCookie} from "../../utils/Tools.ts";
 import "./LoginView.css";
 import {MTBButton, MTBInput} from "../../components/";
-
+import { getToken } from '../../services/authService';
 export const LoaderLogin = () => {
   const isLoggedIn = getCookie("token") !== null;
 
@@ -61,12 +61,14 @@ export default function LoginView() {
 
     setIsLoading(true);
     try {
-      // await authService.login({ email: username.trim(), password: password });
-      let res = validatePassword();
+       let res = await getToken({ username: username.trim(), password: password });
+
       if (!res) {
-        toast.error("invalid password");
+        toast.error("invalid user and/or password");
       } else {
-        toast.success("passwords agree.");
+        localStorage.setItem( "refToken", res.RefreshToken )
+        localStorage.setItem('IdToken', res.idToken)
+        toast.success("welcome!");
         navigate();
       }
       navigate("/admin/dashboards");
