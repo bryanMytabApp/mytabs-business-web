@@ -5,12 +5,14 @@ import {MTBButton, MTBInput, MTBSelector, MTBInputValidator} from "../../compone
 import MTBDropZone from "../../components/MTBDropZone/MTBDropZone";
 import {toast} from "react-toastify";
 import {useNavigate} from "react-router-dom";
-
+import { signUp } from "../../services/authService";
+import {parsePhoneNumberFromString} from "libphonenumber-js";
 export default function RegistrationView() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     username: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
     firstName: "",
@@ -59,7 +61,7 @@ export default function RegistrationView() {
     let newState = {
       ...validationState,
       hasUppercase: /[A-Z]/.test(password),
-      hasSymbol: /[@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(password),
+      hasSymbol: /[@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?/!]+/.test(password),
       hasAtLeastNumCharacters: /.{11,}/.test(password),
       hasLowercase: /[a-z]/.test(password),
       hasNumber: /[0-9]/.test(password),
@@ -72,7 +74,7 @@ export default function RegistrationView() {
     validatePassword(formData.password);
   }, [formData.password]);
 
-  const handleInputChange = (value, name) => {
+  const handleInputChange = ( value, name ) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -90,15 +92,22 @@ export default function RegistrationView() {
         errors.password = "Password is required.";
       }
 
+      if (!formData.phoneNumber) {
+        errors.phoneNumber = "Phonenumber is required.";
+      }
       if (formData.password !== formData.confirmPassword) {
         errors.confirmPassword = "Passwords must match.";
+      }
+      if ( !Object.values(validationState).every(value => value === true) ) {
+        errors.password ="password not secure enough"
+        errors.confirmPassword = "password not secure enough";
       }
     }
     if (part === 1) {
       if (!formData.firstName) {
         errors.firstName = "Please enter your first name";
       }
-      if (!formData.city) {
+      if (!(formData.city).toString()) {
         errors.city = "A city must be selected";
       }
       if (!formData.zipcode) {
@@ -109,11 +118,11 @@ export default function RegistrationView() {
       }
     }
     if (part === 2) {
-      if (!formData.category) {
+      if (!(formData.category).toString()) {
         errors.category = "Must have a category";
       }
 
-      if (!formData.subcategory) {
+      if (!(formData.subcategory).toString()) {
         errors.subcategory = "Select a subcategory";
       }
     }
@@ -151,16 +160,29 @@ export default function RegistrationView() {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const newErrors = validateForm();
-    setErrors(newErrors);
+ const handleSubmit = async (e) => {
+   e.preventDefault(); 
 
-    if (Object.keys(newErrors).length === 0) {
-      toast.success("Congratulations!");
-      navigate("/admin/dashboards");
-    }
-  };
+   const phoneNumberInput = formData.phoneNumber
+  let phoneNumberWithPlus =`+${formData.phoneNumber}`;
+   const phoneNumber = parsePhoneNumberFromString(phoneNumberInput);
+
+   let signUpPayload = {
+     ...formData,
+     phoneNumber: `+${formData.phoneNumber}`, 
+   };
+
+
+   try {
+     const response = await signUp( signUpPayload );
+     toast.success("welcome!")
+      navigate("/login");
+   } catch (error) {
+
+     console.log(error)
+   }
+ };
+
 
   const info = {
     uuid: "1a469f18-dfcc-49c7-90d4-4baf9fddcbca",
@@ -206,17 +228,24 @@ export default function RegistrationView() {
           </div>
           {part === 0 && (
             <>
-              <div style={{display: "flex", flexDirection: "row", justifyContent: "space-between"}}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  gap: "20px",
+                }}>
                 <MTBInput
                   name='email'
-                  style={{flex: 1}}
-                  placeholder='Email or phone'
+                  style={{flex: 1, minWidth: "calc(50% - 10px)"}}
+                  placeholder='Email'
                   autoComplete='email'
                   value={formData.email}
                   onChange={handleInputChange}
                   helper={errors.email && {type: "warning", text: errors.email}}
                 />
                 <MTBInput
+                  style={{flex: 1, minWidth: "calc(50% - 20px)"}}
                   name='username'
                   placeholder='Username'
                   autoComplete='username'
@@ -225,7 +254,16 @@ export default function RegistrationView() {
                   helper={errors.username && {type: "warning", text: errors.username}}
                 />
               </div>
-
+              <MTBInput
+                type="number"
+                name='phoneNumber'
+                placeholder='Phone'
+                autoComplete='phone'
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+                helper={errors.phoneNumber && { type: "warning", text: errors.phoneNumber }}
+                // pattern="\d*"
+              />
               <MTBInput
                 name='password'
                 placeholder='Password'
@@ -233,7 +271,7 @@ export default function RegistrationView() {
                 type='password'
                 value={formData.password}
                 onChange={handleInputChange}
-                helper={errors.password && {type: "warning", text: errors.password}}
+                helper={errors.password && { type: "warning", text: errors.password }}
               />
               <MTBInput
                 name='confirmPassword'
@@ -286,33 +324,43 @@ export default function RegistrationView() {
           )}
           {part === 1 && (
             <>
-              <MTBInput
-                name='firstName'
-                placeholder='First Name'
-                autoComplete='given-name'
-                value={formData.firstName}
-                onChange={handleInputChange}
-                helper={errors.firstName ? {type: "warning", text: errors.firstName} : undefined}
-              />
-              <MTBInput
-                name='lastName'
-                placeholder='Last Name'
-                autoComplete='lastName'
-                value={formData.lastName}
-                onChange={handleInputChange}
-                helper={
-                  errors.lastName && {
-                    type: "warning",
-                    text: errors.lastName,
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  gap: "20px",
+                }}>
+                <MTBInput
+                  style={{flex: 1, minWidth: "calc(50% - 20px)"}}
+                  name='firstName'
+                  placeholder='First Name'
+                  autoComplete='given-name'
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  helper={errors.firstName ? {type: "warning", text: errors.firstName} : undefined}
+                />
+                <MTBInput
+                  style={{flex: 1, minWidth: "calc(50% - 20px)"}}
+                  name='lastName'
+                  placeholder='Last Name'
+                  autoComplete='lastName'
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  helper={
+                    errors.lastName && {
+                      type: "warning",
+                      text: errors.lastName,
+                    }
                   }
-                }
-              />
-
+                />
+              </div>
               <div className='Account-details' style={{color: "black"}}>
                 {secondHeaderText}
               </div>
 
               <MTBInput
+                type='number'
                 name='zipcode'
                 placeholder='Zip code'
                 autoComplete='zipcode'
