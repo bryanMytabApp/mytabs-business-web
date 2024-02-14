@@ -38,12 +38,12 @@ export default function MTBInput({
     }
   };
 
-  // Determine the correct input type based on the component's props and state
+  
   const getInputType = () => {
     if (type === "password") {
       return showPassword ? "text" : "password";
     }
-    return type; // For all other types, use the type as is
+    return type; 
   };
 
   return (
@@ -56,7 +56,7 @@ export default function MTBInput({
           name={name}
           placeholder={placeholder}
           autoComplete={autoComplete}
-          type={getInputType()} // Use the function to determine the input type
+          type={getInputType()} 
           disabled={disabled}
           value={value}
           onBlur={onBlur}

@@ -2,6 +2,17 @@ import React, {useState} from "react";
 import "./MTBSelector.css";
 import chevronIcon from "../../assets/atoms/chevron.svg";
 
+import warning from "../../assets/warning.svg";
+import success from "../../assets/success.svg";
+import info from "../../assets/info.svg";
+
+
+const helperIcon = {
+  warning: warning,
+  success: success,
+  info: info,
+};
+
 export default function MTBSelector({
   name,
   placeholder = "Select...",
@@ -11,6 +22,7 @@ export default function MTBSelector({
   options = [],
   itemName = "name",
   itemValue = "value",
+  helper = {type: "", text: ""},
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const displayValue =
@@ -46,6 +58,12 @@ export default function MTBSelector({
               {option[itemName]}
             </div>
           ))}
+        </div>
+      )}
+      {!isOpen && helper?.text && (
+        <div className='Helper-text'>
+          <img src={helperIcon[helper.type]} alt={helper.type} />
+          <span>{helper.text}</span>
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import axios from "axios";
-import configJSON from "../config.json";
+import configJSON from "../../config.json"
 
 const config = configJSON;
 
@@ -12,8 +12,8 @@ const http = axios.create(axiosConfig);
 
 // change this when congnito config is finished
 http.interceptors.request.use(
-  async function (config) {
-    let token = await localStorage.getItem("idToken");
+   function (config) {
+    let token = localStorage.getItem("idToken");
 
     config.headers.Authorization = `Bearer ${token}`;
 

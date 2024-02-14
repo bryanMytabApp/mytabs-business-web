@@ -6,6 +6,7 @@ import {getCookie} from "../../utils/Tools.ts";
 import "./LoginView.css";
 import {MTBButton, MTBInput} from "../../components/";
 import { getToken } from '../../services/authService';
+
 export const LoaderLogin = () => {
   const isLoggedIn = getCookie("token") !== null;
 
@@ -60,17 +61,15 @@ export default function LoginView() {
     try {
        let res = await getToken({ username: username.trim(), password: password });
 
-      if (!res) {
-        toast.error("invalid user and/or password");
-      } else {
+   
         localStorage.setItem( "refToken", res.RefreshToken )
-        localStorage.setItem('IdToken', res.idToken)
+        localStorage.setItem('idToken', res.IdToken)
         toast.success("welcome!");
-        navigate();
-      }
-      navigate("/admin/dashboards");
-    } catch (error) {
-      toast.error(error);
+        navigate("/admin/dashboards");
+      
+    } catch ( error ) {
+      toast.error("invalid user and/or password");
+      console.error(error)
       setIsLoading(false);
     }
   };
