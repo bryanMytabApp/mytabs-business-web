@@ -17,7 +17,7 @@ export default function RegistrationView() {
     confirmPassword: "",
     firstName: "",
     lastName: "",
-    zipcode: "",
+    zipCode: "",
     city: "",
     category: "",
     subcategory: "",
@@ -69,6 +69,10 @@ export default function RegistrationView() {
 
     setValidationState(newState);
   };
+  useEffect( () => {
+    console.log( 'formDATA:', formData.category === "" );
+    console.log(errors)
+  }, [ formData ] )
 
   useEffect(() => {
     validatePassword(formData.password);
@@ -81,6 +85,11 @@ export default function RegistrationView() {
     }));
   };
 
+  const handleBlur = (name) => {
+    // Perform validation for the field with 'name'
+    const error = errors['name']
+    setErrors((prevErrors) => ({...prevErrors, [name]: error}));
+  };
   const validateForm = () => {
     let errors = {};
     if (part === 0) {
@@ -107,22 +116,24 @@ export default function RegistrationView() {
       if (!formData.firstName) {
         errors.firstName = "Please enter your first name";
       }
-      if (!formData.city.toString()) {
+      if (formData.city === "") {
         errors.city = "A city must be selected";
       }
-      if (!formData.zipcode) {
-        errors.zipcode = "Enter a valid zipcode";
+      if (!formData.zipCode) {
+        errors.zipCode = "Enter a valid zip code";
       }
       if (!formData.lastName) {
         errors.lastName = "Please enter your last name";
       }
     }
     if (part === 2) {
-      if (!formData.category.toString()) {
+
+      if ( formData.category === "" ) {
+        
         errors.category = "Must have a category";
       }
 
-      if (!formData.subcategory.toString()) {
+      if (formData.subcategory  === "") {
         errors.subcategory = "Select a subcategory";
       }
     }
@@ -214,6 +225,7 @@ export default function RegistrationView() {
                 <tr colspan='2'>
                   <td>
                     <MTBInput
+                      onBlur={() => handleBlur("email")}
                       style={{marginRight: "10px"}}
                       name='email'
                       placeholder='Email'
@@ -226,6 +238,7 @@ export default function RegistrationView() {
 
                   <td>
                     <MTBInput
+                      onBlur={() => handleBlur("username")}
                       style={{marginLeft: "10px"}}
                       name='username'
                       placeholder='Username'
@@ -237,26 +250,10 @@ export default function RegistrationView() {
                   </td>
                 </tr>
               </table>
-              {/* <MTBInput
-                  name='email'
-                  style={{flex: 1, minWidth: "calc(50% - 10px)"}}
-                  placeholder='Email'
-                  autoComplete='email'
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  helper={errors.email && {type: "warning", text: errors.email}}
-                />
-                <MTBInput
-                  style={{flex: 1, minWidth: "calc(50% - 20px)"}}
-                  name='username'
-                  placeholder='Username'
-                  autoComplete='username'
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  helper={errors.username && {type: "warning", text: errors.username}}
-                /> */}
+           
 
               <MTBInput
+                onBlur={() => handleBlur("phoneNumber")}
                 type='number'
                 name='phoneNumber'
                 placeholder='Phone'
@@ -266,6 +263,7 @@ export default function RegistrationView() {
                 helper={errors.phoneNumber && {type: "warning", text: errors.phoneNumber}}
               />
               <MTBInput
+                onBlur={() => handleBlur("password")}
                 name='password'
                 placeholder='Password'
                 autoComplete='current-password'
@@ -275,6 +273,7 @@ export default function RegistrationView() {
                 helper={errors.password && {type: "warning", text: errors.password}}
               />
               <MTBInput
+                onBlur={() => handleBlur("confirmPassword")}
                 name='confirmPassword'
                 placeholder='Confirm Password'
                 autoComplete='current-password'
@@ -334,6 +333,7 @@ export default function RegistrationView() {
                 }}>
                 <MTBInput
                   style={{flex: 1, minWidth: "calc(90% - 20px)"}}
+                  onBlur={() => handleBlur("firstName")}
                   name='firstName'
                   placeholder='First Name'
                   autoComplete='given-name'
@@ -343,6 +343,7 @@ export default function RegistrationView() {
                 />
                 <MTBInput
                   style={{flex: 1, minWidth: "calc(30% - 20px)"}}
+                  onBlur={() => handleBlur("lastName")}
                   name='lastName'
                   placeholder='Last Name'
                   autoComplete='lastName'
@@ -361,16 +362,17 @@ export default function RegistrationView() {
               </div>
 
               <MTBInput
+                onBlur={() => handleBlur("zipCode")}
                 type='number'
-                name='zipcode'
+                name='zipCode'
                 placeholder='Zip code'
-                autoComplete='zipcode'
-                value={formData.zipcode}
+                autoComplete='zipCode'
+                value={formData.zipCode}
                 onChange={handleInputChange}
                 helper={
-                  errors.zipcode && {
+                  errors.zipCode && {
                     type: "warning",
-                    text: errors.zipcode,
+                    text: errors.zipCode,
                   }
                 }
               />
@@ -405,6 +407,12 @@ export default function RegistrationView() {
                 value={formData.category}
                 onChange={handleInputChange}
                 options={categoryList}
+                helper={
+                  errors.category && {
+                    type: "warning",
+                    text: errors.category,
+                  }
+                }
               />
               <MTBSelector
                 name={"subcategory"}
@@ -415,6 +423,12 @@ export default function RegistrationView() {
                 value={formData.subcategory}
                 onChange={handleInputChange}
                 options={subCategoryList}
+                helper={
+                  errors.subcategory && {
+                    type: "warning",
+                    text: errors.subcategory,
+                  }
+                }
               />
 
               <MTBDropZone fileType={"image"} setFile={setImageFile}></MTBDropZone>
@@ -430,15 +444,63 @@ export default function RegistrationView() {
         <div className='Footer'>
           <div style={{display: "flex", flex: 5}}></div>
 
-          {part < 2 && (
+          {part === 0 && (
             <MTBButton
-              style={{borderRadius: "16px", width: "10px", flex: 1, backgroundColor: "#F18926"}}
+              style={{
+                borderRadius: "16px",
+                width: "10px",
+                flex: 1,
+                backgroundColor:
+                  formData.email &&
+                  formData.phoneNumber &&
+                  formData.password &&
+                  formData.confirmPassword
+                    ? "#F18926"
+                    : "gray",
+              }}
               onClick={handleNextPart}
               isLoading={isLoading}>
               Continue
             </MTBButton>
           )}
-          {part === 2 && (
+          {part === 1 && (
+            <MTBButton
+              style={{
+                borderRadius: "16px",
+                width: "10px",
+                flex: 1,
+                backgroundColor:
+                  formData.firstName &&
+                  formData.lastName &&
+                  formData.city !== "" &&
+                  formData.zipCode !== ""
+                    ? "#F18926"
+                    : "gray",
+              }}
+              onClick={handleNextPart}
+              isLoading={isLoading}>
+              Continue
+            </MTBButton>
+          )}
+          {part == 2 && !Object.values(formData).every((value) => !!value || value !== "") && (
+            <MTBButton
+              style={{
+                borderRadius: "16px",
+                width: "10px",
+                flex: 1,
+                backgroundColor:
+                  formData.category !== "" &&
+                  formData.subcategory !== "" 
+      
+                    ? "gray"
+                    : "gray",
+              }}
+              onClick={handleNextPart}
+              isLoading={isLoading}>
+              Continue
+            </MTBButton>
+          )}
+          {part === 2 && Object.values(formData).every((value) => !!value || value !== "") && (
             <MTBButton onClick={handleSubmit} isLoading={isLoading}>
               Submit
             </MTBButton>

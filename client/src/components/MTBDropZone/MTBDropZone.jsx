@@ -84,8 +84,8 @@ export default function MTBDropZone({fileType, setData, setFile}) {
       setFile(acceptedFiles[0]);
       if ( fileType === "image" ) {
         const processedImageUrl = await processImage(URL.createObjectURL(acceptedFiles[0]));
-        // setUploadedImage(URL.createObjectURL(acceptedFiles[0]));
-        setUploadedImage(processedImageUrl);
+        setUploadedImage(URL.createObjectURL(acceptedFiles[0]));
+        // setUploadedImage(processedImageUrl);
       }
 
       if (fileType === "kml") {
@@ -184,7 +184,7 @@ export default function MTBDropZone({fileType, setData, setFile}) {
     <div className='drag-and-drop'>
       <div className='edit-delete-icons'>
         <img src={editIcon} alt='editIcon' onClick={() => acceptedFiles.length = 0} />
-        <img src={trashIcon} alt='trashIcon' onClick={() => setUploadedImage(false)} />
+        <img src={trashIcon} alt='trashIcon' onClick={() => setUploadedImage(null)} />
       </div>
       {acceptedFiles.length === 0 && (
         <div {...getRootProps({style})}>
