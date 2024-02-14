@@ -186,7 +186,7 @@ export default function RegistrationView() {
     try {
       const response = await signUp(JSON.stringify(signUpPayload));
       toast.success("welcome!");
-      navigate("/admin/dashboard");
+      navigate("/admin/dashboards");
     } catch (error) {
       console.log(error);
     }
