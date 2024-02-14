@@ -1,0 +1,5 @@
+{
+  "backendUrl": "https://jqkcpejsv7.execute-api.us-east-1.amazonaws.com/testing/",
+  "bucketUrl": "",
+  "env": "testing"
+}

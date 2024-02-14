@@ -1,5 +1,5 @@
 import axios from "axios";
-import configJSON from "../config.json";
+import configJSON from "../../config.json"
 
 const config = configJSON;
 
