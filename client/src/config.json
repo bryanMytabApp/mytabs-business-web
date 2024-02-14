@@ -1,5 +1,5 @@
 {
-  "backendUrl": "https://jqkcpejsv7.execute-api.us-east-1.amazonaws.com/testing/",
+  "backendUrl": "http://localhost:3000",
   "bucketUrl": "",
-  "env": "testing"
+  "env": "dev"
 }
