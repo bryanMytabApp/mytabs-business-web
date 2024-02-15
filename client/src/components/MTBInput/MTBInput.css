@@ -34,7 +34,18 @@
   padding-right: 10px;
   border: 1px solid #BABABA;
   height: 48px;
-  font-family: 'Outfit';
+  font-family: Outfit;
+}
+
+.MTB-input input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+
+.MTB-input input[type=number] {
+  -moz-appearance: textfield;
 }
 
 .MTB-input.start {
@@ -62,10 +73,11 @@ div.MTB-input input:focus-visible {
   margin-top: 4px;
   width: 100%;
 }
+
 .MTB-input .Helper-text {
   display: flex;
   padding: 0px 8px;
-  align-items:center;
+  align-items: center;
   justify-self: flex-end;
   gap: 8px;
 }

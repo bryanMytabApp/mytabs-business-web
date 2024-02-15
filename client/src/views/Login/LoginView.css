@@ -171,6 +171,15 @@
   line-height: 45.921px;
 }
 
+.or {
+  color: var(--Base-Dark, #2C2C2C);
+  font-family: Outfit;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  align-self: center;
+}
 .progress-bar {
   position: absolute;
   bottom: 128px;
@@ -192,7 +201,7 @@
 
 .agree-text {
   color: var(--base-dark, #2c2c2c);
-  font-family: "Outfit-Regular", sans-serif;
+  font-family: Outfit, sans-serif;
   font-size: 16px;
   line-height: 45.92px;
   font-weight: 400;
@@ -200,7 +209,7 @@
 
 .agree-text-underline {
   color: var(--base-dark, #2c2c2c);
-  font-family: "Outfit-Regular", sans-serif;
+  font-family: Outfit, sans-serif;
   font-size: 16px;
   line-height: 45.92px;
   text-decoration: underline;
@@ -220,7 +229,7 @@
 
 .already-have-an-account-log-in-span {
   color: var(--base-dark, #2c2c2c);
-  font-family: "Outfit-Regular", sans-serif;
+  font-family: Outfit, sans-serif;
   font-size: 16px;
   line-height: 45.92px;
   font-weight: 400;
@@ -229,7 +238,7 @@
 
 .already-have-an-account-log-in-span2 {
   color: var(--base-dark, #2c2c2c);
-  font-family: "Outfit-Bold", sans-serif;
+  font-family: Outfit, sans-serif;
   font-size: 16px;
   line-height: 45.92px;
   font-weight: 700;
@@ -240,7 +249,7 @@
 .log-in-to-your-account-subtext {
   color: #ffffff;
   text-align: left;
-  font-family: "Outfit-SemiBold", sans-serif;
+  font-family: Outfit, sans-serif;
   font-size: 16px;
   line-height: 49px;
   font-weight: 600;

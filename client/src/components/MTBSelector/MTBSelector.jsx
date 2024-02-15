@@ -6,7 +6,6 @@ import warning from "../../assets/warning.svg";
 import success from "../../assets/success.svg";
 import info from "../../assets/info.svg";
 
-
 const helperIcon = {
   warning: warning,
   success: success,
@@ -23,6 +22,7 @@ export default function MTBSelector({
   itemName = "name",
   itemValue = "value",
   helper = {type: "", text: ""},
+  appearDisabled = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const displayValue =
@@ -35,7 +35,9 @@ export default function MTBSelector({
 
   return (
     <div className='mtb-selector-container' style={{position: "relative"}}>
-      <div className='mtb-selector-value' onClick={() => setIsOpen(!isOpen)}>
+      <div
+        className={appearDisabled ? "mtb-selector-value-disabled" : "mtb-selector-value"}
+        onClick={() => setIsOpen(!isOpen)}>
         {displayValue}
         <div
           style={{
