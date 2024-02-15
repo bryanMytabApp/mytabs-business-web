@@ -29,12 +29,13 @@ export default function RegistrationView() {
     hasLowercase: false,
     hasNumber: false,
   });
+  const [inputTouched, setInputTouched] = useState({zipCode: false, city: false});
   const [selectedValue, setSelectedValue] = useState("");
   const [imageFile, setImageFile] = useState();
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [part, setPart] = useState(0);
-  const firstHeaderText = ["Your account details", "Personal Info", "Business information"];
+  const firstHeaderText = ["Create your account", "Personal Info", "Business information"];
   const secondHeaderText = "Where are you located";
   const cityList = [
     {value: 0, name: "Dallas", color: "#fff"},
@@ -57,6 +58,12 @@ export default function RegistrationView() {
     {value: 3, name: "Jazz"},
   ];
 
+  const styleInputDisabled = {
+    opacity: "0.5",
+    backgroundColor: "f0f0f0",
+    borderColor: "black",
+    
+  };
   const validatePassword = (password) => {
     let newState = {
       ...validationState,
@@ -69,10 +76,10 @@ export default function RegistrationView() {
 
     setValidationState(newState);
   };
-  useEffect( () => {
-    console.log( 'formDATA:', formData.category === "" );
-    console.log(errors)
-  }, [ formData ] )
+  useEffect(() => {
+    console.log("formDATA:", formData.category === "");
+    console.log(errors);
+  }, [formData]);
 
   useEffect(() => {
     validatePassword(formData.password);
@@ -83,11 +90,24 @@ export default function RegistrationView() {
       ...prev,
       [name]: value,
     }));
+
+    if (name === "zipCode") {
+      setInputTouched({
+        zipCode: true,
+        city: false,
+      });
+    }
+    if (name === "city") {
+      setInputTouched({
+        zipCode: false,
+        city: true,
+      });
+    }
   };
 
   const handleBlur = (name) => {
-    // Perform validation for the field with 'name'
-    const error = errors['name']
+
+    const error = errors["name"];
     setErrors((prevErrors) => ({...prevErrors, [name]: error}));
   };
   const validateForm = () => {
@@ -108,32 +128,34 @@ export default function RegistrationView() {
         errors.confirmPassword = "Passwords must match.";
       }
       if (!Object.values(validationState).every((value) => value === true)) {
-        errors.password = "password not secure enough";
-        errors.confirmPassword = "password not secure enough";
+        errors.password = "Password not secure enough";
+        errors.confirmPassword = "Password not secure enough";
       }
     }
     if (part === 1) {
       if (!formData.firstName) {
         errors.firstName = "Please enter your first name";
       }
-      if (formData.city === "") {
-        errors.city = "A city must be selected";
+
+      if (!formData.zipCode && !formData.city) {
+        errors.city = "Enter a zip code or select a city";
       }
-      if (!formData.zipCode) {
+      if (!formData.zipCode && formData.city !== "") {
         errors.zipCode = "Enter a valid zip code";
+      }
+      if (formData.city === "" && formData.zipCode) {
+        errors.city = "A city must be selected";
       }
       if (!formData.lastName) {
         errors.lastName = "Please enter your last name";
       }
     }
     if (part === 2) {
-
-      if ( formData.category === "" ) {
-        
+      if (formData.category === "") {
         errors.category = "Must have a category";
       }
 
-      if (formData.subcategory  === "") {
+      if (formData.subcategory === "") {
         errors.subcategory = "Select a subcategory";
       }
     }
@@ -175,12 +197,13 @@ export default function RegistrationView() {
     e.preventDefault();
 
     const phoneNumberInput = formData.phoneNumber;
-    let phoneNumberWithPlus = `+${formData.phoneNumber}`;
+    let phoneNumberWithPlus = `+1${formData.phoneNumber}`;
     const phoneNumber = parsePhoneNumberFromString(phoneNumberInput);
 
     let signUpPayload = {
       ...formData,
-      phoneNumber: `+${formData.phoneNumber}`,
+      phoneNumber: `+${ formData.phoneNumber }`,
+      isAdmin: true
     };
 
     try {
@@ -250,7 +273,6 @@ export default function RegistrationView() {
                   </td>
                 </tr>
               </table>
-           
 
               <MTBInput
                 onBlur={() => handleBlur("phoneNumber")}
@@ -324,39 +346,42 @@ export default function RegistrationView() {
           )}
           {part === 1 && (
             <>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  gap: "20px",
-                }}>
-                <MTBInput
-                  style={{flex: 1, minWidth: "calc(90% - 20px)"}}
-                  onBlur={() => handleBlur("firstName")}
-                  name='firstName'
-                  placeholder='First Name'
-                  autoComplete='given-name'
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  helper={errors.firstName ? {type: "warning", text: errors.firstName} : undefined}
-                />
-                <MTBInput
-                  style={{flex: 1, minWidth: "calc(30% - 20px)"}}
-                  onBlur={() => handleBlur("lastName")}
-                  name='lastName'
-                  placeholder='Last Name'
-                  autoComplete='lastName'
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  helper={
-                    errors.lastName && {
-                      type: "warning",
-                      text: errors.lastName,
-                    }
-                  }
-                />
-              </div>
+              <table>
+                <tr colspan='2'>
+                  <td>
+                    <MTBInput
+                      style={{marginRight: "10px"}}
+                      onBlur={() => handleBlur("firstName")}
+                      name='firstName'
+                      placeholder='First Name'
+                      autoComplete='given-name'
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      helper={
+                        errors.firstName ? {type: "warning", text: errors.firstName} : undefined
+                      }
+                    />
+                  </td>
+                  <td>
+                    <MTBInput
+                      style={{marginLeft: "10px"}}
+                      onBlur={() => handleBlur("lastName")}
+                      name='lastName'
+                      placeholder='Last Name'
+                      autoComplete='lastName'
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      helper={
+                        errors.lastName && {
+                          type: "warning",
+                          text: errors.lastName,
+                        }
+                      }
+                    />
+                  </td>
+                </tr>
+              </table>
+
               <div className='Account-details' style={{color: "black"}}>
                 {secondHeaderText}
               </div>
@@ -375,7 +400,10 @@ export default function RegistrationView() {
                     text: errors.zipCode,
                   }
                 }
+                className={inputTouched.city ? "input-appears-disabled" : ""}
+                style={inputTouched.city ? styleInputDisabled : null}
               />
+              <div className='or'>Or</div>
               <MTBSelector
                 name={"city"}
                 placeholder='City'
@@ -393,6 +421,7 @@ export default function RegistrationView() {
                     text: errors.city,
                   }
                 }
+                appearDisabled={inputTouched.zipCode}
               />
             </>
           )}
@@ -400,7 +429,7 @@ export default function RegistrationView() {
             <>
               <MTBSelector
                 name={"category"}
-                placeholder='Type the category of your business'
+                placeholder='Business category'
                 autoComplete='category'
                 itemName={"name"}
                 itemValue={"value"}
@@ -456,7 +485,7 @@ export default function RegistrationView() {
                   formData.password &&
                   formData.confirmPassword
                     ? "#F18926"
-                    : "gray",
+                    : "#D9D9D9",
               }}
               onClick={handleNextPart}
               isLoading={isLoading}>
@@ -472,10 +501,9 @@ export default function RegistrationView() {
                 backgroundColor:
                   formData.firstName &&
                   formData.lastName &&
-                  formData.city !== "" &&
-                  formData.zipCode !== ""
+                  (formData.city !== "" || formData.zipCode !== "")
                     ? "#F18926"
-                    : "gray",
+                    : "#D9D9D9",
               }}
               onClick={handleNextPart}
               isLoading={isLoading}>
@@ -489,26 +517,31 @@ export default function RegistrationView() {
                 width: "10px",
                 flex: 1,
                 backgroundColor:
-                  formData.category !== "" &&
-                  formData.subcategory !== "" 
-      
-                    ? "gray"
-                    : "gray",
+                  formData.category !== "" && formData.subcategory !== "" ? "#D9D9D9" : "#D9D9D9",
               }}
               onClick={handleNextPart}
               isLoading={isLoading}>
               Continue
             </MTBButton>
           )}
-          {part === 2 && Object.values(formData).every((value) => !!value || value !== "") && (
-            <MTBButton onClick={handleSubmit} isLoading={isLoading}>
-              Submit
-            </MTBButton>
-          )}
+          {part === 2 &&
+            formData.email &&
+            formData.phoneNumber &&
+            formData.password &&
+            formData.confirmPassword &&
+            formData.firstName &&
+            formData.lastName &&
+            (formData.city !== "" || formData.zipCode !== "") &&
+            formData.category !== "" &&
+            formData.subcategory !== "" && (
+              <MTBButton onClick={handleSubmit} isLoading={isLoading}>
+                Submit
+              </MTBButton>
+            )}
         </div>
       </div>
       <div className='welcome-back'>Welcome!</div>
-      <div className='log-in-to-your-account'>Let's create your first account in Tabs</div>
+      <div className='log-in-to-your-account'>Let's create your account</div>
       <div class='log-in-to-your-account-subtext'>
         We’re here to guide you every step of the way
       </div>

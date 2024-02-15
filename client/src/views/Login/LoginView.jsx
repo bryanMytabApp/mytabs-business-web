@@ -106,7 +106,7 @@ export default function LoginView() {
             e.preventDefault();
             handleLogin();
           }}>
-          <div className='Account-details'>Your account details</div>
+          <div className='Account-details'>Sign in</div>
           <MTBInput
             placeholder='Email or phone'
             autoComplete='username'
@@ -142,7 +142,7 @@ export default function LoginView() {
 
         <div className='Actions'></div>
         <div className='Footer'>
-          <div style={{display: "flex", flex: 5, marginLeft: "10px", boxSizing:"border-box"}}>
+          <div style={{display: "flex", flex: 5, marginLeft: "10px", boxSizing:"border-box", alignItems: "center", paddingLeft: "20px"}}>
             <span>
               <span class='agree-text'>By continuing, you agree to the Tabs{ " "}</span>
               <span class='agree-text-underline'>terms of service</span>
