@@ -207,7 +207,8 @@ export default function RegistrationView() {
     };
 
     try {
-      const response = await signUp(JSON.stringify(signUpPayload));
+      const response = await signUp( signUpPayload );
+      console.log("response", JSON.stringify(response))
       toast.success("welcome!");
       navigate("/admin/dashboards");
     } catch (error) {
