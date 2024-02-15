@@ -30,7 +30,6 @@ export default function RegistrationView() {
     hasNumber: false,
   });
   const [inputTouched, setInputTouched] = useState({zipCode: false, city: false});
-  const [selectedValue, setSelectedValue] = useState("");
   const [imageFile, setImageFile] = useState();
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -77,8 +76,7 @@ export default function RegistrationView() {
     setValidationState(newState);
   };
   useEffect(() => {
-    console.log("formDATA:", formData.category === "");
-    console.log(errors);
+
   }, [formData]);
 
   useEffect(() => {
@@ -137,15 +135,16 @@ export default function RegistrationView() {
         errors.firstName = "Please enter your first name";
       }
 
-      if (!formData.zipCode && !formData.city) {
+      if (!formData.zipCode && formData.city === "") {
         errors.city = "Enter a zip code or select a city";
       }
-      if (!formData.zipCode && formData.city !== "") {
-        errors.zipCode = "Enter a valid zip code";
-      }
-      if (formData.city === "" && formData.zipCode) {
-        errors.city = "A city must be selected";
-      }
+      // if (!formData.zipCode && formData.city !== "") {
+      //   errors.zipCode = "Enter a valid zip code";
+      // }
+      // if ( formData.city === "" && formData.zipCode ) {
+      //   console.log('añeñe',formData)
+      //   errors.city = "A city must be selected";
+      // }
       if (!formData.lastName) {
         errors.lastName = "Please enter your last name";
       }
@@ -197,16 +196,17 @@ export default function RegistrationView() {
     e.preventDefault();
 
     const phoneNumberInput = formData.phoneNumber;
-    let phoneNumberWithPlus = `+1${formData.phoneNumber}`;
+    let phoneNumberWithPlus = `+${formData.phoneNumber}`;
     const phoneNumber = parsePhoneNumberFromString(phoneNumberInput);
 
     let signUpPayload = {
       ...formData,
-      phoneNumber: `+${ formData.phoneNumber }`,
+      phoneNumber: phoneNumberWithPlus,
       isAdmin: true
     };
 
     try {
+      console.log('signUpPayload',signUpPayload)
       const response = await signUp( signUpPayload );
       console.log("response", JSON.stringify(response))
       toast.success("welcome!");
@@ -511,20 +511,31 @@ export default function RegistrationView() {
               Continue
             </MTBButton>
           )}
-          {part == 2 && !Object.values(formData).every((value) => !!value || value !== "") && (
-            <MTBButton
-              style={{
-                borderRadius: "16px",
-                width: "10px",
-                flex: 1,
-                backgroundColor:
-                  formData.category !== "" && formData.subcategory !== "" ? "#D9D9D9" : "#D9D9D9",
-              }}
-              onClick={handleNextPart}
-              isLoading={isLoading}>
-              Continue
-            </MTBButton>
-          )}
+          {part == 2 &&
+            !(
+              formData.email &&
+              formData.phoneNumber &&
+              formData.password &&
+              formData.confirmPassword &&
+              formData.firstName &&
+              formData.lastName &&
+              (formData.city !== "" || formData.zipCode !== "") &&
+              formData.category !== "" &&
+              formData.subcategory !== ""
+            ) && (
+              <MTBButton
+                style={{
+                  borderRadius: "16px",
+                  width: "10px",
+                  flex: 1,
+                  backgroundColor:
+                    formData.category !== "" && formData.subcategory !== "" ? "#D9D9D9" : "#D9D9D9",
+                }}
+                onClick={handleNextPart}
+                isLoading={isLoading}>
+                Continue
+              </MTBButton>
+            )}
           {part === 2 &&
             formData.email &&
             formData.phoneNumber &&
