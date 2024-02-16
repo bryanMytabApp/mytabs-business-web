@@ -74,7 +74,7 @@ export default function MTBInput({
         )}
       </div>
       {helper?.text && (
-        <div className='Helper-text'>
+        <div className='Helper-text' style={{zIndex: 2}}>
           <img src={helperIcon[helper.type]} alt={helper.type} />
           <span>{helper.text}</span>
         </div>

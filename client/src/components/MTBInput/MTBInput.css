@@ -1,7 +1,7 @@
 .MTB-input {
   display: flex;
   align-items: center;
-
+  height: 80px;
   flex-direction: column;
   gap: 2px;
 }
@@ -144,4 +144,5 @@ div.MTB-input input:focus-visible {
 
 .Helper-text img {
   margin-right: 4px;
+  width: 12px;
 }

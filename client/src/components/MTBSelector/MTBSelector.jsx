@@ -1,7 +1,6 @@
-import React, {useState} from "react";
+import React, {useState, useRef, useEffect} from "react";
 import "./MTBSelector.css";
 import chevronIcon from "../../assets/atoms/chevron.svg";
-
 import warning from "../../assets/warning.svg";
 import success from "../../assets/success.svg";
 import info from "../../assets/info.svg";
@@ -20,21 +19,42 @@ export default function MTBSelector({
   onChange,
   options = [],
   itemName = "name",
-  itemValue = "value",
   helper = {type: "", text: ""},
   appearDisabled = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const displayValue =
-    options.find((option) => option[itemValue] === value)?.[itemName] || placeholder;
+  const ref = useRef(null);
 
-  const handleOptionSelect = (val) => {
-    onChange(val, name);
+  const displayValue =
+    value && options.find((option) => option[itemName] === value)
+      ? value 
+      : placeholder;
+
+  const handleOptionSelect = (index) => {
+    const selectedOption = options[index];
+    if (selectedOption) {
+      onChange(selectedOption[itemName], name); 
+    } else {
+      onChange(null, name);
+    }
     setIsOpen(false);
   };
 
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (ref.current && !ref.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div className='mtb-selector-container' style={{position: "relative"}}>
+    <div ref={ref} className='mtb-selector-container' style={{position: "relative"}}>
       <div
         className={appearDisabled ? "mtb-selector-value-disabled" : "mtb-selector-value"}
         onClick={() => setIsOpen(!isOpen)}>
@@ -46,7 +66,7 @@ export default function MTBSelector({
             transform: isOpen ? "rotate(180deg)" : null,
             flexShrink: 0,
           }}>
-          <img src={chevronIcon} />
+          <img src={chevronIcon} alt='toggle' />
         </div>
       </div>
       {isOpen && (
@@ -55,15 +75,17 @@ export default function MTBSelector({
             <div
               key={index}
               className='mtb-selector-option'
-              onClick={() => handleOptionSelect(option[itemValue])}>
-              <div className='mtb-selector-square' style={{backgroundColor: option.color}}></div>
+              onClick={() => handleOptionSelect(index)}>
+              <div
+                className='mtb-selector-square'
+                style={{backgroundColor: option.color || "transparent"}}></div>
               {option[itemName]}
             </div>
           ))}
         </div>
       )}
-      {!isOpen && helper?.text && (
-        <div className='Helper-text'>
+      {!isOpen && value && helper?.text && (
+        <div className='Helper-text' style={{display: "none"}}>
           <img src={helperIcon[helper.type]} alt={helper.type} />
           <span>{helper.text}</span>
         </div>

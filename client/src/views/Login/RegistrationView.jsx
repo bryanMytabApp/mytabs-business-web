@@ -44,16 +44,16 @@ export default function RegistrationView() {
   ];
 
   const categoryList = [
-    {value: 0, name: "music"},
+    {value: 0, name: "Music"},
     {value: 1, name: "Education"},
     {value: 2, name: "Night Life"},
     {value: 3, name: "Concert"},
   ];
 
   const subCategoryList = [
-    {value: 0, name: "restaurant"},
-    {value: 1, name: "hard rock"},
-    {value: 2, name: "soft Rock"},
+    {value: 0, name: "Restaurant"},
+    {value: 1, name: "Hard rock"},
+    {value: 2, name: "Soft Rock"},
     {value: 3, name: "Jazz"},
   ];
 
@@ -76,7 +76,7 @@ export default function RegistrationView() {
     setValidationState(newState);
   };
   useEffect(() => {
-
+    console.log(formData)
   }, [formData]);
 
   useEffect(() => {
@@ -138,13 +138,7 @@ export default function RegistrationView() {
       if (!formData.zipCode && formData.city === "") {
         errors.city = "Enter a zip code or select a city";
       }
-      // if (!formData.zipCode && formData.city !== "") {
-      //   errors.zipCode = "Enter a valid zip code";
-      // }
-      // if ( formData.city === "" && formData.zipCode ) {
-      //   console.log('añeñe',formData)
-      //   errors.city = "A city must be selected";
-      // }
+      
       if (!formData.lastName) {
         errors.lastName = "Please enter your last name";
       }
@@ -295,6 +289,7 @@ export default function RegistrationView() {
                 onChange={handleInputChange}
                 helper={errors.password && {type: "warning", text: errors.password}}
               />
+              
               <MTBInput
                 onBlur={() => handleBlur("confirmPassword")}
                 name='confirmPassword'
