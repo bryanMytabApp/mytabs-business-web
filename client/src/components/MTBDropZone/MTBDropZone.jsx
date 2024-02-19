@@ -6,7 +6,7 @@ import fileIcon from "../../assets/file.svg";
 import trashIcon from "../../assets/trashIcon.svg";
 import editIcon from "../../assets/editIcon.svg";
 import dragNdropIcon from "../../assets/components/dragNdrop.svg";
-
+import { floodFill } from "../../utils/imageUtils";
 import "./MTBDropZone.css";
 const baseStyle = {
   flex: 1,
@@ -44,7 +44,7 @@ export const processImage = async (imageSrc) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.src = imageSrc;
-    img.crossOrigin = "Anonymous"; 
+    img.crossOrigin = "Anonymous";
     img.onload = () => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
@@ -54,13 +54,12 @@ export const processImage = async (imageSrc) => {
       ctx.drawImage(img, 0, 0);
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
 
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i] > 200 && data[i + 1] > 200 && data[i + 2] > 200) {
-          data[i + 3] = 0; 
-        }
-      }
+  
+      floodFill(ctx, 0, 0, imageData,25); 
+      floodFill(ctx, canvas.width - 1, 0, imageData,25); 
+      floodFill(ctx, 0, canvas.height - 1, imageData,25); 
+      floodFill(ctx, canvas.width - 1, canvas.height - 1, imageData,25); 
 
       ctx.putImageData(imageData, 0, 0);
 
@@ -69,6 +68,7 @@ export const processImage = async (imageSrc) => {
     img.onerror = reject;
   });
 };
+
 
 export default function MTBDropZone({fileType, setData, setFile}) {
   const [uploadedImage, setUploadedImage] = useState(null);
@@ -84,8 +84,8 @@ export default function MTBDropZone({fileType, setData, setFile}) {
       setFile(acceptedFiles[0]);
       if ( fileType === "image" ) {
         const processedImageUrl = await processImage(URL.createObjectURL(acceptedFiles[0]));
-        setUploadedImage(URL.createObjectURL(acceptedFiles[0]));
-        // setUploadedImage(processedImageUrl);
+        //setUploadedImage(URL.createObjectURL(acceptedFiles[0]));
+         setUploadedImage(processedImageUrl);
       }
 
       if (fileType === "kml") {
