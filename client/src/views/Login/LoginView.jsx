@@ -17,10 +17,7 @@ export const LoaderLogin = () => {
   return null;
 };
 
-const tempValid = {
-  username: "manager",
-  password: "Pass.word1!",
-};
+
 export default function LoginView() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
