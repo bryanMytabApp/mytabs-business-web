@@ -2,7 +2,8 @@ export function colorsMatch(a, b, tolerance) {
   return (
     Math.abs(a.r - b.r) <= tolerance &&
     Math.abs(a.g - b.g) <= tolerance &&
-    Math.abs(a.b - b.b) <= tolerance
+    Math.abs(a.b - b.b) <= tolerance &&
+    Math.abs(a.a - b.a) <= tolerance
   );
 }
 
@@ -21,7 +22,7 @@ export function floodFill(ctx, startX, startY, imageData, tolerance) {
   const width = imageData.width;
   const height = imageData.height;
   const data = imageData.data;
-  const targetColor = {r: 255, g: 255, b: 255, a: 255};
+  const targetColor = {r: 255, g: 255, b: 255, a: 0};
   const replacementColor = {r: 0, g: 0, b: 0, a: 0};
 
   function matchStartColor(pixelPos) {
@@ -31,6 +32,7 @@ export function floodFill(ctx, startX, startY, imageData, tolerance) {
       b: data[pixelPos + 2],
       a: data[pixelPos + 3],
     };
+    pixelColor.a = targetColor.a;
     return colorsMatch(pixelColor, targetColor, tolerance);
   }
 

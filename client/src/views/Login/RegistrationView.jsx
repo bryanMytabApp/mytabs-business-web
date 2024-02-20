@@ -151,9 +151,10 @@ export default function RegistrationView() {
         errors.city = "Enter a zip code or select a city";
       }
       const zipCodeRegex = /^\d{5}$/;
-      if (!zipCodeRegex.test(formData.zipCode)) {
+      if (!zipCodeRegex.test(formData.zipCode) && formData.zipCode ) {
         errors.zipCode = "Please enter a valid 5-digit zip code.";
       }
+
       if (!formData.lastName) {
         errors.lastName = "Please enter your last name";
       }
