@@ -49,7 +49,7 @@ export default function LoginView() {
     }
 
     const _invalid = {
-      username: username.trim() ? undefined : "Please enter your email",
+      username: username.trim() ? undefined : "Please enter your email or username",
       password: password ? undefined : "Please enter your password",
     };
 
@@ -108,7 +108,7 @@ export default function LoginView() {
           }}>
           <div className='Account-details'>Sign in</div>
           <MTBInput
-            placeholder='Email or phone'
+            placeholder='Email or username'
             autoComplete='username'
             value={username}
             disabled={isLoading}
