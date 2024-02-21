@@ -120,7 +120,7 @@ export default function RegistrationView() {
       if (error.enhancedMessage) {
         setErrors((prevErrors) => ({
           ...prevErrors,
-          [name]: `${JSON.parse(error.enhancedMessage).error}`,
+          [name]: `${error.errorMessage}`,
         }));
       }
     }
