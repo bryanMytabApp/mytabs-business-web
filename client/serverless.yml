@@ -10,7 +10,7 @@ provider:
     blockPublicAccess: true
 
 custom:
-  currentStage: dev
+  currentStage: testing
   projectName: mytabs-web
   sitename: bp-${self:service}-${self:custom.currentStage}
   s3Sync:
