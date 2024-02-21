@@ -65,8 +65,7 @@ export const processImage = async (imageSrc, tolerance) => {
   });
 };
 
-export default function MTBDropZone({fileType, setData, setFile}) {
-  const [uploadedImage, setUploadedImage] = useState(null);
+export default function MTBDropZone({fileType, setData, setFile, uploadedImage}) {
   const [isFileUploaded, setIsFileUploaded] = useState(false);
   const [key, setKey] = useState(0);
   const acceptObj =
@@ -78,13 +77,10 @@ export default function MTBDropZone({fileType, setData, setFile}) {
       : {"text/xml": [".kml"]};
   const onDrop = async (acceptedFiles) => {
     if (acceptedFiles[0]) {
-      setFile(acceptedFiles[0]);
-      if (fileType === "image") {
-        const processedImageUrl = await processImage(URL.createObjectURL(acceptedFiles[0]), 30);
-        //setUploadedImage(URL.createObjectURL(acceptedFiles[0]));
-        setUploadedImage(processedImageUrl);
-        setIsFileUploaded(true);
-      }
+      const processedImageUrl = await processImage(URL.createObjectURL(acceptedFiles[0]), 30);
+
+      setFile(processedImageUrl);
+      setIsFileUploaded(true);
 
       if (fileType === "kml") {
         const xmlDocuments = [];
@@ -144,9 +140,9 @@ export default function MTBDropZone({fileType, setData, setFile}) {
     [isFocused, isDragAccept, isDragReject]
   );
   const handleTrashClick = () => {
-    setUploadedImage(null);
     setKey((prevKey) => prevKey + 1);
     setIsFileUploaded(false);
+    setFile(null);
   };
   const files = acceptedFiles.map((file) => (
     <div
@@ -187,9 +183,9 @@ export default function MTBDropZone({fileType, setData, setFile}) {
       <div className='edit-delete-icons'>
         <img src={trashIcon} alt='trashIcon' onClick={handleTrashClick} />
       </div>
-      {!isFileUploaded && (
+      {!uploadedImage ? (
         <div {...getRootProps({style})}>
-          <input {...getInputProps()} />
+          <input {...getInputProps()} key={key} />
           <div className='drag-and-drop-labels'>
             <img src={dragNdropIcon} alt='dragNdrop' />
             <div>Drag and drop</div>
@@ -199,8 +195,7 @@ export default function MTBDropZone({fileType, setData, setFile}) {
             </div>
           </div>
         </div>
-      )}
-      {isFileUploaded && (
+      ) : (
         <aside>
           <div className='drag-and-drop-labels'>
             {uploadedImage ? (

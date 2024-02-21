@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from "react";
+import React, {useState, useEffect, useCallback, useRef} from "react";
 import logo from "../../assets/logo.png";
 import "./LoginView.css";
 import {MTBButton, MTBInput, MTBSelector, MTBInputValidator} from "../../components";
@@ -48,6 +48,7 @@ export default function RegistrationView() {
   const [imageFile, setImageFile] = useState();
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState(null);
   const [part, setPart] = useState(0);
   const firstHeaderText = ["Create your account", "Personal Info", "Business information"];
   const secondHeaderText = "Where are you located";
@@ -72,6 +73,16 @@ export default function RegistrationView() {
     {value: 2, name: "Soft Rock"},
     {value: 3, name: "Jazz"},
   ];
+
+  const myRef = useRef(null);
+
+  useEffect(() => {
+    if (myRef.current) {
+      myRef.current.scrollIntoView({
+        behavior: "smooth",
+      });
+    }
+  }, [part]);
 
   const styleInputDisabled = {
     opacity: "0.5",
@@ -105,7 +116,7 @@ export default function RegistrationView() {
       value = `1${value}`;
     }
     const encodeValue = encodeURIComponent(value);
-    console.log("enocevalue", encodeValue);
+
     value = name === "username" ? encodeValue : value;
     try {
       const response = await getUserExistance({attribute: name, value});
@@ -120,11 +131,16 @@ export default function RegistrationView() {
       if (error.enhancedMessage) {
         setErrors((prevErrors) => ({
           ...prevErrors,
-          [name]: `${error.errorMessage}`,
+          [name]: `This field is already in use`,
         }));
       }
     }
   }, 500);
+
+  const handleSetUploadedImage = (image) => {
+    setUploadedImage(image);
+  };
+
   const handleInputChange = useCallback((value, name) => {
     setFormData((prev) => ({
       ...prev,
@@ -270,24 +286,31 @@ export default function RegistrationView() {
 
   const validateUserExistence = async (formData) => {
     const errors = {};
-
+    console.log("formDATA", formData);
     if (formData.email) {
       try {
-        await getUserExistance({email: formData.email});
+        await getUserExistance({attribute: "email", value: encodeURIComponent(formData.email)});
+      } catch (error) {
         errors.email = "Email already exists.";
-      } catch (error) {}
+      }
     }
     if (formData.username) {
       try {
-        await getUserExistance({username: formData.username});
+        let res = await getUserExistance({attribute: "username", value: formData.username});
+        console.log("res", res);
+      } catch (error) {
         errors.username = "Username already exists.";
-      } catch (error) {}
+      }
     }
     if (formData.phoneNumber) {
       try {
-        await getUserExistance({phoneNumber: formData.phoneNumber});
+        await getUserExistance({
+          attribute: "phoneNumber",
+          value: encodeURIComponent(`+1${formData.phoneNumber}`),
+        });
+      } catch (error) {
         errors.phoneNumber = "Phone already exists.";
-      } catch (error) {}
+      }
     }
 
     return errors;
@@ -337,7 +360,7 @@ export default function RegistrationView() {
   document.title = "My Tabs - Registration";
 
   return (
-    <div className='Login-view'>
+    <div className='Login-view' ref={myRef}>
       <div className='rectangle'></div>
       <img
         style={{borderRadius: 20, top: "10%", left: "5%", position: "absolute"}}
@@ -347,8 +370,13 @@ export default function RegistrationView() {
       <div className='Headers'>Registration</div>
       <div className='Container-box'>
         {part > 0 && (
-          <div className='registration-back' onClick={returnBack}>
-            <img src={chevronIcon} alt='toggle' />
+          <div
+            className='back-reg'
+            style={{display: "flex", alignItems: "center", padding: "12px", fontStyle: "Outfit"}}>
+            <div className='registration-back' onClick={returnBack}>
+              <img style={{height: "22px"}} src={chevronIcon} alt='toggle' />
+            </div>
+            <div>back</div>
           </div>
         )}
         <div className='already-have-an-account-log-in'>
@@ -372,7 +400,6 @@ export default function RegistrationView() {
                 <tr colspan='2'>
                   <td>
                     <MTBInput
-                      onBlur={() => handleBlur("email")}
                       style={{marginRight: "10px"}}
                       name='email'
                       placeholder='Email'
@@ -385,7 +412,6 @@ export default function RegistrationView() {
 
                   <td>
                     <MTBInput
-                      onBlur={() => handleBlur("username")}
                       style={{marginLeft: "10px"}}
                       name='username'
                       placeholder='Username'
@@ -399,7 +425,6 @@ export default function RegistrationView() {
               </table>
 
               <MTBInput
-                onBlur={() => handleBlur("phoneNumber")}
                 type='number'
                 name='phoneNumber'
                 placeholder='Phone'
@@ -585,7 +610,11 @@ export default function RegistrationView() {
                 }
               />
 
-              <MTBDropZone fileType={"image"} setFile={setImageFile}></MTBDropZone>
+              <MTBDropZone
+                fileType={"image"}
+                setFile={setUploadedImage}
+                setData={setFormData}
+                uploadedImage={uploadedImage}></MTBDropZone>
             </>
           )}
         </form>
@@ -680,9 +709,9 @@ export default function RegistrationView() {
       </div>
       <div className='welcome-back'>Welcome!</div>
       <div className='log-in-to-your-account'>Let's create your account</div>
-      <div class='log-in-to-your-account-subtext'>
+      {/* <div class='log-in-to-your-account-subtext'>
         We’re here to guide you every step of the way
-      </div>
+      </div> */}
     </div>
   );
 }
