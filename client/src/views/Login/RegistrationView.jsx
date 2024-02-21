@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, useCallback} from "react";
 import logo from "../../assets/logo.png";
 import "./LoginView.css";
 import {MTBButton, MTBInput, MTBSelector, MTBInputValidator} from "../../components";
@@ -8,6 +8,20 @@ import {useNavigate} from "react-router-dom";
 import {signUp} from "../../services/authService";
 import {parsePhoneNumberFromString} from "libphonenumber-js";
 import chevronIcon from "../../assets/atoms/chevron.svg";
+import {getUserExistance} from "../../services/userService";
+
+export const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
+
 export default function RegistrationView() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -37,6 +51,7 @@ export default function RegistrationView() {
   const [part, setPart] = useState(0);
   const firstHeaderText = ["Create your account", "Personal Info", "Business information"];
   const secondHeaderText = "Where are you located";
+
   const cityList = [
     {value: 0, name: "Dallas", color: "#fff"},
     {value: 1, name: "Austin", color: "#fff"},
@@ -75,13 +90,42 @@ export default function RegistrationView() {
 
     setValidationState(newState);
   };
-  useEffect(() => {}, [formData]);
+  useEffect(() => {
+    console.log(errors);
+  }, [formData]);
 
   useEffect(() => {
     validatePassword(formData.password);
   }, [formData.password]);
 
-  const handleInputChange = (value, name) => {
+  const checkExistenceDebounced = debounce(async (name, value, setErrors) => {
+    const plusSign = "%2B1";
+    if (!value.trim()) return;
+    if (name === "phoneNumber") {
+      value = `1${value}`;
+    }
+    const encodeValue = encodeURIComponent(value);
+    console.log("enocevalue", encodeValue);
+    value = name === "username" ? encodeValue : value;
+    try {
+      const response = await getUserExistance({attribute: name, value});
+
+      if (response.exists) {
+        setErrors((prevErrors) => ({...prevErrors, [name]: `${name} already taken`}));
+      }
+    } catch (error) {
+      console.error("Existence check failed:", error);
+      console.error(error.enhancedMessage || "An unexpected error occurred.");
+
+      if (error.enhancedMessage) {
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [name]: `${JSON.parse(error.enhancedMessage).error}`,
+        }));
+      }
+    }
+  }, 500);
+  const handleInputChange = useCallback((value, name) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -99,7 +143,12 @@ export default function RegistrationView() {
         city: true,
       });
     }
-  };
+
+    setErrors((prevErrors) => ({...prevErrors, [name]: undefined}));
+    if (["email", "username", "phoneNumber"].includes(name)) {
+      checkExistenceDebounced(name, value, setErrors);
+    }
+  }, []);
 
   const returnBack = () => {
     setPart((prevPart) => (prevPart > 0 ? prevPart - 1 : prevPart));
@@ -151,7 +200,7 @@ export default function RegistrationView() {
         errors.city = "Enter a zip code or select a city";
       }
       const zipCodeRegex = /^\d{5}$/;
-      if (!zipCodeRegex.test(formData.zipCode) && formData.zipCode ) {
+      if (!zipCodeRegex.test(formData.zipCode) && formData.zipCode) {
         errors.zipCode = "Please enter a valid 5-digit zip code.";
       }
 
@@ -201,11 +250,47 @@ export default function RegistrationView() {
   const handleNextPart = () => {
     const newErrors = validateForm();
     setErrors(newErrors);
-    if (Object.keys(newErrors).length === 0 && part < 2) {
-      setPart((prevPart) => {
-        return prevPart + 1;
-      });
+
+    (async () => {
+      const asyncErrors = await validateUserExistence(formData);
+
+      const combinedErrors = {...newErrors, ...asyncErrors};
+
+      if (Object.keys(combinedErrors).length === 0) {
+        if (part < 2) {
+          setPart((prevPart) => prevPart + 1);
+        }
+      } else {
+        setErrors(combinedErrors);
+
+        toast.error("Please correct the errors before proceeding.");
+      }
+    })();
+  };
+
+  const validateUserExistence = async (formData) => {
+    const errors = {};
+
+    if (formData.email) {
+      try {
+        await getUserExistance({email: formData.email});
+        errors.email = "Email already exists.";
+      } catch (error) {}
     }
+    if (formData.username) {
+      try {
+        await getUserExistance({username: formData.username});
+        errors.username = "Username already exists.";
+      } catch (error) {}
+    }
+    if (formData.phoneNumber) {
+      try {
+        await getUserExistance({phoneNumber: formData.phoneNumber});
+        errors.phoneNumber = "Phone already exists.";
+      } catch (error) {}
+    }
+
+    return errors;
   };
 
   const handleSubmit = async (e) => {
@@ -240,9 +325,9 @@ export default function RegistrationView() {
   const isFormFilled = () => {
     const requiredFieldsFilled = Object.values(formData).every((value) => {
       if (typeof value === "string") {
-        return value.trim() !== ""; 
+        return value.trim() !== "";
       }
-      return value !== undefined; 
+      return value !== undefined;
     });
     const locationFilled = formData.zipCode.trim() !== "" || formData.city.trim() !== "";
     const imageUploaded = imageFile !== undefined;
@@ -560,7 +645,8 @@ export default function RegistrationView() {
               formData.lastName &&
               (formData.city !== "" || formData.zipCode !== "") &&
               formData.category !== "" &&
-              formData.subcategory !== "" && !!imageFile
+              formData.subcategory !== "" &&
+              !!imageFile
             ) && (
               <MTBButton
                 style={{
@@ -584,7 +670,8 @@ export default function RegistrationView() {
             formData.lastName &&
             (formData.city !== "" || formData.zipCode !== "") &&
             formData.category !== "" &&
-            formData.subcategory !== "" && !!imageFile &&(
+            formData.subcategory !== "" &&
+            !!imageFile && (
               <MTBButton onClick={handleSubmit} isLoading={isLoading}>
                 Submit
               </MTBButton>
