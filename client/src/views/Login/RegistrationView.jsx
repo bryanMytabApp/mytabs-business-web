@@ -131,7 +131,7 @@ export default function RegistrationView() {
       if (error.enhancedMessage) {
         setErrors((prevErrors) => ({
           ...prevErrors,
-          [name]: `This field is already in use`,
+          [name]: `${name=="phoneNumber"? 'phone': name} already in use`,
         }));
       }
     }
@@ -171,7 +171,8 @@ export default function RegistrationView() {
   };
 
   const handleBlur = (name) => {
-    const error = errors["name"];
+    let error = errors[ "name" ];
+    if(name==="city" || name == "zipCode") error = ""
     setErrors((prevErrors) => ({...prevErrors, [name]: error}));
   };
 
@@ -212,17 +213,19 @@ export default function RegistrationView() {
         errors.firstName = "Please enter your first name";
       }
 
-      if (!formData.zipCode && formData.city === "") {
-        errors.city = "Enter a zip code or select a city";
-      }
-      const zipCodeRegex = /^\d{5}$/;
-      if (!zipCodeRegex.test(formData.zipCode) && formData.zipCode) {
-        errors.zipCode = "Please enter a valid 5-digit zip code.";
-      }
 
       if (!formData.lastName) {
         errors.lastName = "Please enter your last name";
       }
+
+       if (!formData.zipCode.trim() && !formData.city.trim()) {
+         errors.city = "Either Zip Code or City must be provided.";
+       } else {
+         
+         if (formData.zipCode.trim() && !/^\d{5}$/.test(formData.zipCode)) {
+           errors.zipCode = "Zip Code must be a 5-digit number.";
+         }
+       }
     }
     if (part === 2) {
       if (formData.category === "") {
@@ -253,7 +256,7 @@ export default function RegistrationView() {
       filledFields -= 1;
     }
 
-    if (imageFile) {
+    if (uploadedImage) {
       filledFields += 1;
     } else {
       totalFields += 1;
@@ -263,30 +266,28 @@ export default function RegistrationView() {
   };
   const completionPercentage = calculateCompletionPercentage();
 
-  const handleNextPart = () => {
-    const newErrors = validateForm();
-    setErrors(newErrors);
+ const handleNextPart = async () => {
+   let newErrors = validateForm();
+   setErrors(newErrors);
 
-    (async () => {
-      const asyncErrors = await validateUserExistence(formData);
+   if (part === 0) {
+     const asyncErrors = await validateUserExistence(formData);
+     newErrors = {...newErrors, ...asyncErrors};
+   }
 
-      const combinedErrors = {...newErrors, ...asyncErrors};
-
-      if (Object.keys(combinedErrors).length === 0) {
-        if (part < 2) {
-          setPart((prevPart) => prevPart + 1);
-        }
-      } else {
-        setErrors(combinedErrors);
-
-        toast.error("Please correct the errors before proceeding.");
-      }
-    })();
-  };
+   if (Object.keys(newErrors).length === 0 && part < 2) {
+     setPart((prevPart) => prevPart + 1);
+   } else {
+     // Show error messages if there are validation errors
+     setErrors(newErrors);
+     if ( part === 0 ) { toast.error( "Please correct the errors before proceeding." ); }
+     
+   }
+ };
 
   const validateUserExistence = async (formData) => {
     const errors = {};
-    console.log("formDATA", formData);
+
     if (formData.email) {
       try {
         await getUserExistance({attribute: "email", value: encodeURIComponent(formData.email)});
@@ -376,7 +377,7 @@ export default function RegistrationView() {
             <div className='registration-back' onClick={returnBack}>
               <img style={{height: "22px"}} src={chevronIcon} alt='toggle' />
             </div>
-            <div>back</div>
+            <div>Back</div>
           </div>
         )}
         <div className='already-have-an-account-log-in'>
@@ -537,7 +538,7 @@ export default function RegistrationView() {
               </div>
 
               <MTBInput
-                onBlur={() => handleBlur("zipCode")}
+                onBlur={() => { handleBlur( "zipCode" ); handleBlur("city")}}
                 type='number'
                 name='zipCode'
                 placeholder='Zip code'
@@ -555,6 +556,7 @@ export default function RegistrationView() {
               />
               <div className='or'>Or</div>
               <MTBSelector
+                onBlur={()=>handleBlur('city')}
                 name={"city"}
                 placeholder='City'
                 autoComplete='city'
@@ -675,7 +677,7 @@ export default function RegistrationView() {
               (formData.city !== "" || formData.zipCode !== "") &&
               formData.category !== "" &&
               formData.subcategory !== "" &&
-              !!imageFile
+              !!uploadedImage
             ) && (
               <MTBButton
                 style={{
@@ -700,7 +702,7 @@ export default function RegistrationView() {
             (formData.city !== "" || formData.zipCode !== "") &&
             formData.category !== "" &&
             formData.subcategory !== "" &&
-            !!imageFile && (
+            !!uploadedImage && (
               <MTBButton onClick={handleSubmit} isLoading={isLoading}>
                 Submit
               </MTBButton>
@@ -709,9 +711,7 @@ export default function RegistrationView() {
       </div>
       <div className='welcome-back'>Welcome!</div>
       <div className='log-in-to-your-account'>Let's create your account</div>
-      {/* <div class='log-in-to-your-account-subtext'>
-        We’re here to guide you every step of the way
-      </div> */}
+
     </div>
   );
 }

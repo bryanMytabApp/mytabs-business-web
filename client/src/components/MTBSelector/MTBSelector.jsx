@@ -24,7 +24,7 @@ export default function MTBSelector({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
-
+  console.log(helper)
   const displayValue =
     value && options.find((option) => option[itemName] === value)
       ? value 
@@ -84,8 +84,8 @@ export default function MTBSelector({
           ))}
         </div>
       )}
-      {!isOpen && value && helper?.text && (
-        <div className='Helper-text' style={{display: "none"}}>
+      {!isOpen  && helper?.text && (
+        <div className='Helper-text' style={{display: "block"}}>
           <img src={helperIcon[helper.type]} alt={helper.type} />
           <span>{helper.text}</span>
         </div>
