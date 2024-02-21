@@ -64,7 +64,7 @@ export default function LoginView() {
    
         localStorage.setItem( "refToken", res.RefreshToken )
         localStorage.setItem('idToken', res.IdToken)
-        toast.success("welcome!");
+        toast.success("Welcome!");
         navigate("/admin/dashboards");
       
     } catch ( error ) {
