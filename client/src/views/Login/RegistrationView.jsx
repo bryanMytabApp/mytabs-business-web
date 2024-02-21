@@ -120,7 +120,7 @@ export default function RegistrationView() {
       if (error.enhancedMessage) {
         setErrors((prevErrors) => ({
           ...prevErrors,
-          [name]: `${error.errorMessage}`,
+          [name]: `This field is already in use`,
         }));
       }
     }
