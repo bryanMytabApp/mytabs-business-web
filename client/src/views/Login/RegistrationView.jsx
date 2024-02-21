@@ -271,24 +271,24 @@ export default function RegistrationView() {
   const validateUserExistence = async (formData) => {
     const errors = {};
 
-    if (formData.email) {
-      try {
-        await getUserExistance({email: formData.email});
-        errors.email = "Email already exists.";
-      } catch (error) {}
-    }
-    if (formData.username) {
-      try {
-        await getUserExistance({username: formData.username});
-        errors.username = "Username already exists.";
-      } catch (error) {}
-    }
-    if (formData.phoneNumber) {
-      try {
-        await getUserExistance({phoneNumber: formData.phoneNumber});
-        errors.phoneNumber = "Phone already exists.";
-      } catch (error) {}
-    }
+    // if (formData.email) {
+    //   try {
+    //     await getUserExistance({email: formData.email});
+    //     errors.email = "Email already exists.";
+    //   } catch (error) {}
+    // }
+    // if (formData.username) {
+    //   try {
+    //     await getUserExistance({username: formData.username});
+    //     errors.username = "Username already exists.";
+    //   } catch (error) {}
+    // }
+    // if (formData.phoneNumber) {
+    //   try {
+    //     await getUserExistance({phoneNumber: formData.phoneNumber});
+    //     errors.phoneNumber = "Phone already exists.";
+    //   } catch (error) {}
+    // }
 
     return errors;
   };
