@@ -51,27 +51,28 @@ export default function RegistrationView() {
   const [uploadedImage, setUploadedImage] = useState(null);
   const [part, setPart] = useState(0);
   const firstHeaderText = ["Create your account", "Personal Info", "Business information"];
-  const secondHeaderText = "Where are you located";
+  const secondHeaderText = "Where are you located?";
 
   const cityList = [
-    {value: 0, name: "Dallas", color: "#fff"},
-    {value: 1, name: "Austin", color: "#fff"},
+    {value: 0, name: "Austin", color: "#fff"},
+    {value: 1, name: "Dallas", color: "#fff"},
     {value: 2, name: "Houston", color: "#fff"},
     {value: 3, name: "Los Angeles", color: "#fff"},
+    {value: 3, name: "New Orleans", color: "#fff"},
   ];
 
   const categoryList = [
-    {value: 0, name: "Music"},
+    {value: 0, name: "Concert"},
     {value: 1, name: "Education"},
-    {value: 2, name: "Night Life"},
-    {value: 3, name: "Concert"},
+    {value: 2, name: "Music"},
+    {value: 3, name: "Night Life"},
   ];
 
   const subCategoryList = [
-    {value: 0, name: "Restaurant"},
-    {value: 1, name: "Hard rock"},
-    {value: 2, name: "Soft Rock"},
-    {value: 3, name: "Jazz"},
+    {value: 0, name: "Hard rock"},
+    {value: 1, name: "Jazz"},
+    {value: 2, name: "Restaurant"},
+    {value: 3, name: "Soft Rock"},
   ];
 
   const myRef = useRef(null);

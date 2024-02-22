@@ -160,6 +160,7 @@
 .Sign-up-underline {
   font-weight: 700;
   text-decoration-line: underline;
+  cursor: pointer;
 }
 
 .Account-details {
