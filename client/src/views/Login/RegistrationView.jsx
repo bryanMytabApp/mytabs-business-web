@@ -102,7 +102,7 @@ export default function RegistrationView() {
     setValidationState(newState);
   };
   useEffect(() => {
-    console.log(errors);
+
   }, [formData]);
 
   useEffect(() => {
@@ -121,12 +121,9 @@ export default function RegistrationView() {
     try {
       const response = await getUserExistance({attribute: name, value});
 
-      if (response.exists) {
-        setErrors((prevErrors) => ({...prevErrors, [name]: `${name} already taken.`}));
-      }
+     
     } catch (error) {
-      console.error("Existence check failed:", error);
-      console.error(error.enhancedMessage || "An unexpected error occurred.");
+
       let nameText = name.charAt(0).toUpperCase() + name.slice(1);
       if (error.enhancedMessage) {
         setErrors((prevErrors) => ({
@@ -137,9 +134,18 @@ export default function RegistrationView() {
     }
   }, 500);
 
-  const handleSetUploadedImage = (image) => {
-    setUploadedImage(image);
-  };
+ const handleSetUploadedImage = (image) => {
+   setUploadedImage(image);
+ 
+   setErrors((prevErrors) => {
+     const updatedErrors = {...prevErrors};
+     if (updatedErrors.uploadedImage) {
+       delete updatedErrors.uploadedImage; 
+     }
+     return updatedErrors;
+   });
+ };
+
 
   const handleInputChange = useCallback((value, name) => {
     setFormData((prev) => ({
@@ -172,7 +178,7 @@ export default function RegistrationView() {
 
   const handleBlur = (name) => {
     let error = errors[ "name" ];
-    if(name==="city" || name == "zipCode") error = ""
+    if(name==="city" || name == "zipCode"|| name== "uploadImage") error = ""
     setErrors((prevErrors) => ({...prevErrors, [name]: error}));
   };
 
@@ -235,6 +241,9 @@ export default function RegistrationView() {
       if (formData.subcategory === "") {
         errors.subcategory = "Select a subcategory.";
       }
+      if ( !uploadedImage ) {
+        errors.uploadedImage = "Upload a logo."
+      }
     }
     return errors;
   };
@@ -278,10 +287,9 @@ export default function RegistrationView() {
    if (Object.keys(newErrors).length === 0 && part < 2) {
      setPart((prevPart) => prevPart + 1);
    } else {
-     // Show error messages if there are validation errors
      setErrors(newErrors);
      if ( part === 0 ) { toast.error( "Please correct the errors before proceeding." ); }
-     
+     if (part === 2 && !uploadedImage) { toast.error("Upload a logo.")}
    }
  };
 
@@ -298,7 +306,7 @@ export default function RegistrationView() {
     if (formData.username) {
       try {
         let res = await getUserExistance({attribute: "username", value: formData.username});
-        console.log("res", res);
+
       } catch (error) {
         errors.username = "Username already exists.";
       }
@@ -538,7 +546,10 @@ export default function RegistrationView() {
               </div>
 
               <MTBInput
-                onBlur={() => { handleBlur( "zipCode" ); handleBlur("city")}}
+                onBlur={() => {
+                  handleBlur("zipCode");
+                  handleBlur("city");
+                }}
                 type='number'
                 name='zipCode'
                 placeholder='Zip code'
@@ -556,7 +567,7 @@ export default function RegistrationView() {
               />
               <div className='or'>Or</div>
               <MTBSelector
-                onBlur={()=>handleBlur('city')}
+                onBlur={() => handleBlur("city")}
                 name={"city"}
                 placeholder='City'
                 autoComplete='city'
@@ -614,9 +625,12 @@ export default function RegistrationView() {
 
               <MTBDropZone
                 fileType={"image"}
-                setFile={setUploadedImage}
-                setData={setFormData}
-                uploadedImage={uploadedImage}></MTBDropZone>
+                setFile={handleSetUploadedImage} 
+                uploadedImage={uploadedImage}
+                helper={
+                  errors.uploadedImage ? {type: "warning", text: errors.uploadedImage} : undefined
+                }
+              />
             </>
           )}
         </form>
@@ -666,7 +680,7 @@ export default function RegistrationView() {
               Continue
             </MTBButton>
           )}
-          {part == 2 &&
+          {part === 2 &&
             !(
               formData.email &&
               formData.phoneNumber &&
@@ -711,7 +725,6 @@ export default function RegistrationView() {
       </div>
       <div className='welcome-back'>Welcome!</div>
       <div className='log-in-to-your-account'>Let's create your account</div>
-
     </div>
   );
 }
