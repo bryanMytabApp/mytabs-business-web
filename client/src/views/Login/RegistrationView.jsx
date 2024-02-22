@@ -204,18 +204,18 @@ export default function RegistrationView() {
         errors.confirmPassword = "Passwords must match.";
       }
       if (!Object.values(validationState).every((value) => value === true)) {
-        errors.password = "Password not secure enough";
-        errors.confirmPassword = "Password not secure enough";
+        errors.password = "Password not secure enough.";
+        errors.confirmPassword = "Password not secure enough.";
       }
     }
     if (part === 1) {
       if (!formData.firstName) {
-        errors.firstName = "Please enter your first name";
+        errors.firstName = "Please enter your first name.";
       }
 
 
       if (!formData.lastName) {
-        errors.lastName = "Please enter your last name";
+        errors.lastName = "Please enter your last name.";
       }
 
        if (!formData.zipCode.trim() && !formData.city.trim()) {
@@ -292,7 +292,7 @@ export default function RegistrationView() {
       try {
         await getUserExistance({attribute: "email", value: encodeURIComponent(formData.email)});
       } catch (error) {
-        errors.email = "Email already exists";
+        errors.email = "Email already exists.";
       }
     }
     if (formData.username) {
@@ -300,7 +300,7 @@ export default function RegistrationView() {
         let res = await getUserExistance({attribute: "username", value: formData.username});
         console.log("res", res);
       } catch (error) {
-        errors.username = "Username already exists";
+        errors.username = "Username already exists.";
       }
     }
     if (formData.phoneNumber) {
