@@ -160,6 +160,7 @@
 .Sign-up-underline {
   font-weight: 700;
   text-decoration-line: underline;
+  cursor: pointer;
 }
 
 .Account-details {
@@ -180,6 +181,7 @@
   line-height: 16px;
   align-self: center;
 }
+
 .progress-bar {
   position: absolute;
   bottom: 128px;
@@ -227,6 +229,24 @@
   right: 20px;
 }
 
+.back-reg {
+  font-family: Outfit;
+  font-weight: 400;
+  font-size: 16px;
+}
+
+.registration-back {
+  color: var(--base-dark, #2c2c2c);
+  text-align: right;
+  font-family: Outfit, sans-serif;
+  font-size: 22px;
+  line-height: 45.92px;
+  font-weight: 400;
+  position: absolute;
+  left: 20px;
+  transform: rotate(90deg);
+}
+
 .already-have-an-account-log-in-span {
   color: var(--base-dark, #2c2c2c);
   font-family: Outfit, sans-serif;
@@ -244,6 +264,7 @@
   font-weight: 700;
   text-decoration: underline;
   margin-left: 10px;
+  cursor: pointer;
 }
 
 .log-in-to-your-account-subtext {

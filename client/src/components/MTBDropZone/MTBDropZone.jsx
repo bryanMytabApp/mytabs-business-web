@@ -6,8 +6,17 @@ import fileIcon from "../../assets/file.svg";
 import trashIcon from "../../assets/trashIcon.svg";
 import editIcon from "../../assets/editIcon.svg";
 import dragNdropIcon from "../../assets/components/dragNdrop.svg";
-import { floodFill } from "../../utils/imageUtils";
+import {floodFill} from "../../utils/imageUtils";
 import "./MTBDropZone.css";
+import warning from "../../assets/warning.svg";
+import success from "../../assets/success.svg";
+import info from "../../assets/info.svg";
+
+const helperIcon = {
+  warning: warning,
+  success: success,
+  info: info,
+};
 const baseStyle = {
   flex: 1,
   display: "flex",
@@ -38,9 +47,7 @@ const rejectStyle = {
   borderColor: "#eeeeee",
 };
 
-
-
-export const processImage = async (imageSrc) => {
+export const processImage = async (imageSrc, tolerance) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.src = imageSrc;
@@ -55,12 +62,10 @@ export const processImage = async (imageSrc) => {
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  
-      floodFill(ctx, 0, 0, imageData,25); 
-      floodFill(ctx, canvas.width - 1, 0, imageData,25); 
-      floodFill(ctx, 0, canvas.height - 1, imageData,25); 
-      floodFill(ctx, canvas.width - 1, canvas.height - 1, imageData,25); 
-
+      floodFill(ctx, 0, 0, imageData, tolerance);
+      floodFill(ctx, canvas.width - 1, 0, imageData, tolerance);
+      floodFill(ctx, 0, canvas.height - 1, imageData, tolerance);
+      floodFill(ctx, canvas.width - 1, canvas.height - 1, imageData, tolerance);
       ctx.putImageData(imageData, 0, 0);
 
       resolve(canvas.toDataURL());
@@ -69,9 +74,15 @@ export const processImage = async (imageSrc) => {
   });
 };
 
-
-export default function MTBDropZone({fileType, setData, setFile}) {
-  const [uploadedImage, setUploadedImage] = useState(null);
+export default function MTBDropZone({
+  fileType,
+  setData,
+  setFile,
+  uploadedImage,
+  helper = {type: "", text: ""},
+}) {
+  const [isFileUploaded, setIsFileUploaded] = useState(false);
+  const [key, setKey] = useState(0);
   const acceptObj =
     fileType === "image"
       ? {
@@ -81,12 +92,10 @@ export default function MTBDropZone({fileType, setData, setFile}) {
       : {"text/xml": [".kml"]};
   const onDrop = async (acceptedFiles) => {
     if (acceptedFiles[0]) {
-      setFile(acceptedFiles[0]);
-      if ( fileType === "image" ) {
-        const processedImageUrl = await processImage(URL.createObjectURL(acceptedFiles[0]));
-        //setUploadedImage(URL.createObjectURL(acceptedFiles[0]));
-         setUploadedImage(processedImageUrl);
-      }
+      const processedImageUrl = await processImage(URL.createObjectURL(acceptedFiles[0]), 30);
+
+      setFile(processedImageUrl);
+      setIsFileUploaded(true);
 
       if (fileType === "kml") {
         const xmlDocuments = [];
@@ -145,7 +154,11 @@ export default function MTBDropZone({fileType, setData, setFile}) {
     }),
     [isFocused, isDragAccept, isDragReject]
   );
-
+  const handleTrashClick = () => {
+    setKey((prevKey) => prevKey + 1);
+    setIsFileUploaded(false);
+    setFile(null);
+  };
   const files = acceptedFiles.map((file) => (
     <div
       key={file.path}
@@ -169,7 +182,7 @@ export default function MTBDropZone({fileType, setData, setFile}) {
             src={uploadedImage}
             alt='Uploaded'
             style={{
-              maxHeight: "350px",
+              maxWidth: "60%",
               objectFit: "contain",
             }}
           />
@@ -183,29 +196,44 @@ export default function MTBDropZone({fileType, setData, setFile}) {
   return (
     <div className='drag-and-drop'>
       <div className='edit-delete-icons'>
-        <img src={editIcon} alt='editIcon' onClick={() => acceptedFiles.length = 0} />
-        <img src={trashIcon} alt='trashIcon' onClick={() => setUploadedImage(null)} />
+        <div></div>
+        {/* {helper?.text && !uploadedImage && (
+          <div className='dropzone-Helper-text' style={{zIndex: 2, color: "red"}}>
+            <img style={{height: "12px"}} src={helperIcon[helper.type]} alt={helper.type} />
+            <span>{helper.text}</span>
+          </div>
+        )} */}
+        <img src={trashIcon} alt='trashIcon' onClick={handleTrashClick} />
       </div>
-      {acceptedFiles.length === 0 && (
-        <div {...getRootProps({style})}>
-          <input {...getInputProps()} />
-          <div className='drag-and-drop-labels'>
-            <img src={dragNdropIcon} alt='dragNdrop' />
-            <div className=''>Drag and drop</div>
-            <div className='drag-and-drop-secondary-label'>
-              <div className='drag-and-drop-text'>your logo here or</div>
-              <div className='drag-and-drop-browse'>browse</div>
+      {!uploadedImage ? (
+        <>
+          <div {...getRootProps({style})}>
+            <input {...getInputProps()} key={key} />
+            <div className='drag-and-drop-labels'>
+              <img src={dragNdropIcon} alt='dragNdrop' />
+              <div>Drag and drop</div>
+              <div className='drag-and-drop-secondary-label'>
+                <div className='drag-and-drop-text'>your logo here or</div>
+                <div className='drag-and-drop-browse'>browse</div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-      <aside>
-        {acceptedFiles.length > 0 && (
+        </>
+      ) : (
+        <aside>
           <div className='drag-and-drop-labels'>
-            <ul>{files}</ul>
+            {uploadedImage ? (
+              <img
+                src={uploadedImage}
+                style={{maxWidth: "100%", maxHeight: "256px"}}
+                alt='Uploaded'
+              />
+            ) : (
+              <ul>{files}</ul>
+            )}
           </div>
-        )}
-      </aside>
+        </aside>
+      )}
     </div>
   );
 }

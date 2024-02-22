@@ -46,7 +46,7 @@ export default function LoginView() {
     }
 
     const _invalid = {
-      username: username.trim() ? undefined : "Please enter your email",
+      username: username.trim() ? undefined : "Please enter your email or username",
       password: password ? undefined : "Please enter your password",
     };
 
@@ -61,7 +61,7 @@ export default function LoginView() {
    
         localStorage.setItem( "refToken", res.RefreshToken )
         localStorage.setItem('idToken', res.IdToken)
-        toast.success("welcome!");
+        toast.success("Welcome!");
         navigate("/admin/dashboards");
       
     } catch ( error ) {
@@ -105,7 +105,7 @@ export default function LoginView() {
           }}>
           <div className='Account-details'>Sign in</div>
           <MTBInput
-            placeholder='Email or phone'
+            placeholder='Email or username'
             autoComplete='username'
             value={username}
             disabled={isLoading}
@@ -141,7 +141,7 @@ export default function LoginView() {
         <div className='Footer'>
           <div style={{display: "flex", flex: 5, marginLeft: "10px", boxSizing:"border-box", alignItems: "center", paddingLeft: "20px"}}>
             <span>
-              <span class='agree-text'>By continuing, you agree to the Tabs{ " "}</span>
+              <span class='agree-text'>By continuing, you agree to My Tabs{ " "}</span>
               <span class='agree-text-underline'>terms of service</span>
               <span class='agree-text'>{" "}</span>
               <span class='agree-text'>and{" " }</span>

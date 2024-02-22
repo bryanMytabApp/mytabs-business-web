@@ -4,7 +4,7 @@ import warning from "../../assets/warning.svg";
 import success from "../../assets/success.svg";
 import info from "../../assets/info.svg";
 import viewIcon from "../../assets/view.svg";
-import hideIcon from "../../assets/view.svg"; // Make sure this points to the correct icon for "hide"
+import hideIcon from "../../assets/view.svg"; 
 
 const helperIcon = {
   warning: warning,

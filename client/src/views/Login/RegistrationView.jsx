@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, useCallback, useRef} from "react";
 import logo from "../../assets/logo.png";
 import "./LoginView.css";
 import {MTBButton, MTBInput, MTBSelector, MTBInputValidator} from "../../components";
@@ -7,6 +7,21 @@ import {toast} from "react-toastify";
 import {useNavigate} from "react-router-dom";
 import {signUp} from "../../services/authService";
 import {parsePhoneNumberFromString} from "libphonenumber-js";
+import chevronIcon from "../../assets/atoms/chevron.svg";
+import {getUserExistance} from "../../services/userService";
+
+export const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
+
 export default function RegistrationView() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -33,35 +48,47 @@ export default function RegistrationView() {
   const [imageFile, setImageFile] = useState();
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState(null);
   const [part, setPart] = useState(0);
   const firstHeaderText = ["Create your account", "Personal Info", "Business information"];
-  const secondHeaderText = "Where are you located";
+  const secondHeaderText = "Where are you located?";
+
   const cityList = [
-    {value: 0, name: "Dallas", color: "#fff"},
-    {value: 1, name: "Austin", color: "#fff"},
+    {value: 0, name: "Austin", color: "#fff"},
+    {value: 1, name: "Dallas", color: "#fff"},
     {value: 2, name: "Houston", color: "#fff"},
     {value: 3, name: "Los Angeles", color: "#fff"},
+    {value: 3, name: "New Orleans", color: "#fff"},
   ];
 
   const categoryList = [
-    {value: 0, name: "Music"},
+    {value: 0, name: "Concert"},
     {value: 1, name: "Education"},
-    {value: 2, name: "Night Life"},
-    {value: 3, name: "Concert"},
+    {value: 2, name: "Music"},
+    {value: 3, name: "Night Life"},
   ];
 
   const subCategoryList = [
-    {value: 0, name: "Restaurant"},
-    {value: 1, name: "Hard rock"},
-    {value: 2, name: "Soft Rock"},
-    {value: 3, name: "Jazz"},
+    {value: 0, name: "Hard rock"},
+    {value: 1, name: "Jazz"},
+    {value: 2, name: "Restaurant"},
+    {value: 3, name: "Soft Rock"},
   ];
+
+  const myRef = useRef(null);
+
+  useEffect(() => {
+    if (myRef.current) {
+      myRef.current.scrollIntoView({
+        behavior: "smooth",
+      });
+    }
+  }, [part]);
 
   const styleInputDisabled = {
     opacity: "0.5",
     backgroundColor: "f0f0f0",
     borderColor: "black",
-    
   };
   const validatePassword = (password) => {
     let newState = {
@@ -76,14 +103,52 @@ export default function RegistrationView() {
     setValidationState(newState);
   };
   useEffect(() => {
-    console.log(formData)
+
   }, [formData]);
 
   useEffect(() => {
     validatePassword(formData.password);
   }, [formData.password]);
 
-  const handleInputChange = (value, name) => {
+  const checkExistenceDebounced = debounce(async (name, value, setErrors) => {
+
+    if (!value.trim()) return;
+    if (name === "phoneNumber") {
+      value = `1${value}`;
+    }
+    const encodeValue = encodeURIComponent(value);
+
+    value = name === "username" ? encodeValue : value;
+    try {
+      const response = await getUserExistance({attribute: name, value});
+
+     
+    } catch (error) {
+
+      let nameText = name.charAt(0).toUpperCase() + name.slice(1);
+      if (error.enhancedMessage) {
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [name]: `${name=="phoneNumber"? 'Phone': nameText} already exists.`,
+        }));
+      }
+    }
+  }, 500);
+
+ const handleSetUploadedImage = (image) => {
+   setUploadedImage(image);
+ 
+   setErrors((prevErrors) => {
+     const updatedErrors = {...prevErrors};
+     if (updatedErrors.uploadedImage) {
+       delete updatedErrors.uploadedImage; 
+     }
+     return updatedErrors;
+   });
+ };
+
+
+  const handleInputChange = useCallback((value, name) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -101,16 +166,31 @@ export default function RegistrationView() {
         city: true,
       });
     }
+
+    setErrors((prevErrors) => ({...prevErrors, [name]: undefined}));
+    if (["email", "username", "phoneNumber"].includes(name)) {
+      checkExistenceDebounced(name, value, setErrors);
+    }
+  }, []);
+
+  const returnBack = () => {
+    setPart((prevPart) => (prevPart > 0 ? prevPart - 1 : prevPart));
   };
 
   const handleBlur = (name) => {
-
-    const error = errors["name"];
+    let error = errors[ "name" ];
+    if(name==="city" || name == "zipCode"|| name== "uploadImage") error = ""
     setErrors((prevErrors) => ({...prevErrors, [name]: error}));
   };
+
   const validateForm = () => {
     let errors = {};
     if (part === 0) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!formData.email.trim() || !emailRegex.test(formData.email)) {
+        errors.email = "Please enter a valid email address.";
+      }
+
       if (!formData.username.trim()) {
         errors.username = "Username is required.";
       }
@@ -122,73 +202,132 @@ export default function RegistrationView() {
       if (!formData.phoneNumber) {
         errors.phoneNumber = "Phonenumber is required.";
       }
+
+      const phoneRegex = /^\d{10}$/;
+      if (!phoneRegex.test(formData.phoneNumber)) {
+        errors.phoneNumber = "Phone number must be 10 digits.";
+      }
       if (formData.password !== formData.confirmPassword) {
         errors.confirmPassword = "Passwords must match.";
       }
       if (!Object.values(validationState).every((value) => value === true)) {
-        errors.password = "Password not secure enough";
-        errors.confirmPassword = "Password not secure enough";
+        errors.password = "Password not secure enough.";
+        errors.confirmPassword = "Password not secure enough.";
       }
     }
     if (part === 1) {
       if (!formData.firstName) {
-        errors.firstName = "Please enter your first name";
+        errors.firstName = "Please enter your first name.";
       }
 
-      if (!formData.zipCode && formData.city === "") {
-        errors.city = "Enter a zip code or select a city";
-      }
-      
+
       if (!formData.lastName) {
-        errors.lastName = "Please enter your last name";
+        errors.lastName = "Please enter your last name.";
       }
+
+       if (!formData.zipCode.trim() && !formData.city.trim()) {
+         errors.city = "Either Zip Code or City must be provided.";
+       } else {
+         
+         if (formData.zipCode.trim() && !/^\d{5}$/.test(formData.zipCode)) {
+           errors.zipCode = "Zip Code must be a 5-digit number.";
+         }
+       }
     }
     if (part === 2) {
       if (formData.category === "") {
-        errors.category = "Must have a category";
+        errors.category = "Select a category.";
       }
 
       if (formData.subcategory === "") {
-        errors.subcategory = "Select a subcategory";
+        errors.subcategory = "Select a subcategory.";
+      }
+      if ( !uploadedImage ) {
+        errors.uploadedImage = "Upload a logo."
       }
     }
     return errors;
   };
 
   const calculateCompletionPercentage = () => {
-    const totalFields = Object.keys(formData).length;
-    const filledFields = Object.values(formData).reduce((acc, value) => {
-      if (typeof value === "string" ? value.trim() !== "" : value !== undefined) {
+    let totalFields = Object.keys(formData).length - 1;
+    let filledFields = Object.values(formData).reduce((acc, value, index, array) => {
+      if (typeof value === "string") {
+        if (value.trim() !== "") {
+          acc++;
+        }
+      } else if (value !== undefined) {
         acc++;
       }
       return acc;
     }, 0);
 
+    if (!formData.zipCode.trim() && !formData.city.trim()) {
+      filledFields -= 1;
+    }
+
+    if (uploadedImage) {
+      filledFields += 1;
+    } else {
+      totalFields += 1;
+    }
+
     return (filledFields / totalFields) * 100;
   };
-
   const completionPercentage = calculateCompletionPercentage();
 
-  const handleNextPart = () => {
-    console.log("Current part before update:", part);
-    const newErrors = validateForm();
-    console.log("Validation errors:", newErrors);
+ const handleNextPart = async () => {
+   let newErrors = validateForm();
+   setErrors(newErrors);
 
-    setErrors(newErrors);
+   if (part === 0) {
+     const asyncErrors = await validateUserExistence(formData);
+     newErrors = {...newErrors, ...asyncErrors};
+   }
 
-    if (Object.keys(newErrors).length === 0 && part < 2) {
-      setPart((prevPart) => {
-        console.log("Updating part from:", prevPart, "to:", prevPart + 1);
-        return prevPart + 1;
-      });
-    } else {
-      console.log("Not updating part due to errors or max part reached");
+   if (Object.keys(newErrors).length === 0 && part < 2) {
+     setPart((prevPart) => prevPart + 1);
+   } else {
+     setErrors(newErrors);
+     if ( part === 0 ) { toast.error( "Please correct the errors before proceeding." ); }
+     if (part === 2 && !uploadedImage) { toast.error("Upload a logo.")}
+   }
+ };
+
+  const validateUserExistence = async (formData) => {
+    const errors = {};
+
+    if (formData.email) {
+      try {
+        await getUserExistance({attribute: "email", value: encodeURIComponent(formData.email)});
+      } catch (error) {
+        errors.email = "Email already exists.";
+      }
     }
+    if (formData.username) {
+      try {
+        let res = await getUserExistance({attribute: "username", value: formData.username});
+
+      } catch (error) {
+        errors.username = "Username already exists.";
+      }
+    }
+    if (formData.phoneNumber) {
+      try {
+        await getUserExistance({
+          attribute: "phoneNumber",
+          value: encodeURIComponent(`+1${formData.phoneNumber}`),
+        });
+      } catch (error) {
+        errors.phoneNumber = "Phone already exists.";
+      }
+    }
+
+    return errors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const phoneNumberInput = formData.phoneNumber;
     let phoneNumberWithPlus = `+${formData.phoneNumber}`;
     const phoneNumber = parsePhoneNumberFromString(phoneNumberInput);
@@ -196,24 +335,42 @@ export default function RegistrationView() {
     let signUpPayload = {
       ...formData,
       phoneNumber: phoneNumberWithPlus,
-      isAdmin: true
+      isAdmin: true,
     };
 
     try {
-      console.log('signUpPayload',signUpPayload)
-      const response = await signUp( signUpPayload );
-      console.log("response", JSON.stringify(response))
-      toast.success("welcome!");
+      const response = await signUp(signUpPayload);
+      toast.success("Welcome!");
       navigate("/admin/dashboards");
     } catch (error) {
-      console.log(error);
+      let errorMessage = "An unexpected error occurred. Please try again.";
+
+      if (error.enhancedMessage) {
+        errorMessage = error.enhancedMessage;
+      } else if (error.response && error.response.data) {
+        errorMessage = error.response.data.message || errorMessage;
+      }
+      setPart(0);
+      toast.error(errorMessage);
     }
+  };
+
+  const isFormFilled = () => {
+    const requiredFieldsFilled = Object.values(formData).every((value) => {
+      if (typeof value === "string") {
+        return value.trim() !== "";
+      }
+      return value !== undefined;
+    });
+    const locationFilled = formData.zipCode.trim() !== "" || formData.city.trim() !== "";
+    const imageUploaded = imageFile !== undefined;
+    return requiredFieldsFilled && locationFilled && imageUploaded;
   };
 
   document.title = "My Tabs - Registration";
 
   return (
-    <div className='Login-view'>
+    <div className='Login-view' ref={myRef}>
       <div className='rectangle'></div>
       <img
         style={{borderRadius: 20, top: "10%", left: "5%", position: "absolute"}}
@@ -222,7 +379,17 @@ export default function RegistrationView() {
       />
       <div className='Headers'>Registration</div>
       <div className='Container-box'>
-        <div class='already-have-an-account-log-in'>
+        {part > 0 && (
+          <div
+            className='back-reg'
+            style={{display: "flex", alignItems: "center", padding: "12px", fontStyle: "Outfit"}}>
+            <div className='registration-back' onClick={returnBack}>
+              <img style={{height: "22px"}} src={chevronIcon} alt='toggle' />
+            </div>
+            <div>Back</div>
+          </div>
+        )}
+        <div className='already-have-an-account-log-in'>
           <span>
             <span class='already-have-an-account-log-in-span'>
               Already have an account?{"        "}{" "}
@@ -243,7 +410,6 @@ export default function RegistrationView() {
                 <tr colspan='2'>
                   <td>
                     <MTBInput
-                      onBlur={() => handleBlur("email")}
                       style={{marginRight: "10px"}}
                       name='email'
                       placeholder='Email'
@@ -256,7 +422,6 @@ export default function RegistrationView() {
 
                   <td>
                     <MTBInput
-                      onBlur={() => handleBlur("username")}
                       style={{marginLeft: "10px"}}
                       name='username'
                       placeholder='Username'
@@ -270,7 +435,6 @@ export default function RegistrationView() {
               </table>
 
               <MTBInput
-                onBlur={() => handleBlur("phoneNumber")}
                 type='number'
                 name='phoneNumber'
                 placeholder='Phone'
@@ -289,7 +453,7 @@ export default function RegistrationView() {
                 onChange={handleInputChange}
                 helper={errors.password && {type: "warning", text: errors.password}}
               />
-              
+
               <MTBInput
                 onBlur={() => handleBlur("confirmPassword")}
                 name='confirmPassword'
@@ -383,7 +547,10 @@ export default function RegistrationView() {
               </div>
 
               <MTBInput
-                onBlur={() => handleBlur("zipCode")}
+                onBlur={() => {
+                  handleBlur("zipCode");
+                  handleBlur("city");
+                }}
                 type='number'
                 name='zipCode'
                 placeholder='Zip code'
@@ -401,6 +568,7 @@ export default function RegistrationView() {
               />
               <div className='or'>Or</div>
               <MTBSelector
+                onBlur={() => handleBlur("city")}
                 name={"city"}
                 placeholder='City'
                 autoComplete='city'
@@ -456,7 +624,14 @@ export default function RegistrationView() {
                 }
               />
 
-              <MTBDropZone fileType={"image"} setFile={setImageFile}></MTBDropZone>
+              <MTBDropZone
+                fileType={"image"}
+                setFile={handleSetUploadedImage} 
+                uploadedImage={uploadedImage}
+                helper={
+                  errors.uploadedImage ? {type: "warning", text: errors.uploadedImage} : undefined
+                }
+              />
             </>
           )}
         </form>
@@ -506,7 +681,7 @@ export default function RegistrationView() {
               Continue
             </MTBButton>
           )}
-          {part == 2 &&
+          {part === 2 &&
             !(
               formData.email &&
               formData.phoneNumber &&
@@ -516,7 +691,8 @@ export default function RegistrationView() {
               formData.lastName &&
               (formData.city !== "" || formData.zipCode !== "") &&
               formData.category !== "" &&
-              formData.subcategory !== ""
+              formData.subcategory !== "" &&
+              !!uploadedImage
             ) && (
               <MTBButton
                 style={{
@@ -540,7 +716,8 @@ export default function RegistrationView() {
             formData.lastName &&
             (formData.city !== "" || formData.zipCode !== "") &&
             formData.category !== "" &&
-            formData.subcategory !== "" && (
+            formData.subcategory !== "" &&
+            !!uploadedImage && (
               <MTBButton onClick={handleSubmit} isLoading={isLoading}>
                 Submit
               </MTBButton>
@@ -549,9 +726,6 @@ export default function RegistrationView() {
       </div>
       <div className='welcome-back'>Welcome!</div>
       <div className='log-in-to-your-account'>Let's create your account</div>
-      <div class='log-in-to-your-account-subtext'>
-        We’re here to guide you every step of the way
-      </div>
     </div>
   );
 }
