@@ -110,7 +110,7 @@ export default function RegistrationView() {
   }, [formData.password]);
 
   const checkExistenceDebounced = debounce(async (name, value, setErrors) => {
-    const plusSign = "%2B1";
+
     if (!value.trim()) return;
     if (name === "phoneNumber") {
       value = `1${value}`;
@@ -122,16 +122,16 @@ export default function RegistrationView() {
       const response = await getUserExistance({attribute: name, value});
 
       if (response.exists) {
-        setErrors((prevErrors) => ({...prevErrors, [name]: `${name} already taken`}));
+        setErrors((prevErrors) => ({...prevErrors, [name]: `${name} already taken.`}));
       }
     } catch (error) {
       console.error("Existence check failed:", error);
       console.error(error.enhancedMessage || "An unexpected error occurred.");
-
+      let nameText = name.charAt(0).toUpperCase() + name.slice(1);
       if (error.enhancedMessage) {
         setErrors((prevErrors) => ({
           ...prevErrors,
-          [name]: `${name=="phoneNumber"? 'phone': name} already in use`,
+          [name]: `${name=="phoneNumber"? 'Phone': nameText} already exists.`,
         }));
       }
     }
@@ -229,11 +229,11 @@ export default function RegistrationView() {
     }
     if (part === 2) {
       if (formData.category === "") {
-        errors.category = "Must have a category";
+        errors.category = "Select a category.";
       }
 
       if (formData.subcategory === "") {
-        errors.subcategory = "Select a subcategory";
+        errors.subcategory = "Select a subcategory.";
       }
     }
     return errors;
@@ -292,7 +292,7 @@ export default function RegistrationView() {
       try {
         await getUserExistance({attribute: "email", value: encodeURIComponent(formData.email)});
       } catch (error) {
-        errors.email = "Email already exists.";
+        errors.email = "Email already exists";
       }
     }
     if (formData.username) {
@@ -300,7 +300,7 @@ export default function RegistrationView() {
         let res = await getUserExistance({attribute: "username", value: formData.username});
         console.log("res", res);
       } catch (error) {
-        errors.username = "Username already exists.";
+        errors.username = "Username already exists";
       }
     }
     if (formData.phoneNumber) {
