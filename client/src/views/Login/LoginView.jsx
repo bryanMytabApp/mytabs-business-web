@@ -68,7 +68,7 @@ export default function LoginView() {
         navigate("/admin/dashboards");
       
     } catch ( error ) {
-      toast.error("invalid user and/or password");
+      toast.error("Invalid user and/or password");
       console.error(error)
       setIsLoading(false);
     }
