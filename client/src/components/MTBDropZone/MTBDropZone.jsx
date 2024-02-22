@@ -8,6 +8,15 @@ import editIcon from "../../assets/editIcon.svg";
 import dragNdropIcon from "../../assets/components/dragNdrop.svg";
 import {floodFill} from "../../utils/imageUtils";
 import "./MTBDropZone.css";
+import warning from "../../assets/warning.svg";
+import success from "../../assets/success.svg";
+import info from "../../assets/info.svg";
+
+const helperIcon = {
+  warning: warning,
+  success: success,
+  info: info,
+};
 const baseStyle = {
   flex: 1,
   display: "flex",
@@ -65,7 +74,13 @@ export const processImage = async (imageSrc, tolerance) => {
   });
 };
 
-export default function MTBDropZone({fileType, setData, setFile, uploadedImage}) {
+export default function MTBDropZone({
+  fileType,
+  setData,
+  setFile,
+  uploadedImage,
+  helper = {type: "", text: ""},
+}) {
   const [isFileUploaded, setIsFileUploaded] = useState(false);
   const [key, setKey] = useState(0);
   const acceptObj =
@@ -181,20 +196,29 @@ export default function MTBDropZone({fileType, setData, setFile, uploadedImage})
   return (
     <div className='drag-and-drop'>
       <div className='edit-delete-icons'>
+        <div></div>
+        {/* {helper?.text && !uploadedImage && (
+          <div className='dropzone-Helper-text' style={{zIndex: 2, color: "red"}}>
+            <img style={{height: "12px"}} src={helperIcon[helper.type]} alt={helper.type} />
+            <span>{helper.text}</span>
+          </div>
+        )} */}
         <img src={trashIcon} alt='trashIcon' onClick={handleTrashClick} />
       </div>
       {!uploadedImage ? (
-        <div {...getRootProps({style})}>
-          <input {...getInputProps()} key={key} />
-          <div className='drag-and-drop-labels'>
-            <img src={dragNdropIcon} alt='dragNdrop' />
-            <div>Drag and drop</div>
-            <div className='drag-and-drop-secondary-label'>
-              <div className='drag-and-drop-text'>your logo here or</div>
-              <div className='drag-and-drop-browse'>browse</div>
+        <>
+          <div {...getRootProps({style})}>
+            <input {...getInputProps()} key={key} />
+            <div className='drag-and-drop-labels'>
+              <img src={dragNdropIcon} alt='dragNdrop' />
+              <div>Drag and drop</div>
+              <div className='drag-and-drop-secondary-label'>
+                <div className='drag-and-drop-text'>your logo here or</div>
+                <div className='drag-and-drop-browse'>browse</div>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       ) : (
         <aside>
           <div className='drag-and-drop-labels'>

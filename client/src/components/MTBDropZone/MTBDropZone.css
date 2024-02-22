@@ -12,11 +12,18 @@
 
 .edit-delete-icons {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   margin-right: 10px;
   width: 100%;
 }
 
+.dropzone-Helper-text {
+  display: flex;
+  padding: 0px 8px;
+  align-items: center;
+  justify-self: flex-end;
+  gap: 8px;
+}
 .drag-and-drop-container {
   border-radius: 8px;
   border-style: dashed;
