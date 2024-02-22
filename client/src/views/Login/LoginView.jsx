@@ -144,7 +144,7 @@ export default function LoginView() {
         <div className='Footer'>
           <div style={{display: "flex", flex: 5, marginLeft: "10px", boxSizing:"border-box", alignItems: "center", paddingLeft: "20px"}}>
             <span>
-              <span class='agree-text'>By continuing, you agree to the Tabs{ " "}</span>
+              <span class='agree-text'>By continuing, you agree to My Tabs{ " "}</span>
               <span class='agree-text-underline'>terms of service</span>
               <span class='agree-text'>{" "}</span>
               <span class='agree-text'>and{" " }</span>
