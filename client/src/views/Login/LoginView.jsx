@@ -62,7 +62,8 @@ export default function LoginView() {
         localStorage.setItem( "refToken", res.RefreshToken )
         localStorage.setItem('idToken', res.IdToken)
         toast.success("Welcome!");
-        navigate("/admin/dashboards");
+        // navigate("/admin/dashboards");
+      navigate("/admin/subscription")
       
     } catch ( error ) {
       toast.error("invalid user and/or password");

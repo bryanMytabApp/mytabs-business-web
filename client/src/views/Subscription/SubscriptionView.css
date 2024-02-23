@@ -1,0 +1,120 @@
+.Subscription-view{
+  display: flex;
+  background: url("../../assets/subsImage.png");
+  background-size: cover;
+
+  width: 1440px;
+  height: 900px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.Subscription-icon {
+  position: absolute;
+  top: 10px;
+  left: 20px;
+}
+
+.Subscription-header-text {
+  display: flex;
+  flex-direction: column;
+  font-family: Outfit;
+  font-weight: 700;
+  height: 250px;
+  line-height: 72px;
+  gap: 10px;
+}
+
+.Subscription-main {
+  background-color: red;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.Subscription-options {
+ 
+  display: flex;
+  flex-direction: row;
+    width: 800px;
+    height: 400px;
+    background-color: rgba(0,0,0,0.1);
+    border-radius: 25px;
+}
+
+.selected-subscription-item {
+  flex:1;
+  background-color: #00AAD6;
+  width: 319px;
+  height: 388px;
+  border-radius: 25px;
+}
+
+.unselected-subscription-item {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.subscription-item-header{
+  background-color: #CFF4FC;
+  border-top-left-radius: 25px;
+  border-top-right-radius: 25px;
+  height: 48px;
+  color: #2E7F9C;
+  font-family: Outfit;
+  font-weight: 700;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.subscription-item-header span {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: Outfit;
+}
+
+.selected-subscription-block {
+  flex-direction: column;
+  display: flex;
+  flex:1;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0 20px;
+}
+
+.selected-subscription-item-title {
+  font-weight: 700;
+  font-family: Outfit;
+  font-size: 36px;
+  color: white;
+}
+
+.unselected-subscription-item-title {
+  font-weight: 700;
+  font-family: Outfit;
+  font-size: 46px;
+}
+
+.unselected-subscription-item-subtitle{
+  font-weight: 700;
+  font-family: Outfit;
+  font-size: 28px;
+}
+
+.selected-subscription-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.unselected-subscription-list {
+  display: flex;
+  flex-direction: column;
+    justify-content: space-around;
+    align-items:center;
+}

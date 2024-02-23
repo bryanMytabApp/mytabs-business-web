@@ -46,16 +46,17 @@ const router = createBrowserRouter([
         path: "register",
         element: <RegistrationView />,
         loader: () => routerHandler(false),
-      }, {
-        path: "subscription",
-        element: <SubscriptionView />,
-        loader: () => routerHandler(false),
       },
       {
         path: "/admin",
-        element: <HomeView />,
+        element: <SubscriptionView />,
         loader: () => routerHandler(true),
         children: [
+          {
+            path: "subscription",
+            element: <SubscriptionView />,
+            loader: () => routerHandler(true),
+          },
           {
             path: "dashboards",
             element: <Dashboard />,
