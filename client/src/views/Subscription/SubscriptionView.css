@@ -1,14 +1,18 @@
-.Subscription-view{
+.Subscription-view {
   display: flex;
   background: url("../../assets/subsImage.png");
   background-size: cover;
-
-  width: 1440px;
-  height: 900px;
+  width: 1440px ;
+  height: 900px ;
+  top: 900px ;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+
 }
+
+
+
 
 .Subscription-icon {
   position: absolute;
@@ -34,17 +38,18 @@
 }
 
 .Subscription-options {
- 
+
   display: flex;
   flex-direction: row;
-    width: 800px;
-    height: 400px;
-    background-color: rgba(0,0,0,0.1);
-    border-radius: 25px;
+  width: 800px;
+  height: 400px;
+  background: linear-gradient(102.1deg, rgba(255, 255, 255, 0.24) 6.16%, rgba(255, 255, 255, 0.015) 86.42%),
+      linear-gradient(0deg, rgba(253, 253, 253, 0.3), rgba(253, 253, 253, 0.3));
+  border-radius: 25px;
 }
 
 .selected-subscription-item {
-  flex:1;
+  flex: 1;
   background-color: #00AAD6;
   width: 319px;
   height: 388px;
@@ -59,7 +64,7 @@
   flex-direction: column;
 }
 
-.subscription-item-header{
+.subscription-item-header {
   background-color: #CFF4FC;
   border-top-left-radius: 25px;
   border-top-right-radius: 25px;
@@ -71,6 +76,7 @@
   justify-content: center;
   align-items: center;
 }
+
 .subscription-item-header span {
   display: flex;
   justify-content: center;
@@ -81,7 +87,7 @@
 .selected-subscription-block {
   flex-direction: column;
   display: flex;
-  flex:1;
+  flex: 1;
   justify-content: center;
   align-items: flex-start;
   padding: 0 20px;
@@ -100,21 +106,39 @@
   font-size: 46px;
 }
 
-.unselected-subscription-item-subtitle{
+.unselected-subscription-item-subtitle {
   font-weight: 700;
   font-family: Outfit;
   font-size: 28px;
+  display: flex;
+  justify-self: flex-start;
 }
 
 .selected-subscription-list {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: space-between;
 }
 
 .unselected-subscription-list {
   display: flex;
   flex-direction: column;
-    justify-content: space-around;
-    align-items:center;
+  justify-content: space-around;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.subscription-bullet {
+   background-color: rgba(0,180,220,0.9);
+  position:relative;
+  border-radius: 25px;
+  height: 20px;
+  width: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row;
+  flex: 1;
+
 }
