@@ -4,7 +4,7 @@ import checkIcon from "../../assets/atoms/check.svg";
 import { MTBButton } from "../../components";
 import { useNavigate } from "react-router-dom";
 
-const SubscriptionItem = ( { isSelected, price, plan, benefits, onClick } ) => {
+const SubscriptionItem = ( { isSelected, price, plan, benefits, onClick , bottomText} ) => {
   const navigation = useNavigate()
   const spanLineStyle = {
     display: "flex",
@@ -41,7 +41,7 @@ const SubscriptionItem = ( { isSelected, price, plan, benefits, onClick } ) => {
                       alt='checkmark'
                     />
                   </div>
-                  <div style={{fontFamily: "Outfit"}}>{el}</div>
+                  <div style={{fontFamily: "Outfit", color: "white"}}>{el}</div>
                 </span>
               ))}
             </div>
@@ -60,10 +60,22 @@ const SubscriptionItem = ( { isSelected, price, plan, benefits, onClick } ) => {
               maxHeight: "52px",
               width: "70%",
               alignSelf: "center",
-              marginBottom: "20px"
+              marginBottom: "20px",
             }}>
             Try Now
           </MTBButton>
+          <div
+            style={{
+              fontFamily: "Outfit",
+              fontSize: "10px",
+              color: "white",
+              width: "95%",
+              textAlign: "center",
+              marginBottom: "10px",
+              justifySelf: "flex-start"
+            }}>
+            {bottomText}
+          </div>
         </div>
       ) : (
         <div className='unselected-subscription-item'>
@@ -91,8 +103,8 @@ const SubscriptionItem = ( { isSelected, price, plan, benefits, onClick } ) => {
               </span>
             ))}
           </div>
-            <MTBButton
-              onClick={handleSelect}
+          <MTBButton
+            onClick={handleSelect}
             style={{
               borderRadius: "16px",
               width: "100%",
@@ -103,11 +115,26 @@ const SubscriptionItem = ( { isSelected, price, plan, benefits, onClick } ) => {
               whiteSpace: "nowrap",
               justifySelf: "center",
               maxHeight: "52px",
-                width: "70%"
-            
+              width: "70%",
             }}>
             Purchase
           </MTBButton>
+          <div
+            style={{
+              fontFamily: "Outfit",
+              fontSize: "10px",
+              color: "#767979",
+              width: "92%",
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                marginLeft: "auto",
+                justifyContent: "flex-start",
+              marginTop: "-35px"
+            }}>
+            {bottomText}
+          </div>
         </div>
       )}
     </>

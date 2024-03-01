@@ -1,16 +1,16 @@
-import React,{useState} from "react";
+import React, {useState} from "react";
 import "./SubscriptionView.css";
 import SubscriptionItem from "./SubscriptionItem";
 import logo from "../../assets/logo.png";
 import {Outlet, useNavigate} from "react-router-dom";
 const SubscriptionView = () => {
-  const navigation = useNavigate()
+  const navigation = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState("Basic");
-  const [ selectedPrice, setSelectedPrice ] = useState( 0 );
-  const handleSelectPlan = (plan,price) => {
-    setSelectedPlan( plan );
-    setSelectedPrice( price );
-     navigation("/subpart", {state: {plan: plan, price:price}});
+  const [selectedPrice, setSelectedPrice] = useState(0);
+  const handleSelectPlan = (plan, price) => {
+    setSelectedPlan(plan);
+    setSelectedPrice(price);
+    navigation("/subpart", {state: {plan: plan, price: price}});
   };
   return (
     <div style={{flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh"}}>
@@ -22,7 +22,7 @@ const SubscriptionView = () => {
           <div className='Subscription-header-text'>
             <span style={{fontSize: "72px", alignSelf: "center"}}>Unlock ad space</span>
             <span style={{fontSize: "36px", alignSelf: "center"}}>
-              Pick a plan that's better for you!
+              Pick a plan that best fits your business needs!
             </span>
           </div>
           <div className='Subscription-options'>
@@ -30,22 +30,38 @@ const SubscriptionView = () => {
               isSelected={selectedPlan === "Basic"}
               price={0}
               plan={"Basic"}
-              benefits={["3 ad spaces", "Benefits", "Benefits"]}
-              onClick={() => handleSelectPlan("Basic",0)}
+              benefits={[
+                "3 ad spaces",
+                "Quick Ad Tool",
+                "Ticketing Options",
+                "Generate business specific QR codes",
+              ]}
+              onClick={() => handleSelectPlan("Basic", 0)}
+              bottomText={"Plan included in cost of subscription"}
             />
             <SubscriptionItem
               isSelected={selectedPlan === "Plus"}
               price={5.99}
               plan={"Plus"}
-              benefits={["10 ad spaces", "Specialized ad space", "Benefits"]}
-              onClick={() => handleSelectPlan("Plus",5.99)}
+              benefits={["10 ad spaces", "Dedicated ad spaces", "Basic tier features included"]}
+              onClick={() => handleSelectPlan("Plus", 5.99)}
+              bottomText={
+                "Free 30 day trail then $5.99 per month + subscription.  Offer only available for first time members. Billing according to subscription regularity. Terms apply."
+              }
             />
             <SubscriptionItem
               isSelected={selectedPlan === "Premium"}
               price={10.99}
               plan={"Premium"}
-              benefits={["25 ad spaces", "Specialized ad space", "Tour/Season space included"]}
-              onClick={() => handleSelectPlan("Premium",10.99)}
+              benefits={[
+                "25 ad spaces",
+                "Tour/Season space included",
+                "Plus tier features included",
+              ]}
+              onClick={() => handleSelectPlan("Premium", 10.99)}
+              bottomText={
+                "Free 30 day trail then $10.99 per month + subscription. Offer only available for first time members. Billing according to subscription regularity.  Terms apply."
+              }
             />
           </div>
         </div>
