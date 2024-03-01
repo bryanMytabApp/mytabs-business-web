@@ -17,10 +17,7 @@ export const LoaderLogin = () => {
   return null;
 };
 
-const tempValid = {
-  username: "manager",
-  password: "Pass.word1!",
-};
+
 export default function LoginView() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
@@ -65,7 +62,8 @@ export default function LoginView() {
         localStorage.setItem( "refToken", res.RefreshToken )
         localStorage.setItem('idToken', res.IdToken)
         toast.success("Welcome!");
-        navigate("/admin/dashboards");
+      
+      navigate("/subscription")
       
     } catch ( error ) {
       toast.error("Invalid user and/or password");
