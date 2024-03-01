@@ -7,7 +7,7 @@ import RegistrationView from "../views/Login/RegistrationView";
 import Dashboard from "../views/Dashboards/Dashboard";
 import HomeView, { LoaderHome } from "../views/HomeView";
 import SubscriptionView from "../views/Subscription/SubscriptionView";
-
+import SubscriptionViewPart from "../views/Subscription/SubscriptionViewPart";
 const routerHandler = (isIntern) => {
   const _idToken = localStorage.getItem("idToken");
 
