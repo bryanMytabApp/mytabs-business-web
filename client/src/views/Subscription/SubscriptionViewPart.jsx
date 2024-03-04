@@ -99,7 +99,7 @@ const [showPaymentForm, setShowPaymentForm] = useState(false);
                 fontWeight: 700,
                 fontSize: "36px",
               }}>
-              Choose your plan
+              Choose your subscription
               <span
                 style={{
                   fontFamily: "Outfit",
