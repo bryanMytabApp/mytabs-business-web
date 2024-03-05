@@ -9,33 +9,48 @@
   flex-direction: column;
   gap: 16px;
   padding: 16px;
-  border-radius: 0px 24px 24px 0px;
   background: #FFF;
   box-shadow: 0px 4px 10px 0px rgba(0, 0, 0, 0.15);
+  width: 64px;
 }
 
 .Sidebar img {
-  width: 130px;
+  display: flex;
+  width: 40px;
+  padding: 8px;
+  justify-self: center;
 }
 
 .Sidebar .Menu {
+  display: flex;
   flex: 1;
   overflow: auto;
+  flex-direction: column;
+  justify-content: space-around;
 }
 
 .Sidebar .Menu::-webkit-scrollbar {
-  display: none;
+  display: flex;
+  flex-direction: column;
 }
 
 .Sidebar .Menu-option {
   display: flex;
-  padding: 8px;
+  padding: 16px;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 12px;
   border-radius: 20px;
   background: #FFF;
   text-decoration: none;
+  background-color: #FFF;
+  border: 1.1px solid #F2F2F7;
+  width: 32px;
+  height: 32px;
+  /* box-shadow: 0px 4.3857598304748535px 8.771519660949707px 0px #32324702; */
+  
+    box-shadow: 0px 4.3857598304748535px 4.3857598304748535px 0px #00000014;
+
 }
 
 .Sidebar .Menu-option span {
@@ -67,4 +82,14 @@
   display: flex;
   flex: 1;
   overflow: auto;
+}
+
+.Topbar {
+position: fixed;
+height: 40px;
+  background: white;
+  border-bottom: 1px #aaa solid;
+  width: 100%;
+  z-index: 1;
+  left: 96px;
 }
