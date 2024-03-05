@@ -8,16 +8,16 @@ import backArrow from "../../assets/backArrow.svg";
 import {MTBSubscriptionRateCard} from "../../components";
 import lockIcon from "../../assets/lock.svg";
 import {useStripe, useElements, CardElement} from "@stripe/react-stripe-js";
-
-const SubscriptionViewPart = ( { state } ) => {
+import {createCheckoutSession} from "../../services/paymentService";
+const SubscriptionViewPart = ({state}) => {
   const stripe = useStripe();
   const elements = useElements();
   const location = useLocation();
-  const {plan , price } = location.state || {plan: "Basic", price: 0};
+  const {plan, price} = location.state || {plan: "Basic", price: 0};
   const [selectedPaymentPlan, setSelectedPaymentPlan] = useState("monthly");
-  const [ selectedRate, setSelectedRate ] = useState( 13.99 );
+  const [selectedRate, setSelectedRate] = useState(13.99);
   const [isLoading, setIsLoading] = useState(false);
-const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   const navigation = useNavigate();
   const CARD_ELEMENT_OPTIONS = {
@@ -38,43 +38,55 @@ const [showPaymentForm, setShowPaymentForm] = useState(false);
     setShowPaymentForm(!showPaymentForm);
   };
 
-
   const handleSelectPaymentPlan = (paymentPlan, rate) => {
     setSelectedPaymentPlan(paymentPlan);
     setSelectedRate(rate);
   };
   useEffect(() => {
     console.log("SubscriptionViewPart is mounting");
-     console.log(plan, price);
-  }, [] );
-   const handleSubmit = async (event) => {
-     event.preventDefault();
-     setIsLoading(true);
+    console.log(plan, price);
+  }, []);
 
-     if (!stripe || !elements) {
-       console.log("Stripe has not loaded yet.");
-       setIsLoading(false);
-       return;
-     }
+  // TODO:
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setIsLoading(true);
 
-     const cardElement = elements.getElement(CardElement);
-     const {error, paymentMethod} = await stripe.createPaymentMethod({
-       type: "card",
-       card: cardElement,
-       billing_details: {
-       },
-     });
+    if (!stripe || !elements) {
+      console.log("Stripe has not loaded yet.");
+      setIsLoading(false);
+      return;
+    }
 
-     if (error) {
-       console.log("[Error]", error);
-       setIsLoading(false);
-     } else {
-       console.log( "[PaymentMethod]", paymentMethod );
-       navigation("/admin/dashboards")
-      
-       setIsLoading(false);
-     }
-   };
+    const cardElement = elements.getElement(CardElement);
+    const {error, paymentMethod} = await stripe.createPaymentMethod({
+      type: "card",
+      card: cardElement,
+    });
+
+    if (error) {
+      console.log("[Error]", error);
+      setIsLoading(false);
+    } else {
+      const sessionData = {
+        paymentMethodId: paymentMethod.id,
+        plan: selectedPaymentPlan,
+        price: selectedRate,
+      };
+
+      try {
+        const response = await createCheckoutSession(sessionData);
+        console.log("[response]: ", response);
+
+        console.log("Subscription creation response:", response);
+        navigation("/admin/dashboards");
+      } catch (error) {
+        console.error("Failed to create subscription:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
 
   return (
     <div className='Subscription-view'>
@@ -252,7 +264,7 @@ const [showPaymentForm, setShowPaymentForm] = useState(false);
         <div className='fullscreen-container'>
           <form
             onSubmit={handleSubmit}
-            style={{width: "500px", background: "white", padding: "20px", borderRadius: "8px"}}>
+            style={{width: "500px", background: "white", padding: "20px", borderRadius: "8px", height: "40px"}}>
             {/* Render CardElement here */}
             <CardElement options={CARD_ELEMENT_OPTIONS} />
             <button type='submit' disabled={!stripe}>
