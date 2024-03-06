@@ -49,43 +49,53 @@ const SubscriptionViewPart = ({state}) => {
 
   // TODO:
   const handleSubmit = async (event) => {
-    event.preventDefault();
-    setIsLoading(true);
+    // event.preventDefault();
+    // setIsLoading(true);
 
-    if (!stripe || !elements) {
-      console.log("Stripe has not loaded yet.");
-      setIsLoading(false);
-      return;
-    }
+    // if (!stripe || !elements) {
+    //   console.log("Stripe has not loaded yet.");
+    //   setIsLoading(false);
+    //   return;
+    // }
 
-    const cardElement = elements.getElement(CardElement);
-    const {error, paymentMethod} = await stripe.createPaymentMethod({
-      type: "card",
-      card: cardElement,
-    });
+    // const cardElement = elements.getElement(CardElement);
+    // const {error, paymentMethod} = await stripe.createPaymentMethod({
+    //   type: "card",
+    //   card: cardElement,
+    // });
 
-    if (error) {
-      console.log("[Error]", error);
-      setIsLoading(false);
-    } else {
+    // if (error) {
+    //   console.log("[Error]", error);
+    //   setIsLoading(false);
+    // } else {
       const sessionData = {
-        paymentMethodId: paymentMethod.id,
-        plan: selectedPaymentPlan,
-        price: selectedRate,
+        // paymentMethodId: paymentMethod.id,
+        // plan: selectedPaymentPlan,
+        // price: selectedRate,
+        userId: '9ef72a2c-ed05-4511-a1c9-9f4cb9dd234d',
+        subscriptionId: 'e37448c6-992f-4d0d-a3a4-9cb30c56f207'
       };
 
       try {
         const response = await createCheckoutSession(sessionData);
-        console.log("[response]: ", response);
+        const clientSecret = response.client_secret
+        console.log("🚀 ~ handleSubmit ~ clientSecret:", clientSecret)
 
-        console.log("Subscription creation response:", response);
-        navigation("/admin/dashboards");
+        const checkout = await stripe.initEmbeddedCheckout({
+          clientSecret,
+        });
+        console.log("🚀 ~ handleSubmit ~ checkout:", checkout)
+        checkout.mount('#idmamalon');
+        // console.log("[response]: ", response);
+
+        // console.log("Subscription creation response:", response);
+        // navigation("/admin/dashboards");
       } catch (error) {
         console.error("Failed to create subscription:", error);
       } finally {
         setIsLoading(false);
       }
-    }
+    // }
   };
 
   return (
@@ -235,7 +245,7 @@ const SubscriptionViewPart = ({state}) => {
               Back
             </div>
             <MTBButton
-              onClick={handleShowPaymentForm}
+              onClick={handleSubmit}
               style={{
                 borderRadius: "16px",
                 width: "100%",
@@ -279,6 +289,7 @@ const SubscriptionViewPart = ({state}) => {
       <button type='submit' disabled={!stripe || isLoading} onClick={handleShowPaymentForm}>
         {isLoading ? "Processing…" : `Subscribe for $${price + selectedRate}/year`}
       </button>
+      <div id="idmamalon"></div>
     </div>
   );
 };
