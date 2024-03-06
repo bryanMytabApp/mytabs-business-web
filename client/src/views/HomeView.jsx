@@ -8,7 +8,6 @@ import homeIcon from "../assets/menu/home.svg";
 import clientCatalogIcon from "../assets/menu/clientCatalog.svg";
 import userCatalogIcon from "../assets/menu/userCatalog.svg";
 
-
 import logout from "../assets/menu/logout.svg";
 
 import {UserDataProvider} from "../utils/UserDataProvider";
@@ -48,17 +47,20 @@ export default function HomeView() {
       <div className='HomeView'>
         <div className='Sidebar'>
           <div className='Menu'>
-            <div className='Menu-option' style={{flex: 1}}>
+            <div id='Menu-option-logo' style={{flex: 1}}>
               <img src={logo} alt='logo' />
             </div>
             <div
               style={{
-                flex: 4,
+                flex: 5,
                 backgroundColor: "#F8F9FE",
                 display: "flex",
                 flexDirection: "column",
-                justifyContent: "center",
-                gap: "10px"
+                justifyContent: "space-evenly",
+                gap: "10px",
+                padding: "4px",
+                marginTop: "32px",
+                borderRadius: "10px",
               }}>
               {options
                 .filter((item) => item.title !== "Logout")
