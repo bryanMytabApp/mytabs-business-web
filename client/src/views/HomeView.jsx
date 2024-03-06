@@ -33,7 +33,11 @@ export const LoaderHome = () => {
 
 export default function HomeView() {
   const location = useLocation();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [ isExpanded, setIsExpanded ] = useState( false );
+  
+  const handleExpand = () => {
+    setIsExpanded( !isExpanded );
+  }
   useEffect(() => {
     const selectedMenuOption = options.find(
       (x) => x.path.substring(1) === location.pathname.split("/")[1].split("-")
@@ -47,7 +51,7 @@ export default function HomeView() {
       <div className='HomeView'>
         <div className='Sidebar'>
           <div className='Menu'>
-            <div id='Menu-option-logo' style={{flex: 1}}>
+            <div id='Menu-option-logo' style={{flex: 1}} onClick={handleExpand}>
               <img src={logo} alt='logo' />
             </div>
             <div
