@@ -18,6 +18,16 @@ export const getToken = async (params) => {
   }
 };
 
+export const getUserByAttribute = async (params) => {
+  try {
+    const response = await http.post( "auth/get-user-by-attribute", params );
+    console.log("[response]", response)
+    return response.data;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
 export const forgotPassword = async (params) => {
   try {
     const response = await http.post("auth/forgotPassword", params);
