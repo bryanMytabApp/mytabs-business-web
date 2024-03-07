@@ -9,7 +9,6 @@ import {MTBSubscriptionRateCard} from "../../components";
 import lockIcon from "../../assets/lock.svg";
 import {useStripe, useElements, CardElement} from "@stripe/react-stripe-js";
 import {createCheckoutSession, getSystemSubscriptions} from "../../services/paymentService";
-import {getUserByAttribute} from "../../services/authService";
 const SubscriptionViewPart = ({state}) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -59,9 +58,6 @@ const SubscriptionViewPart = ({state}) => {
   };
 
   useEffect(() => {
-    console.log( "SubscriptionViewPart is mounting" );
-    let a = getSystemSubscriptions()
-    console.log("a:", a)
     const token = localStorage.getItem("idToken");
     userId = parseJwt(token);
     console.log(plan, price);
@@ -70,65 +66,48 @@ const SubscriptionViewPart = ({state}) => {
   // TODO:
 
   const handleSubmit = async (event) => {
-    // event.preventDefault();
-    // setIsLoading(true);
-
-    // if (!stripe || !elements) {
-    //   console.log("Stripe has not loaded yet.");
-    //   setIsLoading(false);
-    //   return;
-    // }
-
-    // const cardElement = elements.getElement(CardElement);
-    // const {error, paymentMethod} = await stripe.createPaymentMethod({
-    //   type: "card",
-    //   card: cardElement,
-    // });
-
-    // if (error) {
-    //   console.log("[Error]", error);
-    //   setIsLoading(false);
-    // } else {
+    handleShowPaymentForm();
 
     const escutiaData = {
       userId: "9ef72a2c-ed05-4511-a1c9-9f4cb9dd234d",
       subscriptionId: "e37448c6-992f-4d0d-a3a4-9cb30c56f207",
     };
-
+    const exampleDATA = {
+      userId: "84fd584b-1952-429a-a075-9c71c560d7de",
+      subscriptionId: "e37448c6-992f-4d0d-a3a4-9cb30c56f207",
+    };
     const sessionData = {
-      // paymentMethodId: paymentMethod.id,
-      // plan: selectedPaymentPlan,
-      // price: selectedRate,
       userId: userId,
       subscriptionId: "e37448c6-992f-4d0d-a3a4-9cb30c56f207",
     };
 
     try {
-      console.log("userID", userId);
-      const response = await createCheckoutSession(sessionData);
-      console.log( "🚀 ~ handleSubmit ~ response:", response );
-      if ( !response.client_secret ) {
-      throw new Error( 'No client secret returned from server' );
-    }
-      const clientSecret = response.client_secret;
-      console.log("🚀 ~ handleSubmit ~ clientSecret:", clientSecret);
+      if (userId) {
+        console.log("userID", userId);
+        const response = await createCheckoutSession(exampleDATA);
+        console.log("🚀 ~ handleSubmit ~ response:", response);
+        if (!response.client_secret) {
+          throw new Error("No client secret returned from server");
+        }
+        const clientSecret = response.client_secret;
+        console.log("🚀 ~ handleSubmit ~ clientSecret:", clientSecret);
 
-      const checkout = await stripe.initEmbeddedCheckout({
-        clientSecret,
-      });
-      console.log( "🚀 ~ handleSubmit ~ checkout:", checkout );
-      handleShowPaymentForm()
-      checkout.mount("#idmamalon");
-      // console.log("[response]: ", response);
+        const checkout = await stripe.initEmbeddedCheckout({
+          clientSecret,
+        });
+        console.log("🚀 ~ handleSubmit ~ checkout:", checkout);
+        checkout.mount("#mytabsStripe");
+        // console.log("[response]: ", response);
 
-      // console.log("Subscription creation response:", response);
-      // navigation("/admin/dashboards");
+        // console.log("Subscription creation response:", response);
+        // navigation("/admin/dashboards");
+      }
     } catch (error) {
       console.error("Failed to create subscription:", error);
+      setShowPaymentForm(false);
     } finally {
       setIsLoading(false);
     }
-    // }
   };
 
   return (
@@ -302,16 +281,7 @@ const SubscriptionViewPart = ({state}) => {
         </div>
       </div>
 
-      {/* Your form elements and subscription options */}
-     
-      <button type='submit' disabled={!stripe || isLoading} onClick={handleShowPaymentForm}>
-        {isLoading ? "Processing…" : `Subscribe for $${price + selectedRate}/year`}
-      </button>
-   
-    
-          <div id='idmamalon'></div>
-      
-      
+      {showPaymentForm && <div className='fullscreen-container' id='mytabsStripe'></div>}
     </div>
   );
 };
