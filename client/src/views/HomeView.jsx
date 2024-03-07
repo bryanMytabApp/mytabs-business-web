@@ -49,7 +49,7 @@ export default function HomeView() {
   return (
     <UserDataProvider>
       <div className='HomeView'>
-        <div className='Sidebar'>
+        <div className={isExpanded ? "Sidebar-expanded" : "Sidebar"}>
           <div className='Menu'>
             <div id='Menu-option-logo' style={{flex: 1}} onClick={handleExpand}>
               <img src={logo} alt='logo' />
@@ -69,9 +69,16 @@ export default function HomeView() {
               {options
                 .filter((item) => item.title !== "Logout")
                 .map((item) => (
-                  <NavLink key={item.path} className='Menu-option' to={item.path}>
+                  <NavLink key={item.path} className={isExpanded ? "Menu-option-expanded": "Menu-option"} to={item.path}>
                     <ReactSVG src={item.icon} />
-                    {isExpanded && <span>{item.title}</span>}
+                    {isExpanded && 
+                      <span style={{
+                        marginLeft: "16px",
+                        display: "flex",
+                        flex: 1,
+                        justifySelf: "flex-start",
+                 
+                      }}>{item.title}</span>}
                   </NavLink>
                 ))}
             </div>
@@ -82,7 +89,7 @@ export default function HomeView() {
                 backgroundColor: "#797676",
               }}></div>
             <div style={{display: "flex", flex: 0.25, paddingTop: "16px"}} className='Menu-option'>
-              <NavLink key={options[3].path} className='Menu-option' to={options[3].path}>
+              <NavLink key={options[3].path} className={isExpanded ? "Menu-option-expanded": "Menu-option"} to={options[3].path}>
                 <ReactSVG src={options[3].icon} />
                 {isExpanded && <span>{options[3].title}</span>}
               </NavLink>

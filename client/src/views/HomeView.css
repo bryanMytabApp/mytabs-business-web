@@ -14,12 +14,20 @@
   width: 64px;
   align-items: center;
   z-index: 2;
-  & hover {
-    background: #EEE;
-    width: 160px;
-  }
 }
 
+.Sidebar-expanded {
+  display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 8px;
+    background: #FFF;
+    box-shadow: 0px 0px 1px 0px rgba(0, 0, 0, 0.5);
+    width: 144px;
+    align-items: center;
+    z-index: 2;
+    
+}
 .Sidebar img {
   display: flex;
   width: 40px;
@@ -28,6 +36,13 @@
 }
 
 .Sidebar .Menu {
+  display: flex;
+  flex: 1;
+  /* overflow: auto; */
+  flex-direction: column;
+  justify-content: space-around;
+}
+.Sidebar-expanded .Menu {
   display: flex;
   flex: 1;
   /* overflow: auto; */
@@ -59,6 +74,24 @@
   padding: 4px;
 
 }
+/* .Sidebar .Menu-option-expanded {
+  display: flex;
+    padding: 8px;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    border-radius: 12px;
+    background: #FFF;
+    text-decoration: none;
+    background-color: #FFF;
+    border: 1.1px solid #F2F2F7;
+    width: 32px;
+    height: 32px;
+    box-shadow: 0px 4.3857598304748535px 8.771519660949707px 0px #32324702;
+    justify-content: center;
+    box-shadow: 0px 4.3857598304748535px 4.3857598304748535px 0px #00000014;
+    padding: 4px;
+} */
 
 #Menu-option-logo {
   display: flex;
@@ -82,10 +115,12 @@
   font-style: normal;
   font-weight: 510;
   line-height: normal;
+  
 }
 
 .Sidebar a.Menu-option.active {
   background: #F5EAEC;
+
 }
 
 .Sidebar .Menu-option:hover {
@@ -98,6 +133,7 @@
 
 .Sidebar .Menu-option.active span {
   color: #00AAD6;
+
 }
 
 .View {
@@ -114,4 +150,17 @@
   border-bottom: 1px #aaa solid;
   width: 100%;
   z-index: 1;
+}
+
+.Sidebar-expanded a.Menu-option-expanded  {
+  display: flex;
+  flex-direction: row;
+  color: #626262;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 510;
+  line-height: normal;
+  justify-content: space-between;
+  text-decoration: none;
+  align-items: center;
 }
