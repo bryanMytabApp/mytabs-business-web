@@ -8,7 +8,8 @@ import backArrow from "../../assets/backArrow.svg";
 import {MTBSubscriptionRateCard} from "../../components";
 import lockIcon from "../../assets/lock.svg";
 import {useStripe, useElements, CardElement} from "@stripe/react-stripe-js";
-import {createCheckoutSession} from "../../services/paymentService";
+import {createCheckoutSession, getSystemSubscriptions} from "../../services/paymentService";
+import {getUserByAttribute} from "../../services/authService";
 const SubscriptionViewPart = ({state}) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -18,7 +19,7 @@ const SubscriptionViewPart = ({state}) => {
   const [selectedRate, setSelectedRate] = useState(13.99);
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-
+  let userId;
   const navigation = useNavigate();
   const CARD_ELEMENT_OPTIONS = {
     style: {
@@ -42,12 +43,32 @@ const SubscriptionViewPart = ({state}) => {
     setSelectedPaymentPlan(paymentPlan);
     setSelectedRate(rate);
   };
+  const parseJwt = (token) => {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map(function (c) {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join("")
+    );
+
+    return JSON.parse(jsonPayload)["custom:user_id"];
+  };
+
   useEffect(() => {
-    console.log("SubscriptionViewPart is mounting");
+    console.log( "SubscriptionViewPart is mounting" );
+    let a = getSystemSubscriptions()
+    console.log("a:", a)
+    const token = localStorage.getItem("idToken");
+    userId = parseJwt(token);
     console.log(plan, price);
   }, []);
 
   // TODO:
+
   const handleSubmit = async (event) => {
     // event.preventDefault();
     // setIsLoading(true);
@@ -68,33 +89,45 @@ const SubscriptionViewPart = ({state}) => {
     //   console.log("[Error]", error);
     //   setIsLoading(false);
     // } else {
-      const sessionData = {
-        // paymentMethodId: paymentMethod.id,
-        // plan: selectedPaymentPlan,
-        // price: selectedRate,
-        userId: '9ef72a2c-ed05-4511-a1c9-9f4cb9dd234d',
-        subscriptionId: 'e37448c6-992f-4d0d-a3a4-9cb30c56f207'
-      };
 
-      try {
-        const response = await createCheckoutSession(sessionData);
-        const clientSecret = response.client_secret
-        console.log("🚀 ~ handleSubmit ~ clientSecret:", clientSecret)
+    const escutiaData = {
+      userId: "9ef72a2c-ed05-4511-a1c9-9f4cb9dd234d",
+      subscriptionId: "e37448c6-992f-4d0d-a3a4-9cb30c56f207",
+    };
 
-        const checkout = await stripe.initEmbeddedCheckout({
-          clientSecret,
-        });
-        console.log("🚀 ~ handleSubmit ~ checkout:", checkout)
-        checkout.mount('#idmamalon');
-        // console.log("[response]: ", response);
+    const sessionData = {
+      // paymentMethodId: paymentMethod.id,
+      // plan: selectedPaymentPlan,
+      // price: selectedRate,
+      userId: userId,
+      subscriptionId: "e37448c6-992f-4d0d-a3a4-9cb30c56f207",
+    };
 
-        // console.log("Subscription creation response:", response);
-        // navigation("/admin/dashboards");
-      } catch (error) {
-        console.error("Failed to create subscription:", error);
-      } finally {
-        setIsLoading(false);
-      }
+    try {
+      console.log("userID", userId);
+      const response = await createCheckoutSession(sessionData);
+      console.log( "🚀 ~ handleSubmit ~ response:", response );
+      if ( !response.client_secret ) {
+      throw new Error( 'No client secret returned from server' );
+    }
+      const clientSecret = response.client_secret;
+      console.log("🚀 ~ handleSubmit ~ clientSecret:", clientSecret);
+
+      const checkout = await stripe.initEmbeddedCheckout({
+        clientSecret,
+      });
+      console.log( "🚀 ~ handleSubmit ~ checkout:", checkout );
+      handleShowPaymentForm()
+      checkout.mount("#idmamalon");
+      // console.log("[response]: ", response);
+
+      // console.log("Subscription creation response:", response);
+      // navigation("/admin/dashboards");
+    } catch (error) {
+      console.error("Failed to create subscription:", error);
+    } finally {
+      setIsLoading(false);
+    }
     // }
   };
 
@@ -270,26 +303,15 @@ const SubscriptionViewPart = ({state}) => {
       </div>
 
       {/* Your form elements and subscription options */}
-      {showPaymentForm && (
-        <div className='fullscreen-container'>
-          <form
-            onSubmit={handleSubmit}
-            style={{width: "500px", background: "white", padding: "20px", borderRadius: "8px", height: "40px"}}>
-            {/* Render CardElement here */}
-            <CardElement options={CARD_ELEMENT_OPTIONS} />
-            <button type='submit' disabled={!stripe}>
-              Pay
-            </button>
-            <button type='button' onClick={handleShowPaymentForm}>
-              Cancel
-            </button>
-          </form>
-        </div>
-      )}
+     
       <button type='submit' disabled={!stripe || isLoading} onClick={handleShowPaymentForm}>
         {isLoading ? "Processing…" : `Subscribe for $${price + selectedRate}/year`}
       </button>
-      <div id="idmamalon"></div>
+   
+    
+          <div id='idmamalon'></div>
+      
+      
     </div>
   );
 };

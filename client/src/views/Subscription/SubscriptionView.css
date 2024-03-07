@@ -189,15 +189,23 @@
 }
 /* Inside SubscriptionView.css or another relevant CSS file */
 .fullscreen-container {
+
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  top: 25vh;
+  left: 25vw;
+  width: 20vw;
+  height: 50vh;
+  border-radius: 15px;
   display: flex;
   justify-content: center;
   align-items: center;
   background-color: rgba(0, 0, 0, 0.5);
   z-index: 1000;
-  /* Ensures it appears above other content */
+}
+#idmamalon {
+  /* align-items: center;
+  justify-content: center;
+  display: flex;
+  justify-self: center; */
+  width: 20;
 }
