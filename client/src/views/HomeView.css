@@ -68,13 +68,12 @@
   border: 1.1px solid #F2F2F7;
   width: 32px;
   height: 32px;
-  /* box-shadow: 0px 4.3857598304748535px 8.771519660949707px 0px #32324702; */
   justify-content: center;
   box-shadow: 0px 4.3857598304748535px 4.3857598304748535px 0px #00000014;
   padding: 4px;
 
 }
-/* .Sidebar .Menu-option-expanded {
+.Sidebar .Menu-option-expanded {
   display: flex;
     padding: 8px;
     flex-direction: column;
@@ -87,11 +86,11 @@
     border: 1.1px solid #F2F2F7;
     width: 32px;
     height: 32px;
-    box-shadow: 0px 4.3857598304748535px 8.771519660949707px 0px #32324702;
+    
     justify-content: center;
-    box-shadow: 0px 4.3857598304748535px 4.3857598304748535px 0px #00000014;
+      box-shadow: 0px 4.3857598304748535px 8.771519660949707px 0px #32324702;
     padding: 4px;
-} */
+} 
 
 #Menu-option-logo {
   display: flex;
@@ -109,9 +108,9 @@
     /* box-shadow: 0px 4.3857598304748535px 4.3857598304748535px 0px #00000014; */
     padding: 4px;
 }
-.Sidebar .Menu-option span {
+.Sidebar, .Sidebar-expanded .Menu-option span {
   color: #626262;
-  font-size: 16px;
+  font-size: 14px;
   font-style: normal;
   font-weight: 510;
   line-height: normal;
@@ -120,11 +119,12 @@
 
 .Sidebar a.Menu-option.active {
   background: #F5EAEC;
+  
 
 }
 
 .Sidebar .Menu-option:hover {
-  background: rgba(144, 211, 224, 0.6);
+  background: rgba(211, 211, 224, 0.1);
 }
 
 .Sidebar .Menu-option.active path {
@@ -141,6 +141,7 @@
   display: flex;
   flex: 1;
   overflow: auto;
+  margin-top: 40px;;
 }
 
 .Topbar {
@@ -152,15 +153,21 @@
   z-index: 1;
 }
 
-.Sidebar-expanded a.Menu-option-expanded  {
+.Sidebar-expanded a.Menu-option-expanded, a.Menu-option  {
   display: flex;
   flex-direction: row;
   color: #626262;
-  font-size: 16px;
+  font-size: 14px;
   font-style: normal;
   font-weight: 510;
   line-height: normal;
   justify-content: space-between;
   text-decoration: none;
   align-items: center;
+}
+
+.Sidebar-expanded a.Menu-option{
+  background-color: white;
+  border-radius: 10px;
+  padding: 5px 2px;
 }

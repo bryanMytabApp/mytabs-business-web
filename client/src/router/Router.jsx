@@ -8,6 +8,9 @@ import Dashboard from "../views/Dashboards/Dashboard";
 import HomeView, { LoaderHome } from "../views/HomeView";
 import SubscriptionView from "../views/Subscription/SubscriptionView";
 import SubscriptionViewPart from "../views/Subscription/SubscriptionViewPart";
+import HomeMainView from "../views/HomeMain/HomeMainView";
+import ClientCatalogView from "../views/ClientCatalog/ClientCatalogView";
+import UserCatalogView from "../views/UserCatalog/UserCatalogView";
 const routerHandler = (isIntern) => {
   const _idToken = localStorage.getItem("idToken");
 
@@ -52,6 +55,21 @@ const router = createBrowserRouter([
           {
             path: "dashboards",
             element: <Dashboard />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "home",
+            element: <HomeMainView />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "client-catalog",
+            element: <ClientCatalogView />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "user-catalog",
+            element: <UserCatalogView />,
             loader: () => routerHandler(true),
           },
         ],
