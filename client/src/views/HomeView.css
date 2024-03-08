@@ -8,23 +8,51 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px;
-  border-radius: 0px 24px 24px 0px;
+  padding: 8px;
   background: #FFF;
-  box-shadow: 0px 4px 10px 0px rgba(0, 0, 0, 0.15);
+  box-shadow: 0px 0px 1px 0px rgba(0, 0, 0, 0.5);
+  width: 64px;
+  align-items: center;
+  z-index: 2;
 }
 
+.Sidebar-expanded {
+  display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 8px;
+    background: #FFF;
+    box-shadow: 0px 0px 1px 0px rgba(0, 0, 0, 0.5);
+    width: 144px;
+    align-items: center;
+    z-index: 2;
+    
+}
 .Sidebar img {
-  width: 130px;
+  display: flex;
+  width: 40px;
+  padding: 8px;
+  justify-self: center;
 }
 
 .Sidebar .Menu {
+  display: flex;
   flex: 1;
-  overflow: auto;
+  /* overflow: auto; */
+  flex-direction: column;
+  justify-content: space-around;
+}
+.Sidebar-expanded .Menu {
+  display: flex;
+  flex: 1;
+  /* overflow: auto; */
+  flex-direction: column;
+  justify-content: space-around;
 }
 
 .Sidebar .Menu::-webkit-scrollbar {
-  display: none;
+  display: flex;
+  flex-direction: column;
 }
 
 .Sidebar .Menu-option {
@@ -32,26 +60,71 @@
   padding: 8px;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  border-radius: 20px;
+  gap: 12px;
+  border-radius: 12px;
   background: #FFF;
   text-decoration: none;
-}
+  background-color: #FFF;
+  border: 1.1px solid #F2F2F7;
+  width: 32px;
+  height: 32px;
+  justify-content: center;
+  box-shadow: 0px 4.3857598304748535px 4.3857598304748535px 0px #00000014;
+  padding: 4px;
 
-.Sidebar .Menu-option span {
+}
+.Sidebar .Menu-option-expanded {
+  display: flex;
+    padding: 8px;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    border-radius: 12px;
+    background: #FFF;
+    text-decoration: none;
+    background-color: #FFF;
+    border: 1.1px solid #F2F2F7;
+    width: 32px;
+    height: 32px;
+    
+    justify-content: center;
+      box-shadow: 0px 4.3857598304748535px 8.771519660949707px 0px #32324702;
+    padding: 4px;
+} 
+
+#Menu-option-logo {
+  display: flex;
+    padding: 8px;
+
+    gap: 12px;
+    background: #FFF;
+    text-decoration: none;
+    background-color: #FFF;
+    /* border: 1.1px solid #F2F2F7; */
+    width: 48px;
+    height: 48px;
+    /* box-shadow: 0px 4.3857598304748535px 8.771519660949707px 0px #32324702; */
+    justify-content: flex-start;
+    /* box-shadow: 0px 4.3857598304748535px 4.3857598304748535px 0px #00000014; */
+    padding: 4px;
+}
+.Sidebar, .Sidebar-expanded .Menu-option span {
   color: #626262;
-  font-size: 16px;
+  font-size: 14px;
   font-style: normal;
   font-weight: 510;
   line-height: normal;
+  
 }
 
 .Sidebar a.Menu-option.active {
   background: #F5EAEC;
+  
+
 }
 
 .Sidebar .Menu-option:hover {
-  background: rgba(144, 211, 224, 0.6);
+  background: rgba(211, 211, 224, 0.1);
 }
 
 .Sidebar .Menu-option.active path {
@@ -60,6 +133,7 @@
 
 .Sidebar .Menu-option.active span {
   color: #00AAD6;
+
 }
 
 .View {
@@ -67,4 +141,33 @@
   display: flex;
   flex: 1;
   overflow: auto;
+  margin-top: 40px;;
+}
+
+.Topbar {
+  position: fixed;
+  height: 80px;
+  background: white;
+  border-bottom: 1px #aaa solid;
+  width: 100%;
+  z-index: 1;
+}
+
+.Sidebar-expanded a.Menu-option-expanded, a.Menu-option  {
+  display: flex;
+  flex-direction: row;
+  color: #626262;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 510;
+  line-height: normal;
+  justify-content: space-between;
+  text-decoration: none;
+  align-items: center;
+}
+
+.Sidebar-expanded a.Menu-option{
+  background-color: white;
+  border-radius: 10px;
+  padding: 5px 2px;
 }

@@ -1,22 +1,22 @@
 import React from "react";
 import "./SubscriptionView.css";
 import checkIcon from "../../assets/atoms/check.svg";
-import { MTBButton } from "../../components";
-import { useNavigate } from "react-router-dom";
+import {MTBButton} from "../../components";
+import {useNavigate} from "react-router-dom";
 
-const SubscriptionItem = ( { isSelected, price, plan, benefits, onClick , bottomText} ) => {
-  const navigation = useNavigate()
+const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomText}) => {
+  const navigation = useNavigate();
   const spanLineStyle = {
     display: "flex",
     flexDirection: "row",
     justifyContent: "flex-start",
     position: "relative",
     gap: "10px",
-    marginTop: "12px"
+    marginTop: "12px",
   };
   const handleSelect = () => {
-    navigation('/subpart', { state: {plan, price}})
-  }
+    navigation("/subpart", {state: {plan, price}});
+  };
   return (
     <>
       {isSelected ? (
@@ -72,7 +72,7 @@ const SubscriptionItem = ( { isSelected, price, plan, benefits, onClick , bottom
               width: "95%",
               textAlign: "center",
               marginBottom: "10px",
-              justifySelf: "flex-start"
+              justifySelf: "flex-start",
             }}>
             {bottomText}
           </div>
@@ -125,13 +125,13 @@ const SubscriptionItem = ( { isSelected, price, plan, benefits, onClick , bottom
               fontSize: "10px",
               color: "#767979",
               width: "92%",
-                textAlign: "center",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                marginLeft: "auto",
-                justifyContent: "flex-start",
-              marginTop: "-35px"
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              marginLeft: "auto",
+              justifyContent: "flex-start",
+              marginTop: "-35px",
             }}>
             {bottomText}
           </div>
