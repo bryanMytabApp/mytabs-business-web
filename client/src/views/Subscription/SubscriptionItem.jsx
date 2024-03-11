@@ -4,7 +4,7 @@ import checkIcon from "../../assets/atoms/check.svg";
 import {MTBButton} from "../../components";
 import {useNavigate} from "react-router-dom";
 
-const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomText}) => {
+const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomText, isSuccess=false}) => {
   const navigation = useNavigate();
   const spanLineStyle = {
     display: "flex",
@@ -15,7 +15,12 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
     marginTop: "12px",
   };
   const handleSelect = () => {
-    navigation("/subpart", {state: {plan, price}});
+    if ( !isSuccess ) {
+      
+      navigation("/subpart", {state: {plan, price}});
+    } else {
+      navigation("/admin")
+    }
   };
   return (
     <>
@@ -109,7 +114,7 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
               borderRadius: "16px",
               width: "100%",
               flex: 1,
-              backgroundColor: "#231D4F",
+              backgroundColor: isSuccess ? "#F09925":"#231D4F",
               fontFamily: "Outfit",
               display: "inline",
               whiteSpace: "nowrap",
@@ -117,7 +122,7 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
               maxHeight: "52px",
               width: "70%",
             }}>
-            Purchase
+            {!isSuccess ? "Purchase" : "Continue!"}
           </MTBButton>
           <div
             style={{

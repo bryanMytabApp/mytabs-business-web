@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react";
-import {useNavigate, useLocation} from "react-router-dom";
+import {useNavigate, useLocation, useParams} from "react-router-dom";
 import "./SubscriptionView.css";
 import mobileMTB from "../../assets/mobileMTB.png";
 import logo from "../../assets/logo.png";
@@ -9,7 +9,9 @@ import {MTBSubscriptionRateCard} from "../../components";
 import lockIcon from "../../assets/lock.svg";
 import {useStripe, useElements, CardElement} from "@stripe/react-stripe-js";
 import {createCheckoutSession, getSystemSubscriptions} from "../../services/paymentService";
+let userId;
 const SubscriptionViewPart = ({state}) => {
+  const {sessionId} = useParams();
   const stripe = useStripe();
   const elements = useElements();
   const location = useLocation();
@@ -18,7 +20,8 @@ const SubscriptionViewPart = ({state}) => {
   const [selectedRate, setSelectedRate] = useState(13.99);
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-  let userId;
+  const [systemSubscriptions, setSystemSubscriptions] = useState([]);
+
   const navigation = useNavigate();
   const CARD_ELEMENT_OPTIONS = {
     style: {
@@ -58,15 +61,39 @@ const SubscriptionViewPart = ({state}) => {
   };
 
   useEffect(() => {
+    const fetchSystemSubscriptions = async () => {
+      try {
+        const response = await getSystemSubscriptions();
+        if (response.data) {
+          setSystemSubscriptions(response.data);
+        } else {
+          console.log("No data received from getSystemSubscriptions");
+        }
+      } catch (error) {
+        console.error("Failed to fetch system subscriptions:", error);
+      }
+    };
+
+    fetchSystemSubscriptions();
     const token = localStorage.getItem("idToken");
     userId = parseJwt(token);
-    console.log(plan, price);
   }, []);
 
   // TODO:
 
+  const getPaymentSubscriptionId = (_plan, paymentMethod) => {
+    let res = systemSubscriptions.find((subscription) => {
+      return (
+        subscription.name.toLowerCase() ===
+        `${_plan.toLowerCase()} ${paymentMethod.toLowerCase()} subscription`
+      );
+    })._id;
+    return res;
+  };
   const handleSubmit = async (event) => {
     handleShowPaymentForm();
+
+    const subscriptionId = getPaymentSubscriptionId(plan, selectedPaymentPlan);
 
     const escutiaData = {
       userId: "9ef72a2c-ed05-4511-a1c9-9f4cb9dd234d",
@@ -78,12 +105,16 @@ const SubscriptionViewPart = ({state}) => {
     };
     const sessionData = {
       userId: userId,
-      subscriptionId: "e37448c6-992f-4d0d-a3a4-9cb30c56f207",
+      subscriptionId: subscriptionId,
     };
 
     try {
-      if (userId) {
+      if (!userId || !subscriptionId) {
+        throw new Error("User not found and sessionID ");
+      }
+      if (userId && subscriptionId) {
         console.log("userID", userId);
+        console.log("subscriptionIID", subscriptionId);
         const response = await createCheckoutSession(exampleDATA);
         console.log("🚀 ~ handleSubmit ~ response:", response);
         if (!response.client_secret) {
@@ -96,11 +127,12 @@ const SubscriptionViewPart = ({state}) => {
           clientSecret,
         });
         console.log("🚀 ~ handleSubmit ~ checkout:", checkout);
+        let paymentData = {
+          price: price + selectedRate,
+          plan: plan,
+        };
+        localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
         checkout.mount("#mytabsStripe");
-        // console.log("[response]: ", response);
-
-        // console.log("Subscription creation response:", response);
-        // navigation("/admin/dashboards");
       }
     } catch (error) {
       console.error("Failed to create subscription:", error);

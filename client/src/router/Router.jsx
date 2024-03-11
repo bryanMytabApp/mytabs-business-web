@@ -11,6 +11,7 @@ import SubscriptionViewPart from "../views/Subscription/SubscriptionViewPart";
 import HomeMainView from "../views/HomeMain/HomeMainView";
 import ClientCatalogView from "../views/ClientCatalog/ClientCatalogView";
 import UserCatalogView from "../views/UserCatalog/UserCatalogView";
+import SubscriptionSuccess from "../views/Subscription/SubscriptionSuccess";
 const routerHandler = (isIntern) => {
   const _idToken = localStorage.getItem("idToken");
 
@@ -46,6 +47,20 @@ const router = createBrowserRouter([
         path: "subpart",
         element: <SubscriptionViewPart />,
         // loader: () => routerHandler(true),
+      },
+      {
+        path: "success",
+        element: <SubscriptionSuccess />,
+        //   loader: async ({ params }) => {
+        //     console.log(params.sessionId);
+        // },
+      },
+      {
+        path: "success/session_id=:sessionId",
+        element: <SubscriptionSuccess />,
+        //   loader: async ({ params }) => {
+        //     console.log(params.sessionId);
+        // },
       },
       {
         path: "/admin",
