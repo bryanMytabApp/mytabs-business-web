@@ -1,7 +1,7 @@
 import React, {useState, useEffect, useCallback, useRef} from "react";
 import logo from "../../assets/logo.png";
 import "./LoginView.css";
-import {MTBButton, MTBInput, MTBSelector, MTBInputValidator} from "../../components";
+import {MTBButton, MTBInput, MTBSelector, MTBInputValidator, MTBCategorySelector} from "../../components";
 import MTBDropZone from "../../components/MTBDropZone/MTBDropZone";
 import {toast} from "react-toastify";
 import {useNavigate} from "react-router-dom";
@@ -49,7 +49,7 @@ export default function RegistrationView() {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
-  const [part, setPart] = useState(0);
+  const [part, setPart] = useState(2);
   const firstHeaderText = ["Create your account", "Personal Info", "Business information"];
   const secondHeaderText = "Where are you located?";
 
@@ -285,7 +285,7 @@ export default function RegistrationView() {
      newErrors = {...newErrors, ...asyncErrors};
    }
 
-   if (Object.keys(newErrors).length === 0 && part < 2) {
+   if (Object.keys(newErrors).length === 0 && part < 3) {
      setPart((prevPart) => prevPart + 1);
    } else {
      setErrors(newErrors);
@@ -623,16 +623,18 @@ export default function RegistrationView() {
                   }
                 }
               />
-
-              <MTBDropZone
-                fileType={"image"}
-                setFile={handleSetUploadedImage} 
-                uploadedImage={uploadedImage}
-                helper={
-                  errors.uploadedImage ? {type: "warning", text: errors.uploadedImage} : undefined
-                }
-              />
+              <MTBCategorySelector/>
             </>
+          )}
+          {part === 3 && (
+            <MTBDropZone
+              fileType={"image"}
+              setFile={handleSetUploadedImage}
+              uploadedImage={uploadedImage}
+              helper={
+                errors.uploadedImage ? {type: "warning", text: errors.uploadedImage} : undefined
+              }
+            />
           )}
         </form>
         <div
@@ -681,7 +683,25 @@ export default function RegistrationView() {
               Continue
             </MTBButton>
           )}
-          {part === 2 &&
+          {part === 2 && (
+            <MTBButton
+              style={{
+                borderRadius: "16px",
+                width: "10px",
+                flex: 1,
+                backgroundColor:
+                  formData.firstName &&
+                  formData.lastName &&
+                  (formData.city !== "" || formData.zipCode !== "")
+                    ? "#F18926"
+                    : "#D9D9D9",
+              }}
+              onClick={handleNextPart}
+              isLoading={isLoading}>
+              Continue
+            </MTBButton>
+          )}
+          {part === 3 &&
             !(
               formData.email &&
               formData.phoneNumber &&
@@ -707,7 +727,7 @@ export default function RegistrationView() {
                 Continue
               </MTBButton>
             )}
-          {part === 2 &&
+          {part === 3 &&
             formData.email &&
             formData.phoneNumber &&
             formData.password &&

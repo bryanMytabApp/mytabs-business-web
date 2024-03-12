@@ -1,0 +1,113 @@
+{
+  "Bar": [
+    "Wine bar",
+    "Sports Bar",
+    "Bar & Grill",
+    "Dive Bar"
+  ],
+  "Club": [
+    "Beach Club",
+    "Night Club",
+    "Comedy Club",
+    "Jazz club",
+    "Yacht club",
+    "Youth club",
+    "Strip Club",
+    "Social club"
+  ],
+  "Event Center": [],
+  "Restaurant": [
+    "American restaurant",
+    "Italian restaurant",
+    "Steakhouse",
+    "Korean restaurant",
+    "Tex Mex restaurant",
+    "Taqueria"
+  ],
+  "Café": [],
+  "School": [
+    "Elementary School",
+    "Middle school",
+    "High School",
+    "Jr. High School"
+  ],
+  "Venue": [],
+  "Church": [],
+  "Night Life": [],
+  "Sports": [
+    "Football",
+    "Basketball",
+    "Soccer",
+    "Softball",
+    "Baseball",
+    "Hockey",
+    "Swimming",
+    "Track",
+    "Bowling"
+  ],
+  "Symphony": [],
+  "League": [
+    "Little League",
+    "Youth league",
+    "Men’s League",
+    "Woman’s league"
+  ],
+  "Library": [],
+  "Lounge": [],
+  "Lodge": [],
+  "Food Truck": [],
+  "Concert Hall": [],
+  "Stadium": [],
+  "Music": [
+    "Hip-Hop",
+    "Pop",
+    "R&B",
+    "Country",
+    "Jazz",
+    "Blues",
+    "Reggae",
+    "Reggaeton",
+    "Classical"
+  ],
+  "Theater": [],
+  "Store": [],
+  "Artist": [
+    "Music",
+    "Artwork"
+  ],
+  "Museum": [
+    "Art",
+    "Science",
+    "History"
+  ],
+  "Class": [
+    "Cooking"
+  ],
+  "Ministry": [],
+  "Synagogue": [],
+  "University": [],
+  "Coach": [],
+  "Gym": [],
+  "Entertainer": [],
+  "Hair Salon": [],
+  "Pub": [],
+  "Amusement Park": [],
+  "Park": [],
+  "Charity": [],
+  "Dance Hall": [],
+  "Arena": [],
+  "Arcade": [],
+  "After Hours": [],
+  "Ballet": [],
+  "Brewery": [],
+  "Bingo Hall": [],
+  "Circus": [],
+  "Coffee Shop": [],
+  "Kids": [],
+  "Gaming": [],
+  "Zoo": [],
+  "Diner": [],
+  "Exhibit": [],
+  "Exhibition": [],
+  "Health": []
+}

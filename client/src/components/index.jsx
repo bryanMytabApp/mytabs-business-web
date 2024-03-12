@@ -5,6 +5,7 @@ import MTBSelector from "./MTBSelector/MTBSelector";
 import MTBDropZone from "./MTBDropZone/MTBDropZone";
 import MTBInputValidator from "./MTBInputValidator/MTBInputValidator";
 import MTBSubscriptionRateCard from "./MTBSubscriptionRateCard/MTBSubscriptionRateCard";
+import MTBCategorySelector from "./MTBCategorySelector/MTBCategorySelector";
 
 export {
   MTBButton,
@@ -13,5 +14,6 @@ export {
   MTBSelector,
   MTBDropZone,
   MTBInputValidator,
-  MTBSubscriptionRateCard
+  MTBSubscriptionRateCard,
+  MTBCategorySelector
 }

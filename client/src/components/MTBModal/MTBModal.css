@@ -1,0 +1,54 @@
+.MTB-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+
+}
+
+.MTB-modal-content {
+  display: flex;
+  background-color: white;
+  padding: 20px;
+  border-radius: 25px;
+  max-width: 500px;
+  width: 100%;
+  height: 500px;
+  align-items: center;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.MTB-modal-first {
+  flex: 1;
+  display: flex;
+
+  flex-direction: column;
+  justify-content : center;
+  align-items: center;
+}
+
+.MTB-modal-second {
+  flex: 1;
+  display: flex;  
+  flex-direction: column;
+
+  justify-content: center;
+    align-items: center;
+    font-family: Outfit;
+    font-size: 20px;
+}
+
+.MTB-modal-third {
+  flex: 1;
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+}
