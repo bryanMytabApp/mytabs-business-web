@@ -52,7 +52,7 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
             </div>
           </div>
           <MTBButton
-            onClick={handleSelect}
+            onClick={onClick}
             style={{
               borderRadius: "16px",
               width: "100%",
@@ -109,7 +109,7 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
             ))}
           </div>
           <MTBButton
-            onClick={handleSelect}
+            onClick={onClick}
             style={{
               borderRadius: "16px",
               width: "100%",

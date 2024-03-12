@@ -7,20 +7,20 @@ import {MTBButton} from "../../components";
 import backArrow from "../../assets/backArrow.svg";
 import {MTBSubscriptionRateCard} from "../../components";
 import lockIcon from "../../assets/lock.svg";
-import {useStripe, useElements, CardElement} from "@stripe/react-stripe-js";
-import {createCheckoutSession, getSystemSubscriptions} from "../../services/paymentService";
+import {useStripe, useElements} from "@stripe/react-stripe-js";
+import {createCheckoutSession} from "../../services/paymentService";
+
 let userId;
 const SubscriptionViewPart = ({state}) => {
   const {sessionId} = useParams();
   const stripe = useStripe();
-  const elements = useElements();
   const location = useLocation();
-  const {plan, price} = location.state || {plan: "Basic", price: 0};
+  const {plan, price, paymentArray} = location.state || {plan: "Basic", price: 0, paymentArray: []};
   const [selectedPaymentPlan, setSelectedPaymentPlan] = useState("monthly");
   const [selectedRate, setSelectedRate] = useState(13.99);
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [systemSubscriptions, setSystemSubscriptions] = useState([]);
+
 
   const navigation = useNavigate();
   const CARD_ELEMENT_OPTIONS = {
@@ -61,48 +61,23 @@ const SubscriptionViewPart = ({state}) => {
   };
 
   useEffect(() => {
-    const fetchSystemSubscriptions = async () => {
-      try {
-        const response = await getSystemSubscriptions();
-        if (response.data) {
-          setSystemSubscriptions(response.data);
-        } else {
-          console.log("No data received from getSystemSubscriptions");
-        }
-      } catch (error) {
-        console.error("Failed to fetch system subscriptions:", error);
-      }
-    };
-
-    fetchSystemSubscriptions();
     const token = localStorage.getItem("idToken");
     userId = parseJwt(token);
   }, []);
 
-  // TODO:
 
-  const getPaymentSubscriptionId = (_plan, paymentMethod) => {
-    let res = systemSubscriptions.find((subscription) => {
-      return (
-        subscription.name.toLowerCase() ===
-        `${_plan.toLowerCase()} ${paymentMethod.toLowerCase()} subscription`
-      );
+  const getPaymentSubscriptionId = (paymentMethod) => {
+    let res = paymentArray.find((subscription) => {
+      return subscription.sublevel === paymentMethod;
     })._id;
     return res;
   };
+
   const handleSubmit = async (event) => {
     handleShowPaymentForm();
 
-    const subscriptionId = getPaymentSubscriptionId(plan, selectedPaymentPlan);
+    const subscriptionId = getPaymentSubscriptionId(selectedPaymentPlan);
 
-    const escutiaData = {
-      userId: "9ef72a2c-ed05-4511-a1c9-9f4cb9dd234d",
-      subscriptionId: "e37448c6-992f-4d0d-a3a4-9cb30c56f207",
-    };
-    const exampleDATA = {
-      userId: "84fd584b-1952-429a-a075-9c71c560d7de",
-      subscriptionId: "e37448c6-992f-4d0d-a3a4-9cb30c56f207",
-    };
     const sessionData = {
       userId: userId,
       subscriptionId: subscriptionId,
@@ -115,7 +90,7 @@ const SubscriptionViewPart = ({state}) => {
       if (userId && subscriptionId) {
         console.log("userID", userId);
         console.log("subscriptionIID", subscriptionId);
-        const response = await createCheckoutSession(exampleDATA);
+        const response = await createCheckoutSession(sessionData);
         console.log("🚀 ~ handleSubmit ~ response:", response);
         if (!response.client_secret) {
           throw new Error("No client secret returned from server");
@@ -150,7 +125,7 @@ const SubscriptionViewPart = ({state}) => {
           flexDirection: "row",
           justifyContent: "space-around",
           alignItems: "center",
-          width: "100%",
+         
         }}
         className='Subcrition-main'>
         <div style={{display: "flex"}} className='Subscription-options-rates'>
