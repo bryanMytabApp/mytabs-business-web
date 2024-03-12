@@ -2,7 +2,7 @@ import React, {useEffect, useState} from "react";
 import "./SubscriptionView.css";
 import SubscriptionItem from "./SubscriptionItem";
 import logo from "../../assets/logo.png";
-import {Outlet, redirect, useNavigate} from "react-router-dom";
+import { useNavigate} from "react-router-dom";
 const SubscriptionSuccess = () => {
   const navigation = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState("Basic");
@@ -15,7 +15,6 @@ const SubscriptionSuccess = () => {
 
   useEffect(() => {
     let planData = JSON.parse(localStorage.getItem("checkoutResult"));
-    console.log(planData);
     setSelectedPlan(planData.plan);
     setSelectedPrice(planData.price);
   }, []);
@@ -39,7 +38,7 @@ const SubscriptionSuccess = () => {
               price={selectedPrice}
               plan={selectedPlan}
               benefits={["Upgrade anytime!"]}
-              onClick={() => redirect("/admin")}
+              onClick={() => navigation("/admin")}
             />
           </div>
         </div>

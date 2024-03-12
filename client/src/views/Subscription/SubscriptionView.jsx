@@ -1,16 +1,42 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import "./SubscriptionView.css";
 import SubscriptionItem from "./SubscriptionItem";
 import logo from "../../assets/logo.png";
-import {Outlet, useNavigate} from "react-router-dom";
+import { useNavigate} from "react-router-dom";
+import {getSystemSubscriptions} from "../../services/paymentService";
+
 const SubscriptionView = () => {
   const navigation = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState("Basic");
   const [selectedPrice, setSelectedPrice] = useState(0);
+  const [systemSubscriptions, setSystemSubscriptions] = useState([]);
+  const [paymentArray, setPaymentArray] = useState([]);
+  useEffect(() => {
+    const fetchSystemSubscriptions = async () => {
+      try {
+        const response = await getSystemSubscriptions();
+        if (response.data) {
+          setSystemSubscriptions(response.data);
+        } else {
+          console.log("No data received from getSystemSubscriptions");
+        }
+      } catch (error) {
+        console.error("Failed to fetch system subscriptions:", error);
+      }
+    };
+    fetchSystemSubscriptions();
+   
+  }, []);
+
+
   const handleSelectPlan = (plan, price) => {
+    const planMap = {Basic: 1, Plus: 2, Premium: 3};
+    const subsFiltered = systemSubscriptions.filter( ( sub ) => sub.level === planMap[ plan ] );
+  
+    setPaymentArray(subsFiltered);
     setSelectedPlan(plan);
     setSelectedPrice(price);
-    navigation("/subpart", {state: {plan: plan, price: price}});
+     navigation("/subpart", {state: {plan: plan, price: price, paymentArray: subsFiltered}});
   };
   return (
     <div style={{flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh"}}>

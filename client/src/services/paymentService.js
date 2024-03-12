@@ -19,7 +19,6 @@ export const createCheckoutSession = async (sessionData) => {
 export const getSystemSubscriptions = async () => {
   try {
     const response = await http.get( "payments/subscription/all" );
-    console.log("System Subscriptions:", response);
     return response;
   } catch ( error ) {
     console.error("Error getting system subscriptions", error.response || error)
