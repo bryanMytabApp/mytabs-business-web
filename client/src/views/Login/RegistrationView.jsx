@@ -341,7 +341,7 @@ export default function RegistrationView() {
     try {
       const response = await signUp(signUpPayload);
       toast.success("Welcome!");
-      navigate("/admin/dashboards");
+      navigate("/subscription");
     } catch (error) {
       let errorMessage = "An unexpected error occurred. Please try again.";
 
