@@ -339,7 +339,10 @@ export default function RegistrationView() {
     };
 
     try {
-      const response = await signUp(signUpPayload);
+      const response = await signUp( signUpPayload );
+      console.log("'response salvador", response)
+      // let res = await getToken( { username: formData.username.trim(), password: formData.password } );
+       localStorage.setItem("idToken", response.IdToken);
       toast.success("Welcome!");
       navigate("/subscription");
     } catch (error) {

@@ -66,7 +66,8 @@ const SubscriptionViewPart = ({state}) => {
   }, []);
 
 
-  const getPaymentSubscriptionId = (paymentMethod) => {
+  const getPaymentSubscriptionId = ( paymentMethod ) => {
+   
     let res = paymentArray.find((subscription) => {
       return subscription.sublevel === paymentMethod;
     })._id;
@@ -88,8 +89,7 @@ const SubscriptionViewPart = ({state}) => {
         throw new Error("User not found and sessionID ");
       }
       if (userId && subscriptionId) {
-        console.log("userID", userId);
-        console.log("subscriptionIID", subscriptionId);
+   
         const response = await createCheckoutSession(sessionData);
         console.log("🚀 ~ handleSubmit ~ response:", response);
         if (!response.client_secret) {
@@ -168,8 +168,8 @@ const SubscriptionViewPart = ({state}) => {
                   <MTBSubscriptionRateCard
                     rate={10.99}
                     period={"quarterly"}
-                    isSelected={selectedPaymentPlan === "quaterly"}
-                    onClick={() => handleSelectPaymentPlan("quaterly", 10.99)}
+                    isSelected={selectedPaymentPlan === "quarterly"}
+                    onClick={() => handleSelectPaymentPlan("quarterly", 10.99)}
                   />
                 </td>
               </tr>
