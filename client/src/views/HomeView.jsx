@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react";
-import {Outlet, redirect, NavLink, useLocation} from "react-router-dom";
+import {Outlet, redirect, NavLink, useLocation, Link} from "react-router-dom";
 import {ReactSVG} from "react-svg";
 
 import "./HomeView.css";
@@ -10,7 +10,16 @@ import clientCatalogInactiveIcon from "../assets/menu/clientCatalogInactive.svg"
 import clientCatalogActiveIcon from "../assets/menu/clientCatalogActive.svg";
 import userCatalogInactiveIcon from "../assets/menu/userCatalogInactive.svg";
 import userCatalogActiveIcon from "../assets/menu/userCatalogActive.svg";
-
+import myEventsInactiveIcon from "../assets/menu/myEventsInactive.svg";
+import myEventsActiveIcon from "../assets/menu/myEventsActive.svg";
+import analyticsActiveIcon from "../assets/menu/analyticsActive.svg";
+import analyticsInactiveIcon from "../assets/menu/analyticsInactive.svg";
+import upgradesAddonsActiveIcon from "../assets/menu/upgradesAddonsActive.svg";
+import upgradesAddonsInactiveIcon from "../assets/menu/upgradesAddonsInactive.svg";
+import shopActiveIcon from "../assets/menu/shopActive.svg";
+import shopInactiveIcon from "../assets/menu/shopInactive.svg";
+import configurationActiveIcon from "../assets/menu/configurationActive.svg";
+import configurationInactiveIcon from "../assets/menu/configurationInactive.svg";
 import logout from "../assets/menu/logout.svg";
 
 import {UserDataProvider} from "../utils/UserDataProvider";
@@ -26,7 +35,7 @@ const options = [
     title: "Home",
   },
   {
-    path: "/admin/client-catalog",
+    path: "/admin/my-info",
     icon: {
       inactive: clientCatalogInactiveIcon,
       active: clientCatalogActiveIcon,
@@ -34,16 +43,33 @@ const options = [
     title: "Client Catalog",
   },
   {
-    path: "/admin/user-catalog",
+    path: "/admin/my-events",
     icon: {
-      active: userCatalogActiveIcon,
-      inactive: userCatalogInactiveIcon,
+      active: myEventsActiveIcon,
+      inactive: myEventsInactiveIcon,
     },
     title: "User Catalog",
   },
+  {
+    path: "/admin/analytics",
+    icon: {
+      active: analyticsActiveIcon,
+      inactive: analyticsInactiveIcon,
+    },
+    title: "Analytics",
+  },
+  {
+    path: "/admin/upgrades-and-add-ons",
+    icon: {
+      active: upgradesAddonsActiveIcon,
+      inactive: upgradesAddonsInactiveIcon,
+    },
+    title: "Upgrades adn add ons",
+  },
+  {path: "/configuration", icon: configurationInactiveIcon, title: "Configuration"},
   {path: "/logout", icon: logout, title: "Logout"},
 ];
-
+const state = {user:""}
 export const LoaderHome = () => {
   const isLoggedIn = getCookie("token") !== null;
 
@@ -119,16 +145,38 @@ export default function HomeView() {
               }}></div>
             <div style={{display: "flex", flex: 0.25, paddingTop: "16px"}} className='Menu-option'>
               <NavLink
-                key={options[3].path}
+                key={options[options.length - 1].path}
                 className={isExpanded ? "Menu-option-expanded" : "Menu-option"}
-                to={options[3].path}>
-                <ReactSVG src={options[3].icon} />
-                {isExpanded && <span>{options[3].title}</span>}
+                to={options[options.length -1].path}>
+                <ReactSVG src={options[options.length-1].icon} />
+                {isExpanded && <span>{options[options.length -1].title}</span>}
               </NavLink>
             </div>
           </div>
         </div>
-        <div className='Topbar'></div>
+        <div display='flex' justifyContent='center' alignItems='center'>
+          {true && (
+            <Link
+              // to={`/admin/accounts/clientidentification/${state?.user._id}`}
+              state={{user: state.user}}>
+              <img
+                style={{
+                  height: 40,
+                  width: 40,
+                  borderRadius: "50%",
+                  backgroundColor: "#919292",
+                  zIndex: 10000,
+                  right: 32,
+                  position: "absolute",
+                  top: 16,
+                }}
+                src={"https://www.gravatar.com/avatar/205e460b479e2e5b48aec07710c08d50?s=200"}
+                alt='ProfileIcon'
+              />
+            </Link>
+          )}
+        </div>
+        {/* <div className='Topbar'></div> */}
         <div className='View'>
           <Outlet />
         </div>
