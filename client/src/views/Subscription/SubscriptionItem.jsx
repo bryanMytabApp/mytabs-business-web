@@ -14,6 +14,8 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
     gap: "10px",
     marginTop: "12px",
   };
+
+ 
   const handleSelect = () => {
     if ( !isSuccess ) {
       
@@ -27,28 +29,24 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
       {isSelected ? (
         <div className='selected-subscription-item'>
           <div className='subscription-item-header'>
-            <span style={{flex: 1}}>Start free trial</span>
+            <span style={{ flex: 1 }}>Start free trial</span>
           </div>
           <div className='selected-subscription-block'>
             <div className='selected-subscription-item-title'>{plan}</div>
 
             <div className='selected-subscription-list'>
-              {benefits.map((el, idx) => (
+              {benefits.map( ( el, idx ) => (
                 <span key={idx} style={spanLineStyle}>
                   <div className='subscription-bullet' style={{}}>
                     <img
-                      style={
-                        {
-                          // filter: "invert(0.4) sepia(0.5) saturate(5) hue-rotate(175deg)",
-                        }
-                      }
+                     
                       src={checkIcon}
                       alt='checkmark'
                     />
                   </div>
-                  <div style={{fontFamily: "Outfit", color: "white"}}>{el}</div>
+                  <div style={{ fontFamily: "Outfit", color: "white" }}>{el}</div>
                 </span>
-              ))}
+              ) )}
             </div>
           </div>
           <MTBButton
@@ -83,7 +81,7 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
           </div>
         </div>
       ) : (
-        <div className='unselected-subscription-item'>
+        <div  className='unselected-subscription-item'>
           <div style={{}}>
             <div className='unselected-subscription-item-title'>
               ${price}
@@ -108,13 +106,13 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
               </span>
             ))}
           </div>
-          <MTBButton
+          {!isSuccess && <MTBButton
             onClick={onClick}
             style={{
               borderRadius: "16px",
               width: "100%",
               flex: 1,
-              backgroundColor: isSuccess ? "#F09925":"#231D4F",
+              backgroundColor: isSuccess ? "#F09925" : "#231D4F",
               fontFamily: "Outfit",
               display: "inline",
               whiteSpace: "nowrap",
@@ -123,7 +121,7 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
               width: "70%",
             }}>
             {!isSuccess ? "Purchase" : "Continue!"}
-          </MTBButton>
+          </MTBButton>}
           <div
             style={{
               fontFamily: "Outfit",
@@ -142,6 +140,7 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
           </div>
         </div>
       )}
+      
     </>
   );
 };
