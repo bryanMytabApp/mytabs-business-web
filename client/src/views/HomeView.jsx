@@ -66,10 +66,23 @@ const options = [
     },
     title: "Upgrades adn add ons",
   },
-  {path: "/configuration", icon: configurationInactiveIcon, title: "Configuration"},
+  {
+    path: "/admin/shops",
+    icon: {
+      active: shopActiveIcon,
+      inactive: shopInactiveIcon,
+    },
+    title: "Upgrades adn add ons",
+  },
+  {
+    path: "/configuration",
+    icon: configurationInactiveIcon,
+    title: "Configuration",
+  },
   {path: "/logout", icon: logout, title: "Logout"},
 ];
-const state = {user:""}
+
+const state = {user: ""};
 export const LoaderHome = () => {
   const isLoggedIn = getCookie("token") !== null;
 
@@ -122,7 +135,7 @@ export default function HomeView() {
                 borderRadius: "10px",
               }}>
               {options
-                .filter((item) => item.title !== "Logout")
+                .filter((item) => !["Logout", "Configuration"].includes(item.title))
                 .map((item) => (
                   <NavLink
                     key={item.path}
@@ -141,17 +154,31 @@ export default function HomeView() {
             <div
               style={{
                 height: "1px",
-                backgroundColor: "#797676",
+                backgroundColor: "#717272",
               }}></div>
-            <div style={{display: "flex", flex: 0.25, paddingTop: "16px"}} className='Menu-option'>
+            <div style={{flex: 0.5}}></div>
+            <div style={{display: "flex", flex: 2, paddingTop: "16px"}} className='Menu-option'>
+              <div
+                style={{
+                  height: "1px",
+                  backgroundColor: "#797676",
+                }}></div>
+              <NavLink
+                key={options[options.length - 2].path}
+                className={isExpanded ? "Menu-option-expanded" : "Menu-option"}
+                to={options[options.length - 2].path}>
+                <ReactSVG src={options[options.length - 2].icon} />
+                {isExpanded && <span>{options[options.length - 2].title}</span>}
+              </NavLink>
               <NavLink
                 key={options[options.length - 1].path}
                 className={isExpanded ? "Menu-option-expanded" : "Menu-option"}
-                to={options[options.length -1].path}>
-                <ReactSVG src={options[options.length-1].icon} />
-                {isExpanded && <span>{options[options.length -1].title}</span>}
+                to={options[options.length - 1].path}>
+                <ReactSVG src={options[options.length - 1].icon} />
+                {isExpanded && <span>{options[options.length - 1].title}</span>}
               </NavLink>
             </div>
+            <div style={{flex: 1}}></div>
           </div>
         </div>
         <div display='flex' justifyContent='center' alignItems='center'>
