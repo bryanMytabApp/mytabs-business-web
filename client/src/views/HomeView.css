@@ -1,7 +1,7 @@
 .HomeView {
   display: flex;
   flex: 1;
-  background: #EEE;
+  background: #FFF;
 }
 
 .Sidebar {
@@ -23,7 +23,7 @@
     padding: 8px;
     background: #FFF;
     box-shadow: 0px 0px 1px 0px rgba(0, 0, 0, 0.5);
-    width: 144px;
+    width: 240px;
     align-items: center;
     z-index: 2;
     
@@ -57,7 +57,7 @@
 
 .Sidebar .Menu-option {
   display: flex;
-  padding: 8px;
+  /* padding: 8px; */
   flex-direction: column;
   align-items: center;
   gap: 12px;
@@ -70,7 +70,7 @@
   height: 32px;
   justify-content: center;
   box-shadow: 0px 4.3857598304748535px 4.3857598304748535px 0px #00000014;
-  padding: 4px;
+  padding: 8px;
 
 }
 .Sidebar .Menu-option-expanded {
@@ -89,7 +89,7 @@
     
     justify-content: center;
       box-shadow: 0px 4.3857598304748535px 8.771519660949707px 0px #32324702;
-    padding: 4px;
+    padding: 8px;
 } 
 
 #Menu-option-logo {
@@ -141,7 +141,7 @@
   display: flex;
   flex: 1;
   overflow: auto;
-  margin-top: 40px;;
+  /* margin-top: 40px;; */
 }
 
 .Topbar {
@@ -161,13 +161,14 @@
   font-style: normal;
   font-weight: 510;
   line-height: normal;
-  justify-content: space-between;
+  justify-content: flex-start;
   text-decoration: none;
   align-items: center;
+  padding: 2px;
 }
 
 .Sidebar-expanded a.Menu-option{
-  background-color: white;
+  background-color: #F8F9FE;
   border-radius: 10px;
   padding: 5px 2px;
 }
