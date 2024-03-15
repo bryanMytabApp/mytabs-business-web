@@ -67,12 +67,12 @@ const options = [
     title: "Upgrades and add ons",
   },
   {
-    path: "/admin/shops",
+    path: "/admin/shop",
     icon: {
       active: shopActiveIcon,
       inactive: shopInactiveIcon,
     },
-    title: "Upgrades adn add ons",
+    title: "Shop",
   },
   {
     path: "/configuration",
@@ -163,20 +163,34 @@ export default function HomeView() {
                   height: "1px",
                   backgroundColor: "#797676",
                 }}></div>
-              <div style={{display: "flex", flexDirection: "column"}}>
+              <div
+                style={{
+                  flex: 1,
+                  backgroundColor: "white",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-evenly",
+                  gap: "10px",
+                  padding: "8px",
+                  borderRadius: "10px",
+                }}>
                 <NavLink
                   key={options[options.length - 2].path}
                   className={isExpanded ? "Menu-option-expanded" : "Menu-option"}
                   to={options[options.length - 2].path}>
                   <ReactSVG src={options[options.length - 2].icon} />
-                  {isExpanded && <span>{options[options.length - 2].title}</span>}
+                  {isExpanded && (
+                    <span style={{marginLeft: "16px"}}>{options[options.length - 2].title}</span>
+                  )}
                 </NavLink>
                 <NavLink
                   key={options[options.length - 1].path}
                   className={isExpanded ? "Menu-option-expanded" : "Menu-option"}
                   to={options[options.length - 1].path}>
                   <ReactSVG src={options[options.length - 1].icon} />
-                  {isExpanded && <span>{options[options.length - 1].title}</span>}
+                  {isExpanded && (
+                    <span style={{marginLeft: "16px"}}>{options[options.length - 1].title}</span>
+                  )}
                 </NavLink>
               </div>
             </div>
