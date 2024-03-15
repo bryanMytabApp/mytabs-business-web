@@ -59,6 +59,17 @@
   padding: 0px 40px;
 }
 
+.Subscription-options-success {
+
+  display: flex;
+  flex-direction: row;
+  width: 350px;
+  height: 350px;
+  background: linear-gradient(102.1deg, rgba(255, 255, 255, 0.24) 6.16%, rgba(255, 255, 255, 0.015) 86.42%),
+    linear-gradient(0deg, rgba(253, 253, 253, 0.3), rgba(253, 253, 253, 0.3));
+  border-radius: 25px;
+  padding: 0px 40px;
+}
 .Subscription-options-rates {
 
   display: flex;

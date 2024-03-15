@@ -329,7 +329,8 @@ export default function RegistrationView() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const phoneNumberInput = formData.phoneNumber;
-    let phoneNumberWithPlus = `+${formData.phoneNumber}`;
+    let phoneNumberWithPlus = `+1${formData.phoneNumber}`;
+    console.log({phoneNumberWithPlus})
     const phoneNumber = parsePhoneNumberFromString(phoneNumberInput);
 
     let signUpPayload = {
@@ -339,9 +340,12 @@ export default function RegistrationView() {
     };
 
     try {
-      const response = await signUp(signUpPayload);
+      const response = await signUp( signUpPayload );
+      console.log("'response salvador", response)
+      // let res = await getToken( { username: formData.username.trim(), password: formData.password } );
+       localStorage.setItem("idToken", response.IdToken);
       toast.success("Welcome!");
-      navigate("/admin/dashboards");
+      navigate("/subscription");
     } catch (error) {
       let errorMessage = "An unexpected error occurred. Please try again.";
 

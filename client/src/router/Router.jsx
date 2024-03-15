@@ -12,6 +12,12 @@ import HomeMainView from "../views/HomeMain/HomeMainView";
 import ClientCatalogView from "../views/ClientCatalog/ClientCatalogView";
 import UserCatalogView from "../views/UserCatalog/UserCatalogView";
 import SubscriptionSuccess from "../views/Subscription/SubscriptionSuccess";
+import MyInfoView from "../views/MyInfo/MyInfoView";
+import AnalyticsView from "../views/Analytics/AnalyticsView";
+import UpgradesAddonsView from "../views/UpgradesAddons/UpgradesAddonsView";
+import ShopView from "../views/Shop/ShopView";
+import MyTabsConfigurationView from "../views/MyTabsConfiguration/MyTabsConfigurationView";
+import EventsView from "../views/Events/EventsView";
 const routerHandler = (isIntern) => {
   const _idToken = localStorage.getItem("idToken");
 
@@ -85,6 +91,36 @@ const router = createBrowserRouter([
           {
             path: "user-catalog",
             element: <UserCatalogView />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-info",
+            element: <MyInfoView />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events",
+            element: <EventsView />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "analytics",
+            element: <AnalyticsView />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "upgrades-and-add-ons",
+            element: <UpgradesAddonsView />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "shop",
+            element: <ShopView />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "configuration",
+            element: <MyTabsConfigurationView />,
             loader: () => routerHandler(true),
           },
         ],

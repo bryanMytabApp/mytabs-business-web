@@ -16,7 +16,8 @@ const SubscriptionView = () => {
       try {
         const response = await getSystemSubscriptions();
         if (response.data) {
-          setSystemSubscriptions(response.data);
+          setSystemSubscriptions( response.data );
+        
         } else {
           console.log("No data received from getSystemSubscriptions");
         }
