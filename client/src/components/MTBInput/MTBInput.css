@@ -146,3 +146,37 @@ div.MTB-input input:focus-visible {
   margin-right: 4px;
   width: 12px;
 }
+
+.input-container-category {
+  background-color: #F4F4F4;
+  width: 100%;
+  display: flex;
+  border-radius: 16px;
+}
+
+.MTB-category-input {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.input-container-category input {
+  display: flex;
+  padding: 4px 16px 4px 32px;
+  border-radius: 8px;
+  background: #F4F4F4;
+  color: #959595;
+  font-size: 16px !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  line-height: normal;
+  align-self: normal;
+  text-align: left;
+  padding-right: 10px;
+  border: 1px solid #fff;
+  height: 48px;
+  font-family: Outfit;
+  width: 100%;
+}

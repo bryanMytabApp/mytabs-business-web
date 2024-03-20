@@ -1,7 +1,55 @@
-import React from "react";
-import bulletIcon from "../../assets/atoms/bulletSelector.svg";
+import React, {useState} from "react";
+import selectIcon from "../../assets/atoms/selectIcon.svg";
+import selectIconActive from "../../assets/atoms/selectIconActive.svg";
+import Icon from "@mdi/react";
+import circusIcon from "../../assets/categories/circus.svg";
+import {
+  mdiGlassCocktail,
+  mdiAccountOutline,
+  mdiGlassMug,
+  mdiFoodOutline,
+  mdiCoffeeOutline,
+  mdiSchoolOutline,
+  mdiChurchOutline,
+  mdiMessageOutline,
+  mdiLibraryOutline,
+  mdiStadiumOutline,
+  mdiTheater,
+  mdiHairDryerOutline,
+  mdiCharity,
+  mdiMusic,
+  mdiBaseball,
+  mdiDumbbell,
+  mdiShopping,
+  mdiDanceBallroom
+} from "@mdi/js";
 
-const MTBCategorySelectItem = ({category, onClick}) => {
+const iconMap = {
+  Club: mdiGlassCocktail,
+  Bar: mdiGlassMug,
+  Restaurant: mdiFoodOutline,
+  Café: mdiCoffeeOutline,
+  School: mdiSchoolOutline,
+  "Worship Center": mdiChurchOutline,
+  Religion: mdiChurchOutline,
+  Other: mdiMessageOutline,
+  Library: mdiLibraryOutline,
+  Stadium: mdiStadiumOutline,
+  Arena: mdiStadiumOutline,
+  Theater: mdiTheater,
+  "Food Truck": mdiFoodOutline,
+  "Hair Salon": mdiHairDryerOutline,
+  Charity: mdiCharity, 
+  Museum: mdiLibraryOutline,
+  Music: mdiMusic,
+  Sports: mdiBaseball,
+  Gym: mdiDumbbell,
+  Store: mdiShopping,
+  "Dance Hall": mdiDanceBallroom,
+ 
+};
+const MTBCategorySelectItem = ({category, onClick, subcategories, clicked}) => {
+  const iconPath = iconMap[category] || mdiAccountOutline;
   return (
     <div
       onClick={onClick}
@@ -19,11 +67,15 @@ const MTBCategorySelectItem = ({category, onClick}) => {
       <div
         style={{
           position: "absolute",
-          top: 0,
-          right: 0,
+          top: "2px",
+          right: "2px",
           padding: "5px",
         }}>
-        <img src={bulletIcon} alt='Bullet Icon' />
+        <img
+          style={{justifySelf: "flex-end"}}
+          src={clicked ? selectIconActive : selectIcon}
+          alt='bullet'
+        />
       </div>
       <div
         style={{
@@ -32,7 +84,13 @@ const MTBCategorySelectItem = ({category, onClick}) => {
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
+          alignItems: "center",
+          fontSize: "16px",
+          fontWeight: 500,
+          fontFamily: "Outfit",
+          color: "#676565",
         }}>
+        <Icon path={iconPath} size={"40px"} color={clicked ? "#00AAD7" : "#919797"} />
         {category}
       </div>
     </div>

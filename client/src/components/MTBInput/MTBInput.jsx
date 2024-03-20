@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useState,useEffect} from "react";
 import "./MTBInput.css";
 import warning from "../../assets/warning.svg";
 import success from "../../assets/success.svg";
@@ -27,9 +27,11 @@ export default function MTBInput({
   size = false,
   style = {},
   isWeb = false,
+  options=[],
   pattern = "",
 }) {
-  const [showPassword, setShowPassword] = useState(false);
+  const [ showPassword, setShowPassword ] = useState( false );
+  const [filteredOptions, setFilteredOptions] = useState(options);
   const classes = ["MTB-input", helper.type, children != null && "start"];
 
   const handleKeyDown = (event) => {
@@ -37,8 +39,6 @@ export default function MTBInput({
       onEnterPress();
     }
   };
-
-  
   const getInputType = () => {
     if (type === "password") {
       return showPassword ? "text" : "password";
@@ -47,16 +47,16 @@ export default function MTBInput({
   };
 
   return (
-    <div className={classes.filter(Boolean).join(" ")}>
+    <div className={type == "category" ? "MTB-category-input" : classes.filter(Boolean).join(" ")}>
       {children}
       <div
-        className='input-container'
+        className={type !== "category" ? "input-container" : "input-container-category"}
         style={size === "small" ? {maxWidth: "3rem", ...style} : style}>
         <input
           name={name}
           placeholder={placeholder}
           autoComplete={autoComplete}
-          type={getInputType()} 
+          type={getInputType()}
           disabled={disabled}
           value={value}
           onBlur={onBlur}

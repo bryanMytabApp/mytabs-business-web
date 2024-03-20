@@ -5,7 +5,7 @@
   align-items: center;
   flex: 1 0 0;
   border-radius: 30px;
-  background: #00AAD6;
+  background: var(--primary-blue-color);
   cursor: pointer;
   border: none;
   color: #FFF;
