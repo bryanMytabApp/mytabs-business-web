@@ -2,7 +2,6 @@ import React, {useEffect, useState} from "react";
 import "./MTBModal.css";
 import MTBButton from "../MTBButton/MTBButton";
 import MTBInput from "../MTBInput/MTBInput";
-import church from "../../assets/categories/church.svg";
 import {
   mdiGlassCocktail,
   mdiGlassMug,
@@ -21,7 +20,7 @@ import {
   mdiBaseball,
   mdiDumbbell,
   mdiShopping,
-  mdiDanceBallroom
+  mdiDanceBallroom,
 } from "@mdi/js";
 import Icon from "@mdi/react";
 import selectIcon from "../../assets/atoms/selectIcon.svg";
@@ -29,7 +28,6 @@ import selectIconActive from "../../assets/atoms/selectIconActive.svg";
 const MTBModal = ({
   isOpen,
   onClose,
-  children,
   category,
   isOther,
   subcategories,
@@ -57,21 +55,33 @@ const MTBModal = ({
     Sports: mdiBaseball,
     Gym: mdiDumbbell,
     Store: mdiShopping,
-    "Dance Hall": mdiDanceBallroom
+    "Dance Hall": mdiDanceBallroom,
   };
   if (!isOpen) return null;
   const iconPath = iconMap[category] || mdiAccountOutline;
 
-  const handleClick = (_category) => {
-    if (selectedSubCategories.includes(_category)) {
-      setSelectedSubCategories((prev) => prev.filter((category) => category !== _category));
-      if (onSubCategoriesChange) {
-        onSubCategoriesChange((prev) => prev.filter((category) => category !== _category));
+  const handleClick = ( _category ) => {
+    console.log( 1 )
+    console.log( "selectedSubCat Modal", selectedSubCategories )
+    console.log('_category', _category)
+    if ( selectedSubCategories.length && selectedSubCategories.includes( _category ) ) {
+      const _filteredArray = [ ...selectedSubCategories ].filter( ( category ) => category !== _category );
+      setSelectedSubCategories( _filteredArray );
+      if ( onSubCategoriesChange ) {
+        console.log( 2 );
+        onSubCategoriesChange( [ _category ] );
       }
     } else {
-      setSelectedSubCategories((prev) => [...prev, _category]);
-      if (onSubCategoriesChange) {
-        onSubCategoriesChange((prev) => [...prev, _category]);
+      console.log( 3 )
+      setSelectedSubCategories([_category]);
+      if ( onSubCategoriesChange ) {
+        let a = new Set( selectedSubCategories )
+        let b = Array.from(a)
+        onSubCategoriesChange((prev) => {
+          //  prev.length && prev.pop();
+       
+          return b;
+        });
       }
     }
   };

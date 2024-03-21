@@ -162,7 +162,8 @@ export default function RegistrationView() {
     }));
 
     console.log("selectedCategories--", selectedCategories);
-    console.log("selectedSubCategories", selectedSubCategories);
+    console.log( "selectedSubCategories", selectedSubCategories );
+    console.log('formDataaaaaa',formData.subcategory)
   };
 
   const handleInputChange = useCallback((value, name) => {

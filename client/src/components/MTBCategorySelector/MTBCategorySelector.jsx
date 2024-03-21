@@ -18,6 +18,21 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
       }));
   const [selectedCategories, setSelectedCategories] = useState([]);
 
+  const toggleCategorySelection = (categoryName) => {
+    let subCategoryQuantity = categories.find((cat) => cat.name === categoryName).subcategories
+      .length;
+
+    if (subCategoryQuantity === 0) {
+      let filteredSelectedCategories = selectedCategories.filter(
+        (category) => category !== categoryName
+      );
+      setSelectedCategories((prev) =>
+        prev.includes(categoryName) ? filteredSelectedCategories : [...prev, categoryName]
+      );
+    } else {
+      setSelectedCategories((prev) => [...prev, categoryName]);
+    }
+  };
   useEffect(() => {
     if (currentSubCategories.length > 0) {
       onChange("", selectedCategories);
@@ -26,32 +41,17 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
     }
   }, [currentCategory, selectedCategories, currentSubCategories.length]);
 
-  const toggleCategorySelection = (categoryName) => {
-    console.log("categoryName", categoryName);
-    console.log("selectedCategories", selectedCategories);
-
-    let subCategoryQuantity = categories.find((cat) => cat.name === categoryName).subcategories
-      .length;
-
-    if (subCategoryQuantity !== 0) {
+  console.log( "42 selectedCategories", selectedCategories );
+  
+  const handleCategoryClick = ( category ) => {
+    if ( selectedCategories.length > 3 && !selectedCategories.includes(category.name)) {
+      toast.warn("You can select up to 3 subcategories");
       return;
     }
-    setSelectedCategories((prev) =>
-      prev.includes(categoryName)
-        ? prev.filter((category) => category !== categoryName)
-        : [...prev, categoryName]
-    );
-  };
-
-  const handleCategoryClick = (category) => {
-    console.log("handle Category cate", category);
     if (category.subcategories.length === 0 && category.name !== "Other") {
       setCurrentSubCategories(category.name);
       toggleCategorySelection(category.name);
     } else {
-      if (selectedCategories.length > 3) {
-        toast.warn("You can select up to 3 subcategories");
-      }
       setOpenModal(true);
       setCurrentCategory(category.name);
       setCurrentSubCategories(category.subcategories);
