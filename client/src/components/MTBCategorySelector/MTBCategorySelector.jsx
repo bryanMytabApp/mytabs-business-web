@@ -27,9 +27,36 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
 
     if (subCategoryQuantity === 0) {
       let filteredSelectedCategories = Array.from(
-        new Set(selectedCategories.filter((category) => category !== categoryName))
+        new Set(selectedCategories.filter((category) => category.name !== categoryName))
       );
+      // [{
+      //   name: "Other",
+      //   subcategories: ["Other"],
+      //   subcategoryText: "",
+      
+    // },
+      //   name: "Restaurant",
+      //   subcategories: ["a", "b", "c"],
+      //   subCategoryText: "",
+      // }
+    // ]
+      
+      //subcategories.length =  0 : return name
+      // else find in subcategories
 
+
+      // const categoryFinder = ( categoryList, categoryName ) => {
+      //   categoryList.forEach( category => {
+      //     if ( !category.subCategories.length ) {
+            
+      //     }
+      //   })
+      //   if ( categoryList.find( ( category ) => category.name === categoryName ) ) {
+      //     return categoryList.find( ( category ) => category.name === categoryName )
+      //   } else {
+      //     cacategoryList
+      //   }
+      //  }
       setSelectedCategories((prev) =>
         prev.includes(categoryName)
           ? filteredSelectedCategories
@@ -38,8 +65,8 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
     }
   };
   useEffect(() => {
-    console.log("data", data.subcategory);
-    console.log();
+    // console.log("data", data.subcategory);
+    // console.log();
     if (currentSubCategories.length > 0) {
       onChange("", selectedCategories);
     } else {
@@ -47,20 +74,21 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
     }
   }, [currentCategory, selectedCategories, currentSubCategories.length]);
 
-  const handleCategoryClick = (category) => {
+  const handleCategoryClick = ( category ) => {
+    console.log('[handleCategoryClick ] category', category)
     console.log("selectedCategoriessdssds", selectedCategories);
     if (data.subcategory.length > 3 && !selectedCategories.includes(category.name)) {
       toast.warn("You can select up to 3 subcategories");
       return;
     }
     if (category.subcategories.length === 0 && category.name !== "Other") {
-      setCurrentSubCategories(category.name);
-      setCurrentCategory(category.name);
+      setCurrentSubCategories(category.subcategories);
+      setCurrentCategory(category);
       toggleCategorySelection(category.name);
     } else {
       setOpenModal(true);
-      setCurrentCategory(category.name);
-      setCurrentSubCategories(category.subcategories);
+      setCurrentCategory(category);
+      setCurrentSubCategories([category]);
       setCurrentIconName(category?.iconName);
     }
   };
@@ -86,8 +114,9 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
               subCategories={category.subcategories}
               iconName={category?.iconName}
               clicked={
-                selectedCategories.includes(category.name) ||
-                categoryContainsSubCategory(category.name, data.subcategory)
+                selectedCategories.includes( category.name )
+                // ||
+                // categoryContainsSubCategory(category.name, data.subcategory)
               }
             />
           ))}
@@ -97,7 +126,7 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
         data={data}
         onSubCategoriesChange={setSelectedCategories}
         iconName={currentIconName}
-        subcategories={currentSubCategories}
+        currentCategoryObj={currentSubCategories}
         isOther={currentCategory === "Other"}
         category={currentCategory}
         isOpen={openModal}
