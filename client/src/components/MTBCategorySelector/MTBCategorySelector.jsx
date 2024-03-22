@@ -10,12 +10,15 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
   const [currentCategory, setCurrentCategory] = useState("");
   const [currentSubCategories, setCurrentSubCategories] = useState([]);
   const [currentIconName, setCurrentIconName] = useState("mdiAccount");
+
   const categories = filteredCategories
     ? filteredCategories
     : Object.keys(categoriesJS).map((categoryName) => ({
         name: categoryName,
         subcategories: categoriesJS[categoryName].subcategories,
+        isText: false,
       }));
+  // console.log("Categoriessss",categoriesJS)
   const [selectedCategories, setSelectedCategories] = useState([]);
 
   const toggleCategorySelection = (categoryName) => {
@@ -23,17 +26,20 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
       .length;
 
     if (subCategoryQuantity === 0) {
-      let filteredSelectedCategories = selectedCategories.filter(
-        (category) => category !== categoryName
+      let filteredSelectedCategories = Array.from(
+        new Set(selectedCategories.filter((category) => category !== categoryName))
       );
+
       setSelectedCategories((prev) =>
-        prev.includes(categoryName) ? filteredSelectedCategories : [...prev, categoryName]
+        prev.includes(categoryName)
+          ? filteredSelectedCategories
+          : Array.from(new Set([...prev, categoryName]))
       );
-    } else {
-      setSelectedCategories((prev) => [...prev, categoryName]);
     }
   };
   useEffect(() => {
+    console.log("data", data.subcategory);
+    console.log();
     if (currentSubCategories.length > 0) {
       onChange("", selectedCategories);
     } else {
@@ -41,23 +47,32 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
     }
   }, [currentCategory, selectedCategories, currentSubCategories.length]);
 
-  console.log( "42 selectedCategories", selectedCategories );
-  
-  const handleCategoryClick = ( category ) => {
-    if ( selectedCategories.length > 3 && !selectedCategories.includes(category.name)) {
+  const handleCategoryClick = (category) => {
+    console.log("selectedCategoriessdssds", selectedCategories);
+    if (data.subcategory.length > 3 && !selectedCategories.includes(category.name)) {
       toast.warn("You can select up to 3 subcategories");
       return;
     }
     if (category.subcategories.length === 0 && category.name !== "Other") {
       setCurrentSubCategories(category.name);
+      setCurrentCategory(category.name);
       toggleCategorySelection(category.name);
     } else {
       setOpenModal(true);
       setCurrentCategory(category.name);
       setCurrentSubCategories(category.subcategories);
       setCurrentIconName(category?.iconName);
-      toggleCategorySelection(category.name);
     }
+  };
+
+  const categoryContainsSubCategory = (categoryName, dataArr) => {
+    const currCategory = categories.find(
+      (category) => category.name === categoryName
+    ).subcategories;
+
+    return typeof dataArr == "string"
+      ? [dataArr].length && [dataArr]?.some((el) => currCategory.includes(el))
+      : [...dataArr].length && [...dataArr]?.some((el) => currCategory.includes(el));
   };
   return (
     <>
@@ -70,12 +85,16 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
               category={category.name}
               subCategories={category.subcategories}
               iconName={category?.iconName}
-              clicked={selectedCategories.includes(category.name)}
+              clicked={
+                selectedCategories.includes(category.name) ||
+                categoryContainsSubCategory(category.name, data.subcategory)
+              }
             />
           ))}
         </div>
       </div>
       <MTBModal
+        data={data}
         onSubCategoriesChange={setSelectedCategories}
         iconName={currentIconName}
         subcategories={currentSubCategories}

@@ -43,7 +43,7 @@ export default {
     subcategories: ["Coffee shop"],
   },
   School: {
-    subcategories: ["Elementary School", "Middle school", "High School", "Jr. High School"],
+    subcategories: ["Elementary School", "Middle School", "High School", "Jr. High School"],
   },
   Venue: {
     subcategories: [],

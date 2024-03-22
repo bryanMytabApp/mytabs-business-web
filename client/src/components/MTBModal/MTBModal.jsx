@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import "./MTBModal.css";
 import MTBButton from "../MTBButton/MTBButton";
 import MTBInput from "../MTBInput/MTBInput";
@@ -26,6 +26,7 @@ import Icon from "@mdi/react";
 import selectIcon from "../../assets/atoms/selectIcon.svg";
 import selectIconActive from "../../assets/atoms/selectIconActive.svg";
 const MTBModal = ({
+  data,
   isOpen,
   onClose,
   category,
@@ -57,33 +58,36 @@ const MTBModal = ({
     Store: mdiShopping,
     "Dance Hall": mdiDanceBallroom,
   };
+  const [otherCategory, setOtherCategory] = useState({"categoryName": "", otherCategoryValue:""});
   if (!isOpen) return null;
   const iconPath = iconMap[category] || mdiAccountOutline;
 
-  const handleClick = ( _category ) => {
-    console.log( 1 )
-    console.log( "selectedSubCat Modal", selectedSubCategories )
-    console.log('_category', _category)
-    if ( selectedSubCategories.length && selectedSubCategories.includes( _category ) ) {
-      const _filteredArray = [ ...selectedSubCategories ].filter( ( category ) => category !== _category );
-      setSelectedSubCategories( _filteredArray );
-      if ( onSubCategoriesChange ) {
-        console.log( 2 );
-        onSubCategoriesChange( [ _category ] );
-      }
+  const handleClick = (_category) => {
+    if (selectedSubCategories.length && selectedSubCategories.includes(_category)) {
+      const _filteredArray = [...selectedSubCategories].filter(
+        (category) => category !== _category
+      );
+      setSelectedSubCategories(_filteredArray);
     } else {
-      console.log( 3 )
       setSelectedSubCategories([_category]);
-      if ( onSubCategoriesChange ) {
-        let a = new Set( selectedSubCategories )
-        let b = Array.from(a)
-        onSubCategoriesChange((prev) => {
-          //  prev.length && prev.pop();
-       
-          return b;
-        });
-      }
     }
+  };
+
+  const handleOtherCategory = (name, value) => {
+    setSelectedSubCategories( ( prev ) => prev.filter( ( category ) => !category.isText ) )
+    let newOtherCategory = {categoryName: category, otherCategoryValue: name};
+    setOtherCategory(newOtherCategory);
+    console.log(" [handleOther] data", data.subcategory);
+    console.log(" [handleOther] selectedSubCategories ", selectedSubCategories);
+    console.log(" [handleOther] name ", name );
+    // let a = selectedSubCategories.filter((category) => category.isText).name;
+    setSelectedSubCategories([newOtherCategory]);
+  };
+
+  const handleContinue = () => {
+    onClose();
+    let res = Array.from(new Set(selectedSubCategories));
+    onSubCategoriesChange((prev) => Array.from(new Set([...prev, ...res])));
   };
   return (
     <>
@@ -98,7 +102,13 @@ const MTBModal = ({
             <div className='MTB-modal-second'>
               <div>Type the subcategory option</div>
               <div style={{display: "flex", flex: 0.75}}></div>
-              <MTBInput type='category' value={category} placeholder='Type your category' />
+              <MTBInput
+                type='category'
+                value={otherCategory}
+                placeholder='Type your category'
+                onChange={handleOtherCategory}
+                name='subcategoryInput'
+              />
             </div>
             <div className='MTB-modal-third'>
               <MTBButton onClick={onClose}>Close</MTBButton>
@@ -136,9 +146,15 @@ const MTBModal = ({
                 ))}
               </ul>
             </div>
-            <MTBInput type='category' value={category} placeholder='Type your category' />
+            <MTBInput
+              type='category'
+              value={otherCategory}
+              placeholder='Type your category'
+              onChange={handleOtherCategory}
+              name='subcategoryInput'
+            />
             <div className='MTB-modal-third'>
-              <MTBButton onClick={onClose}>Continue</MTBButton>
+              <MTBButton onClick={handleContinue}>Continue</MTBButton>
             </div>
           </div>
         </div>

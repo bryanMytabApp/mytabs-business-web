@@ -151,19 +151,22 @@ export default function RegistrationView() {
   };
 
   const handleCategoryChange = (selectedCategories, selectedSubCategories) => {
-    if (selectedSubCategories.length > 3) {
+    console.log("selectedCategories", selectedSubCategories);
+    console.log("selectedCategories", selectedCategories);
+
+    let blendedCategories = Array.from(new Set([...selectedCategories, ...selectedSubCategories]));
+    if (blendedCategories.length > 3) {
       // toast.warn("you can only choose 3 subcategories");
       return;
     }
-
+    
     setFormData((prev) => ({
       ...prev,
-      subcategory: selectedSubCategories,
+      subcategory: blendedCategories,
     }));
 
-    console.log("selectedCategories--", selectedCategories);
-    console.log( "selectedSubCategories", selectedSubCategories );
-    console.log('formDataaaaaa',formData.subcategory)
+    console.log("[Reg] blendedCategories", blendedCategories);
+    console.log("[REG] formDataaaaaa", formData.subcategory);
   };
 
   const handleInputChange = useCallback((value, name) => {
@@ -256,9 +259,9 @@ export default function RegistrationView() {
       }
     }
     if (part === 3) {
-         if (!uploadedImage) {
-           errors.uploadedImage = "Upload a logo.";
-         }
+      if (!uploadedImage) {
+        errors.uploadedImage = "Upload a logo.";
+      }
     }
     return errors;
   };
@@ -726,8 +729,7 @@ export default function RegistrationView() {
                   borderRadius: "16px",
                   width: "10px",
                   flex: 1,
-                  backgroundColor:
-                     formData.subcategory !== "" ? "#D9D9D9" : "#D9D9D9",
+                  backgroundColor: formData.subcategory !== "" ? "#D9D9D9" : "#D9D9D9",
                 }}
                 onClick={handleNextPart}
                 isLoading={isLoading}>
