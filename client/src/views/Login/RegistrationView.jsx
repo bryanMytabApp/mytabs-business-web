@@ -1,7 +1,13 @@
 import React, {useState, useEffect, useCallback, useRef} from "react";
 import logo from "../../assets/logo.png";
 import "./LoginView.css";
-import {MTBButton, MTBInput, MTBSelector, MTBInputValidator} from "../../components";
+import {
+  MTBButton,
+  MTBInput,
+  MTBSelector,
+  MTBInputValidator,
+  MTBCategorySelector,
+} from "../../components";
 import MTBDropZone from "../../components/MTBDropZone/MTBDropZone";
 import {toast} from "react-toastify";
 import {useNavigate} from "react-router-dom";
@@ -9,6 +15,7 @@ import {signUp} from "../../services/authService";
 import {parsePhoneNumberFromString} from "libphonenumber-js";
 import chevronIcon from "../../assets/atoms/chevron.svg";
 import {getUserExistance} from "../../services/userService";
+import categoriesJS from "../../utils/data/categories";
 
 export const debounce = (func, wait) => {
   let timeout;
@@ -34,8 +41,7 @@ export default function RegistrationView() {
     lastName: "",
     zipCode: "",
     city: "",
-    category: "",
-    subcategory: "",
+    subcategory: [],
   });
   const [validationState, setValidationState] = useState({
     hasUppercase: false,
@@ -44,13 +50,24 @@ export default function RegistrationView() {
     hasLowercase: false,
     hasNumber: false,
   });
+  const [searchTerm, setSearchTerm] = useState("");
+  const subCategoryList = categoriesJS;
+  const [filteredSubCategories, setFilteredSubCategories] = useState([]);
+
   const [inputTouched, setInputTouched] = useState({zipCode: false, city: false});
   const [imageFile, setImageFile] = useState();
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
-  const [part, setPart] = useState(0);
-  const firstHeaderText = ["Create your account", "Personal Info", "Business information"];
+  const [ part, setPart ] = useState( 0 );
+  const filterSubCategorySetter = () => {
+    setFilteredSubCategories(subCategoryList);
+  }
+  const firstHeaderText = [
+    "Create your account",
+    "Personal Info",
+    "Select three that best describe your business",
+  ];
   const secondHeaderText = "Where are you located?";
 
   const cityList = [
@@ -61,21 +78,10 @@ export default function RegistrationView() {
     {value: 3, name: "New Orleans", color: "#fff"},
   ];
 
-  const categoryList = [
-    {value: 0, name: "Concert"},
-    {value: 1, name: "Education"},
-    {value: 2, name: "Music"},
-    {value: 3, name: "Night Life"},
-  ];
-
-  const subCategoryList = [
-    {value: 0, name: "Hard rock"},
-    {value: 1, name: "Jazz"},
-    {value: 2, name: "Restaurant"},
-    {value: 3, name: "Soft Rock"},
-  ];
-
   const myRef = useRef(null);
+  useEffect(() => {
+    filterSubCategorySetter();
+  },[])
 
   useEffect(() => {
     if (myRef.current) {
@@ -84,6 +90,13 @@ export default function RegistrationView() {
       });
     }
   }, [part]);
+
+  useEffect(() => {
+    const filtered = subCategoryList.filter((subCategory) =>
+      subCategory.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredSubCategories(filtered);
+  }, [searchTerm]);
 
   const styleInputDisabled = {
     opacity: "0.5",
@@ -102,16 +115,12 @@ export default function RegistrationView() {
 
     setValidationState(newState);
   };
-  useEffect(() => {
-
-  }, [formData]);
 
   useEffect(() => {
     validatePassword(formData.password);
   }, [formData.password]);
 
   const checkExistenceDebounced = debounce(async (name, value, setErrors) => {
-
     if (!value.trim()) return;
     if (name === "phoneNumber") {
       value = `1${value}`;
@@ -121,39 +130,42 @@ export default function RegistrationView() {
     value = name === "username" ? encodeValue : value;
     try {
       const response = await getUserExistance({attribute: name, value});
-
-     
     } catch (error) {
-
       let nameText = name.charAt(0).toUpperCase() + name.slice(1);
       if (error.enhancedMessage) {
         setErrors((prevErrors) => ({
           ...prevErrors,
-          [name]: `${name=="phoneNumber"? 'Phone': nameText} already exists.`,
+          [name]: `${name == "phoneNumber" ? "Phone" : nameText} already exists.`,
         }));
       }
     }
   }, 500);
 
- const handleSetUploadedImage = (image) => {
-   setUploadedImage(image);
- 
-   setErrors((prevErrors) => {
-     const updatedErrors = {...prevErrors};
-     if (updatedErrors.uploadedImage) {
-       delete updatedErrors.uploadedImage; 
-     }
-     return updatedErrors;
-   });
- };
+  const handleSetUploadedImage = (image) => {
+    setUploadedImage(image);
 
+    setErrors((prevErrors) => {
+      const updatedErrors = {...prevErrors};
+      if (updatedErrors.uploadedImage) {
+        delete updatedErrors.uploadedImage;
+      }
+      return updatedErrors;
+    });
+  };
+
+  const handleCategoryChange = (selectedSubCategories) => {
+    setFormData((prev) => ({
+      ...prev,
+      subcategory: selectedSubCategories,
+    }));
+  };
 
   const handleInputChange = useCallback((value, name) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-
+    setSearchTerm(value);
     if (name === "zipCode") {
       setInputTouched({
         zipCode: true,
@@ -178,8 +190,8 @@ export default function RegistrationView() {
   };
 
   const handleBlur = (name) => {
-    let error = errors[ "name" ];
-    if(name==="city" || name == "zipCode"|| name== "uploadImage") error = ""
+    let error = errors["name"];
+    if (name === "city" || name == "zipCode" || name == "uploadImage") error = "";
     setErrors((prevErrors) => ({...prevErrors, [name]: error}));
   };
 
@@ -200,7 +212,7 @@ export default function RegistrationView() {
       }
 
       if (!formData.phoneNumber) {
-        errors.phoneNumber = "Phonenumber is required.";
+        errors.phoneNumber = "Phone number is required.";
       }
 
       const phoneRegex = /^\d{10}$/;
@@ -220,30 +232,26 @@ export default function RegistrationView() {
         errors.firstName = "Please enter your first name.";
       }
 
-
       if (!formData.lastName) {
         errors.lastName = "Please enter your last name.";
       }
 
-       if (!formData.zipCode.trim() && !formData.city.trim()) {
-         errors.city = "Either Zip Code or City must be provided.";
-       } else {
-         
-         if (formData.zipCode.trim() && !/^\d{5}$/.test(formData.zipCode)) {
-           errors.zipCode = "Zip Code must be a 5-digit number.";
-         }
-       }
+      if (!formData.zipCode.trim() && !formData.city.trim()) {
+        errors.city = "Either Zip Code or City must be provided.";
+      } else {
+        if (formData.zipCode.trim() && !/^\d{5}$/.test(formData.zipCode)) {
+          errors.zipCode = "Zip Code must be a 5-digit number.";
+        }
+      }
     }
     if (part === 2) {
-      if (formData.category === "") {
-        errors.category = "Select a category.";
+      if (formData.subcategory.length === 0) {
+        errors.subcategory = "Select three subcategories.";
       }
-
-      if (formData.subcategory === "") {
-        errors.subcategory = "Select a subcategory.";
-      }
-      if ( !uploadedImage ) {
-        errors.uploadedImage = "Upload a logo."
+    }
+    if (part === 3) {
+      if (!uploadedImage) {
+        errors.uploadedImage = "Upload a logo.";
       }
     }
     return errors;
@@ -276,23 +284,29 @@ export default function RegistrationView() {
   };
   const completionPercentage = calculateCompletionPercentage();
 
- const handleNextPart = async () => {
-   let newErrors = validateForm();
-   setErrors(newErrors);
+  const handleNextPart = async () => {
+    let newErrors = validateForm();
+    setErrors(newErrors);
+    if ( filteredSubCategories.length === 0 ) {
+      
+    }
+    if (part === 0) {
+      const asyncErrors = await validateUserExistence(formData);
+      newErrors = {...newErrors, ...asyncErrors};
+    }
 
-   if (part === 0) {
-     const asyncErrors = await validateUserExistence(formData);
-     newErrors = {...newErrors, ...asyncErrors};
-   }
-
-   if (Object.keys(newErrors).length === 0 && part < 2) {
-     setPart((prevPart) => prevPart + 1);
-   } else {
-     setErrors(newErrors);
-     if ( part === 0 ) { toast.error( "Please correct the errors before proceeding." ); }
-     if (part === 2 && !uploadedImage) { toast.error("Upload a logo.")}
-   }
- };
+    if (Object.keys(newErrors).length === 0 && part < 3) {
+      setPart((prevPart) => prevPart + 1);
+    } else {
+      setErrors(newErrors);
+      if (part === 0) {
+        toast.error("Please correct the errors before proceeding.");
+      }
+      if (part === 2 && !uploadedImage) {
+        toast.error("Upload a logo.");
+      }
+    }
+  };
 
   const validateUserExistence = async (formData) => {
     const errors = {};
@@ -307,7 +321,6 @@ export default function RegistrationView() {
     if (formData.username) {
       try {
         let res = await getUserExistance({attribute: "username", value: formData.username});
-
       } catch (error) {
         errors.username = "Username already exists.";
       }
@@ -330,7 +343,7 @@ export default function RegistrationView() {
     e.preventDefault();
     const phoneNumberInput = formData.phoneNumber;
     let phoneNumberWithPlus = `+1${formData.phoneNumber}`;
-    console.log({phoneNumberWithPlus})
+    console.log({phoneNumberWithPlus});
     const phoneNumber = parsePhoneNumberFromString(phoneNumberInput);
 
     let signUpPayload = {
@@ -340,10 +353,8 @@ export default function RegistrationView() {
     };
 
     try {
-      const response = await signUp( signUpPayload );
-      console.log("'response salvador", response)
-      // let res = await getToken( { username: formData.username.trim(), password: formData.password } );
-       localStorage.setItem("idToken", response.IdToken);
+      const response = await signUp(signUpPayload);
+      localStorage.setItem("idToken", response.IdToken);
       toast.success("Welcome!");
       navigate("/subscription");
     } catch (error) {
@@ -395,16 +406,18 @@ export default function RegistrationView() {
         )}
         <div className='already-have-an-account-log-in'>
           <span>
-            <span class='already-have-an-account-log-in-span'>
+            <span className='already-have-an-account-log-in-span'>
               Already have an account?{"        "}{" "}
             </span>
             <span>{"   "}</span>
-            <span class='already-have-an-account-log-in-span2' onClick={() => navigate("/login")}>
+            <span
+              className='already-have-an-account-log-in-span2'
+              onClick={() => navigate("/login")}>
               Log in
             </span>
           </span>
         </div>
-        <form className='Body'>
+        <form className={part === 2 ? "Body-categories" : "Body"}>
           <div className='Account-details' style={{color: "black"}}>
             {firstHeaderText[part]}
           </div>
@@ -595,31 +608,18 @@ export default function RegistrationView() {
           )}
           {part === 2 && (
             <>
-              <MTBSelector
-                name={"category"}
-                placeholder='Business category'
-                autoComplete='category'
-                itemName={"name"}
-                itemValue={"value"}
-                value={formData.category}
-                onChange={handleInputChange}
-                options={categoryList}
-                helper={
-                  errors.category && {
-                    type: "warning",
-                    text: errors.category,
-                  }
-                }
-              />
-              <MTBSelector
+              <MTBInput
+                type='category'
                 name={"subcategory"}
-                placeholder='Subcategory'
+                placeholder='Type the category to filter options'
                 autoComplete='subcategory'
                 itemName={"name"}
                 itemValue={"value"}
-                value={formData.subcategory}
+                value={formData.subcategory?.map((el) => {
+                  return " " + (el.subcategories.length ? el.subcategories[0] : el.name);
+                })}
                 onChange={handleInputChange}
-                options={subCategoryList}
+                options={filteredSubCategories}
                 helper={
                   errors.subcategory && {
                     type: "warning",
@@ -628,15 +628,30 @@ export default function RegistrationView() {
                 }
               />
 
-              <MTBDropZone
-                fileType={"image"}
-                setFile={handleSetUploadedImage} 
-                uploadedImage={uploadedImage}
-                helper={
-                  errors.uploadedImage ? {type: "warning", text: errors.uploadedImage} : undefined
-                }
-              />
+              {filteredSubCategories.length ? (
+                <MTBCategorySelector
+                  onChange={handleCategoryChange}
+                  data={formData}
+                  filteredCategories={filteredSubCategories}
+                />
+              ) : (
+                <MTBCategorySelector
+                  onChange={handleCategoryChange}
+                  data={formData}
+                  filteredCategories={subCategoryList}
+                />
+              )}
             </>
+          )}
+          {part === 3 && (
+            <MTBDropZone
+              fileType={"image"}
+              setFile={handleSetUploadedImage}
+              uploadedImage={uploadedImage}
+              helper={
+                errors.uploadedImage ? {type: "warning", text: errors.uploadedImage} : undefined
+              }
+            />
           )}
         </form>
         <div
@@ -685,7 +700,25 @@ export default function RegistrationView() {
               Continue
             </MTBButton>
           )}
-          {part === 2 &&
+          {part === 2 && (
+            <MTBButton
+              style={{
+                borderRadius: "16px",
+                width: "10px",
+                flex: 1,
+                backgroundColor:
+                  formData.firstName &&
+                  formData.lastName &&
+                  (formData.city !== "" || formData.zipCode !== "")
+                    ? "#F18926"
+                    : "#D9D9D9",
+              }}
+              onClick={handleNextPart}
+              isLoading={isLoading}>
+              Continue
+            </MTBButton>
+          )}
+          {part === 3 &&
             !(
               formData.email &&
               formData.phoneNumber &&
@@ -694,7 +727,6 @@ export default function RegistrationView() {
               formData.firstName &&
               formData.lastName &&
               (formData.city !== "" || formData.zipCode !== "") &&
-              formData.category !== "" &&
               formData.subcategory !== "" &&
               !!uploadedImage
             ) && (
@@ -703,15 +735,14 @@ export default function RegistrationView() {
                   borderRadius: "16px",
                   width: "10px",
                   flex: 1,
-                  backgroundColor:
-                    formData.category !== "" && formData.subcategory !== "" ? "#D9D9D9" : "#D9D9D9",
+                  backgroundColor: formData.subcategory !== "" ? "#D9D9D9" : "#D9D9D9",
                 }}
                 onClick={handleNextPart}
                 isLoading={isLoading}>
                 Continue
               </MTBButton>
             )}
-          {part === 2 &&
+          {part === 3 &&
             formData.email &&
             formData.phoneNumber &&
             formData.password &&
@@ -719,7 +750,6 @@ export default function RegistrationView() {
             formData.firstName &&
             formData.lastName &&
             (formData.city !== "" || formData.zipCode !== "") &&
-            formData.category !== "" &&
             formData.subcategory !== "" &&
             !!uploadedImage && (
               <MTBButton onClick={handleSubmit} isLoading={isLoading}>

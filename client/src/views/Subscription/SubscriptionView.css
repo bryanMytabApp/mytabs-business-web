@@ -94,7 +94,7 @@
 }
 .selected-subscription-item {
   flex: 1;
-  background-color: #00AAD6;
+  background-color: var(--primary-blue-color);
   width: 319px;
   height: 388px;
   border-radius: 25px;

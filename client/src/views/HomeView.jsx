@@ -75,7 +75,7 @@ const options = [
     title: "Shop",
   },
   {
-    path: "/configuration",
+    path: "/admin/configuration",
     icon: configurationInactiveIcon,
     title: "Configuration",
   },

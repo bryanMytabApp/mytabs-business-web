@@ -87,6 +87,14 @@
   justify-content: center;
 }
 
+.Login-view .Body-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  justify-content: center;
+
+}
+
 .Login-view .Actions {
   display: flex;
 }
