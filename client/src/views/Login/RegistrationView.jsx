@@ -51,18 +51,18 @@ export default function RegistrationView() {
     hasNumber: false,
   });
   const [searchTerm, setSearchTerm] = useState("");
-  const subCategoryList = Object.keys(categoriesJS).map((categoryName) => ({
-    name: categoryName,
-    subcategories: categoriesJS[categoryName].subcategories,
-  }));
-  const [filteredSubCategories, setFilteredSubCategories] = useState(subCategoryList);
+  const subCategoryList = categoriesJS;
+  const [filteredSubCategories, setFilteredSubCategories] = useState([]);
 
   const [inputTouched, setInputTouched] = useState({zipCode: false, city: false});
   const [imageFile, setImageFile] = useState();
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
-  const [part, setPart] = useState(2);
+  const [ part, setPart ] = useState( 0 );
+  const filterSubCategorySetter = () => {
+    setFilteredSubCategories(subCategoryList);
+  }
   const firstHeaderText = [
     "Create your account",
     "Personal Info",
@@ -79,6 +79,9 @@ export default function RegistrationView() {
   ];
 
   const myRef = useRef(null);
+  useEffect(() => {
+    filterSubCategorySetter();
+  },[])
 
   useEffect(() => {
     if (myRef.current) {
@@ -150,23 +153,11 @@ export default function RegistrationView() {
     });
   };
 
-  const handleCategoryChange = (selectedCategories, selectedSubCategories) => {
-    console.log("selectedCategories", selectedSubCategories);
-    console.log("selectedCategories", selectedCategories);
-
-    let blendedCategories = Array.from(new Set([...selectedCategories, ...selectedSubCategories]));
-    if (blendedCategories.length > 3) {
-      // toast.warn("you can only choose 3 subcategories");
-      return;
-    }
-    
+  const handleCategoryChange = (selectedSubCategories) => {
     setFormData((prev) => ({
       ...prev,
-      subcategory: blendedCategories,
+      subcategory: selectedSubCategories,
     }));
-
-    console.log("[Reg] blendedCategories", blendedCategories);
-    console.log("[REG] formDataaaaaa", formData.subcategory);
   };
 
   const handleInputChange = useCallback((value, name) => {
@@ -296,7 +287,9 @@ export default function RegistrationView() {
   const handleNextPart = async () => {
     let newErrors = validateForm();
     setErrors(newErrors);
-
+    if ( filteredSubCategories.length === 0 ) {
+      
+    }
     if (part === 0) {
       const asyncErrors = await validateUserExistence(formData);
       newErrors = {...newErrors, ...asyncErrors};
@@ -413,11 +406,13 @@ export default function RegistrationView() {
         )}
         <div className='already-have-an-account-log-in'>
           <span>
-            <span class='already-have-an-account-log-in-span'>
+            <span className='already-have-an-account-log-in-span'>
               Already have an account?{"        "}{" "}
             </span>
             <span>{"   "}</span>
-            <span class='already-have-an-account-log-in-span2' onClick={() => navigate("/login")}>
+            <span
+              className='already-have-an-account-log-in-span2'
+              onClick={() => navigate("/login")}>
               Log in
             </span>
           </span>
@@ -620,7 +615,9 @@ export default function RegistrationView() {
                 autoComplete='subcategory'
                 itemName={"name"}
                 itemValue={"value"}
-                value={formData.subcategory}
+                value={formData.subcategory?.map((el) => {
+                  return " " + (el.subcategories.length ? el.subcategories[0] : el.name);
+                })}
                 onChange={handleInputChange}
                 options={filteredSubCategories}
                 helper={
@@ -630,11 +627,20 @@ export default function RegistrationView() {
                   }
                 }
               />
-              <MTBCategorySelector
-                onChange={handleCategoryChange}
-                data={formData}
-                filteredCategories={filteredSubCategories}
-              />
+
+              {filteredSubCategories.length ? (
+                <MTBCategorySelector
+                  onChange={handleCategoryChange}
+                  data={formData}
+                  filteredCategories={filteredSubCategories}
+                />
+              ) : (
+                <MTBCategorySelector
+                  onChange={handleCategoryChange}
+                  data={formData}
+                  filteredCategories={subCategoryList}
+                />
+              )}
             </>
           )}
           {part === 3 && (

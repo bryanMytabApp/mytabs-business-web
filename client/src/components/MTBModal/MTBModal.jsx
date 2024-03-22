@@ -32,7 +32,6 @@ const MTBModal = ({
   onClose,
   category,
   isOther,
-  currentCategoryObj,
   onSubCategoriesChange,
 }) => {
   const [selectedSubCategories, setSelectedSubCategories] = useState([]);
@@ -59,40 +58,42 @@ const MTBModal = ({
     Store: mdiShopping,
     "Dance Hall": mdiDanceBallroom,
   };
-  useEffect( () => {
-    console.log("category mtbmodal", category)
-    console.log(currentCategoryObj)
-  },[])
-  const [otherCategory, setOtherCategory] = useState({"categoryName": "", otherCategoryValue:""});
-  if (!isOpen) return null;
-  const iconPath = iconMap[ category.name ] || mdiAccountOutline;
-  const handleClick = (_category) => {
-    if (selectedSubCategories.length && selectedSubCategories.includes(_category)) {
-      const _filteredArray = [...selectedSubCategories].filter(
-        (categoryAux) => categoryAux !== _category
-      );
-      setSelectedSubCategories(_filteredArray);
-    } else {
-      setSelectedSubCategories([_category]);
+
+  const [subCategories, setSubCategories] = useState([]);
+  const [otherCategory, setOtherCategory] = useState("");
+  
+  const iconPath = iconMap[category.name] || mdiAccountOutline;
+
+  const handleClick = (_subCategory) => {
+    if (subCategories.includes(_subCategory)) {
+      let _subCategories = subCategories.filter((subCat) => subCat !== _subCategory);
+      setSubCategories(_subCategories);
+      return;
     }
+    setOtherCategory("");
+    setSubCategories([_subCategory]);
   };
 
-  const handleOtherCategory = (name, value) => {
-    setSelectedSubCategories( ( prev ) => prev.filter( ( category ) => !category.isText ) )
-    let newOtherCategory = {categoryName: category, otherCategoryValue: name};
-    setOtherCategory(newOtherCategory);
-    console.log(" [handleOther] data", data.subcategory);
-    console.log(" [handleOther] selectedSubCategories ", selectedSubCategories);
-    console.log(" [handleOther] name ", name );
-    // let a = selectedSubCategories.filter((category) => category.isText).name;
-    setSelectedSubCategories([newOtherCategory]);
+  const handleOtherCategory = (value) => {
+    setSubCategories([]);
+    setOtherCategory(value);
   };
-  console.log("subcategories", currentCategoryObj);
+
   const handleContinue = () => {
-    onClose();
-    let res = Array.from(new Set(selectedSubCategories));
-    onSubCategoriesChange((prev) => Array.from(new Set([...prev, ...res])));
+
+      const _category = JSON.parse(JSON.stringify(category));
+      if (subCategories.length) {
+        _category.subcategories = subCategories;
+      } else {
+        _category.subcategories = [otherCategory];
+      }
+
+      onSubCategoriesChange(_category);
+      setSubCategories([]);
+      setOtherCategory("");
+      onClose();
   };
+  if (!isOpen) return <div></div>;
   return (
     <>
       {isOther ? (
@@ -133,17 +134,14 @@ const MTBModal = ({
 
               <ul className='MTB-subcategory-grid'>
                 {category.subcategories?.map((subcategory, index) => (
-                  <li key={index}
-                    onClick={() => handleClick( subcategory )}>
+                  <li key={index} onClick={() => handleClick(subcategory)}>
                     <img
-                      src={
-                        selectedSubCategories.includes(subcategory) ? selectIconActive : selectIcon
-                      }
+                      src={subCategories.includes(subcategory) ? selectIconActive : selectIcon}
                       alt='selectIcon'
                     />
                     <span
                       style={{
-                        color: selectedSubCategories.includes(subcategory) ? "#00AAD6" : "#000000",
+                        color: subCategories.includes(subcategory) ? "#00AAD6" : "#000000",
                       }}>
                       {subcategory}
                     </span>

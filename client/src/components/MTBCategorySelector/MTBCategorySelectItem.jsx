@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import selectIcon from "../../assets/atoms/selectIcon.svg";
 import selectIconActive from "../../assets/atoms/selectIconActive.svg";
 import Icon from "@mdi/react";
@@ -21,7 +21,7 @@ import {
   mdiBaseball,
   mdiDumbbell,
   mdiShopping,
-  mdiDanceBallroom
+  mdiDanceBallroom,
 } from "@mdi/js";
 
 const iconMap = {
@@ -39,16 +39,16 @@ const iconMap = {
   Theater: mdiTheater,
   "Food Truck": mdiFoodOutline,
   "Hair Salon": mdiHairDryerOutline,
-  Charity: mdiCharity, 
+  Charity: mdiCharity,
   Museum: mdiLibraryOutline,
   Music: mdiMusic,
   Sports: mdiBaseball,
   Gym: mdiDumbbell,
   Store: mdiShopping,
   "Dance Hall": mdiDanceBallroom,
- 
 };
-const MTBCategorySelectItem = ({category, onClick, subcategories, clicked}) => {
+const MTBCategorySelectItem = ({category, onClick, subcategories, clicked }) => {
+
   const iconPath = iconMap[category] || mdiAccountOutline;
   return (
     <div

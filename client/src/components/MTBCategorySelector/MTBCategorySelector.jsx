@@ -4,130 +4,68 @@ import "./MTBCategorySelector.css";
 import MTBModal from "../MTBModal/MTBModal";
 import categoriesJS from "../../utils/data/categories";
 import {toast} from "react-toastify";
-
+let categories;
 const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) => {
   const [openModal, setOpenModal] = useState(false);
   const [currentCategory, setCurrentCategory] = useState("");
-  const [currentSubCategories, setCurrentSubCategories] = useState([]);
   const [currentIconName, setCurrentIconName] = useState("mdiAccount");
+  const [testCategories, setTestCategories] = useState([]);
 
-  const categories = filteredCategories
-    ? filteredCategories
-    : Object.keys(categoriesJS).map((categoryName) => ({
-        name: categoryName,
-        subcategories: categoriesJS[categoryName].subcategories,
-        isText: false,
-      }));
-  // console.log("Categoriessss",categoriesJS)
-  const [selectedCategories, setSelectedCategories] = useState([]);
-
-  const toggleCategorySelection = (categoryName) => {
-    let subCategoryQuantity = categories.find((cat) => cat.name === categoryName).subcategories
-      .length;
-
-    if (subCategoryQuantity === 0) {
-      let filteredSelectedCategories = Array.from(
-        new Set(selectedCategories.filter((category) => category.name !== categoryName))
-      );
-      // [{
-      //   name: "Other",
-      //   subcategories: ["Other"],
-      //   subcategoryText: "",
-      
-    // },
-      //   name: "Restaurant",
-      //   subcategories: ["a", "b", "c"],
-      //   subCategoryText: "",
-      // }
-    // ]
-      
-      //subcategories.length =  0 : return name
-      // else find in subcategories
-
-
-      // const categoryFinder = ( categoryList, categoryName ) => {
-      //   categoryList.forEach( category => {
-      //     if ( !category.subCategories.length ) {
-            
-      //     }
-      //   })
-      //   if ( categoryList.find( ( category ) => category.name === categoryName ) ) {
-      //     return categoryList.find( ( category ) => category.name === categoryName )
-      //   } else {
-      //     cacategoryList
-      //   }
-      //  }
-      setSelectedCategories((prev) =>
-        prev.includes(categoryName)
-          ? filteredSelectedCategories
-          : Array.from(new Set([...prev, categoryName]))
-      );
-    }
-  };
+  // const categories = filteredCategories ? filteredCategories : categoriesJS;
   useEffect(() => {
-    // console.log("data", data.subcategory);
-    // console.log();
-    if (currentSubCategories.length > 0) {
-      onChange("", selectedCategories);
-    } else {
-      onChange(currentCategory, selectedCategories);
-    }
-  }, [currentCategory, selectedCategories, currentSubCategories.length]);
+    categories = filteredCategories ? filteredCategories : categoriesJS;
+  },[])
 
-  const handleCategoryClick = ( category ) => {
-    console.log('[handleCategoryClick ] category', category)
-    console.log("selectedCategoriessdssds", selectedCategories);
-    if (data.subcategory.length > 3 && !selectedCategories.includes(category.name)) {
-      toast.warn("You can select up to 3 subcategories");
+  useEffect(() => {
+    if ( testCategories.length > 0 ) {
+      const _testCategories = JSON.parse(JSON.stringify(testCategories));
+      onChange(_testCategories);
+    } 
+  }, [currentCategory, testCategories.length]);
+
+  const handleCategoryClick = (category) => {
+
+    if (testCategories.some((cat) => cat.name === category.name)) {
+      const _testCategories = testCategories.filter((cat) => cat.name !== category.name);
+      setTestCategories(_testCategories);
       return;
     }
-    if (category.subcategories.length === 0 && category.name !== "Other") {
-      setCurrentSubCategories(category.subcategories);
-      setCurrentCategory(category);
-      toggleCategorySelection(category.name);
-    } else {
+    if (testCategories.length > 2) {
+      toast.warn("You can only select up to 3 categories");
+      return;
+    }
+    if (category.subcategories.length > 0) {
       setOpenModal(true);
       setCurrentCategory(category);
-      setCurrentSubCategories([category]);
-      setCurrentIconName(category?.iconName);
+    } else {
+      setTestCategories((prev) => [...prev, category]);
     }
   };
 
-  const categoryContainsSubCategory = (categoryName, dataArr) => {
-    const currCategory = categories.find(
-      (category) => category.name === categoryName
-    ).subcategories;
-
-    return typeof dataArr == "string"
-      ? [dataArr].length && [dataArr]?.some((el) => currCategory.includes(el))
-      : [...dataArr].length && [...dataArr]?.some((el) => currCategory.includes(el));
-  };
   return (
     <>
       <div className='scroll-wrapper'>
+        
         <div className='mtb-category-selector'>
-          {categories.map((category, idx) => (
+          {categories && categories.length && categories.map((category, idx) => (
             <MTBCategorySelectItem
               key={idx}
               onClick={() => handleCategoryClick(category)}
               category={category.name}
               subCategories={category.subcategories}
               iconName={category?.iconName}
-              clicked={
-                selectedCategories.includes( category.name )
-                // ||
-                // categoryContainsSubCategory(category.name, data.subcategory)
-              }
+              clicked={testCategories.some((cat) => cat.name === category.name)}
+              testCategories={testCategories}
             />
           ))}
         </div>
       </div>
       <MTBModal
         data={data}
-        onSubCategoriesChange={setSelectedCategories}
+        onSubCategoriesChange={(arg) => setTestCategories((prev) => [...prev, arg])}
         iconName={currentIconName}
-        currentCategoryObj={currentSubCategories}
-        isOther={currentCategory === "Other"}
+        currentCategoryObj={currentCategory}
+        isOther={currentCategory.name === "Other"}
         category={currentCategory}
         isOpen={openModal}
         onClose={() => setOpenModal(false)}
