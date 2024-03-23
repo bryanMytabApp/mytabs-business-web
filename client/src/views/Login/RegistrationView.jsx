@@ -16,7 +16,7 @@ import {parsePhoneNumberFromString} from "libphonenumber-js";
 import chevronIcon from "../../assets/atoms/chevron.svg";
 import {getUserExistance} from "../../services/userService";
 import categoriesJS from "../../utils/data/categories";
-
+let subCategoryList;
 export const debounce = (func, wait) => {
   let timeout;
   return function executedFunction(...args) {
@@ -51,7 +51,7 @@ export default function RegistrationView() {
     hasNumber: false,
   });
   const [searchTerm, setSearchTerm] = useState("");
-  const subCategoryList = categoriesJS;
+
   const [filteredSubCategories, setFilteredSubCategories] = useState([]);
 
   const [inputTouched, setInputTouched] = useState({zipCode: false, city: false});
@@ -59,10 +59,11 @@ export default function RegistrationView() {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
-  const [ part, setPart ] = useState( 0 );
+  const [part, setPart] = useState(0);
   const filterSubCategorySetter = () => {
-    setFilteredSubCategories(subCategoryList);
-  }
+    subCategoryList = categoriesJS;
+    setFilteredSubCategories(categoriesJS);
+  };
   const firstHeaderText = [
     "Create your account",
     "Personal Info",
@@ -81,7 +82,7 @@ export default function RegistrationView() {
   const myRef = useRef(null);
   useEffect(() => {
     filterSubCategorySetter();
-  },[])
+  }, [part]);
 
   useEffect(() => {
     if (myRef.current) {
@@ -92,7 +93,7 @@ export default function RegistrationView() {
   }, [part]);
 
   useEffect(() => {
-    const filtered = subCategoryList.filter((subCategory) =>
+    const filtered = categoriesJS.filter((subCategory) =>
       subCategory.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredSubCategories(filtered);
@@ -287,8 +288,7 @@ export default function RegistrationView() {
   const handleNextPart = async () => {
     let newErrors = validateForm();
     setErrors(newErrors);
-    if ( filteredSubCategories.length === 0 ) {
-      
+    if (filteredSubCategories.length === 0) {
     }
     if (part === 0) {
       const asyncErrors = await validateUserExistence(formData);
@@ -615,9 +615,11 @@ export default function RegistrationView() {
                 autoComplete='subcategory'
                 itemName={"name"}
                 itemValue={"value"}
-                value={formData.subcategory?.map((el) => {
-                  return " " + (el.subcategories.length ? el.subcategories[0] : el.name);
-                })}
+                value={
+                  Array.isArray(formData.subcategory)
+                    ? formData.subcategory.map((el) =>  el.subcategories[0] || el.name)
+                    : []
+                }
                 onChange={handleInputChange}
                 options={filteredSubCategories}
                 helper={

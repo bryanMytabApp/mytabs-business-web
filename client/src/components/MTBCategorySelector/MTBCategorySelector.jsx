@@ -11,10 +11,9 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
   const [currentIconName, setCurrentIconName] = useState("mdiAccount");
   const [testCategories, setTestCategories] = useState([]);
 
-  // const categories = filteredCategories ? filteredCategories : categoriesJS;
   useEffect(() => {
     categories = filteredCategories ? filteredCategories : categoriesJS;
-  },[])
+  },[filteredCategories])
 
   useEffect(() => {
     if ( testCategories.length > 0 ) {
@@ -45,7 +44,6 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
   return (
     <>
       <div className='scroll-wrapper'>
-        
         <div className='mtb-category-selector'>
           {categories && categories.length && categories.map((category, idx) => (
             <MTBCategorySelectItem
