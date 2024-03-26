@@ -52,6 +52,14 @@ export default function MTBInput({
       <div
         className={type !== "category" ? "input-container" : "input-container-category"}
         style={size === "small" ? {maxWidth: "3rem", ...style} : style}>
+        {type === "password" && (
+          <img
+            src={showPassword ? hideIcon : viewIcon}
+            alt='Toggle visibility'
+            className='view-icon'
+            onClick={() => setShowPassword(!showPassword)}
+          />
+        )}
         <input
           name={name}
           placeholder={placeholder}
@@ -64,14 +72,6 @@ export default function MTBInput({
           onKeyDown={handleKeyDown}
           pattern={pattern}
         />
-        {type === "password" && (
-          <img
-            src={showPassword ? hideIcon : viewIcon}
-            alt='Toggle visibility'
-            className='view-icon'
-            onClick={() => setShowPassword(!showPassword)}
-          />
-        )}
       </div>
       {helper?.text && (
         <div className='Helper-text' style={{zIndex: 2}}>

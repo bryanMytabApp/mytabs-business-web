@@ -137,11 +137,17 @@
 }
 
 .View {
-  padding: 59px 32px 32px 41px;
-  display: flex;
+  /* padding: 59px 0px 32px 0px; */
+  /* display: flex; */
   flex: 1;
-  overflow: auto;
+  /* overflow: auto; */
   /* margin-top: 40px;; */
+}
+
+.tableActions {
+  display: flex;
+  width: 100%;
+  align-items: flex-end;
 }
 
 .Topbar {

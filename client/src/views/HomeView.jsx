@@ -197,7 +197,7 @@ export default function HomeView() {
             <div style={{flex: 1}}></div>
           </div>
         </div>
-        <div display='flex' justifyContent='center' alignItems='center'>
+        {/* <div display='flex' justifyContent='center' alignItems='center'>
           {true && (
             <Link
               // to={`/admin/accounts/clientidentification/${state?.user._id}`}
@@ -218,7 +218,7 @@ export default function HomeView() {
               />
             </Link>
           )}
-        </div>
+        </div> */}
         {/* <div className='Topbar'></div> */}
         <div className='View'>
           <Outlet />
