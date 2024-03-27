@@ -48,7 +48,7 @@ const options = [
       active: myEventsActiveIcon,
       inactive: myEventsInactiveIcon,
     },
-    title: "User Catalog",
+    title: "My Ads",
   },
   {
     path: "/admin/analytics",

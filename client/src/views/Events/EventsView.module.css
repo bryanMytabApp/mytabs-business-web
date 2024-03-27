@@ -1,10 +1,18 @@
 .view {
-  background: url("../../assets/subsImage.png") no-repeat center center fixed;
+  background: url("../../assets/subsImage.png") repeat center center fixed;
   /* background-size: repeat; */
   width: 100%;
   height: 100%;
   display: flex;
   justify-content: center;
+  align-items: center;
+}
+h1 {
+  color:#F09925;
+  font-size: 22px;
+}
+.titleContainer {
+  display: flex;
   align-items: center;
 }
 .tableRow {
@@ -22,13 +30,16 @@
   border-radius: 10px;
   padding: 15px;
   box-sizing: border-box;
-  width: 95%;
+  width: 100%;
   height: 90%;
   background: rgba(253, 253, 253, 0.3);
   display: flex;
   flex-wrap: wrap;
   justify-content: end;
   align-content: space-around;
+}
+.contentContainer {
+  width: 95%;
 }
 
 .tableActions {
