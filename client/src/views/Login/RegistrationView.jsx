@@ -91,11 +91,21 @@ export default function RegistrationView() {
       });
     }
   }, [part]);
-
+  let timeout
   useEffect(() => {
-    const filtered = categoriesJS.filter((subCategory) =>
-      subCategory.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let filtered
+    console.log("🚀 ~ useEffect ~ searchTerm:", searchTerm)
+    
+    if(searchTerm.length) {
+      console.log('filtering', categoriesJS.length)
+      filtered = JSON.parse(JSON.stringify(categoriesJS)).filter((subCategory) =>
+        subCategory.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    else { 
+      console.log('not filtering', categoriesJS.length)
+      filtered = categoriesJS
+    }
     setFilteredSubCategories(filtered);
   }, [searchTerm]);
 
@@ -618,7 +628,7 @@ export default function RegistrationView() {
                 value={
                   Array.isArray(formData.subcategory)
                     ? formData.subcategory.map((el) =>  el.subcategories[0] || el.name)
-                    : []
+                    : [searchTerm]
                 }
                 onChange={handleInputChange}
                 options={filteredSubCategories}
@@ -630,19 +640,11 @@ export default function RegistrationView() {
                 }
               />
 
-              {filteredSubCategories.length ? (
                 <MTBCategorySelector
                   onChange={handleCategoryChange}
                   data={formData}
                   filteredCategories={filteredSubCategories}
                 />
-              ) : (
-                <MTBCategorySelector
-                  onChange={handleCategoryChange}
-                  data={formData}
-                  filteredCategories={subCategoryList}
-                />
-              )}
             </>
           )}
           {part === 3 && (

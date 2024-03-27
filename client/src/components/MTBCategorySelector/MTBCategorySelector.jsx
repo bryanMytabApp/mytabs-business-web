@@ -2,18 +2,13 @@ import React, {useEffect, useState} from "react";
 import MTBCategorySelectItem from "./MTBCategorySelectItem";
 import "./MTBCategorySelector.css";
 import MTBModal from "../MTBModal/MTBModal";
-import categoriesJS from "../../utils/data/categories";
 import {toast} from "react-toastify";
-let categories;
+
 const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) => {
   const [openModal, setOpenModal] = useState(false);
   const [currentCategory, setCurrentCategory] = useState("");
   const [currentIconName, setCurrentIconName] = useState("mdiAccount");
   const [testCategories, setTestCategories] = useState([]);
-
-  useEffect(() => {
-    categories = filteredCategories ? filteredCategories : categoriesJS;
-  },[filteredCategories])
 
   useEffect(() => {
     if ( testCategories.length > 0 ) {
@@ -23,6 +18,11 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
   }, [currentCategory, testCategories.length]);
 
   const handleCategoryClick = (category) => {
+    if(category.name === 'Other' && !testCategories.some((cat) => cat.name === category.name)) {
+      setOpenModal(true);
+      setCurrentCategory(category);
+      return
+    } 
 
     if (testCategories.some((cat) => cat.name === category.name)) {
       const _testCategories = testCategories.filter((cat) => cat.name !== category.name);
@@ -45,7 +45,7 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
     <>
       <div className='scroll-wrapper'>
         <div className='mtb-category-selector'>
-          {categories && categories.length && categories.map((category, idx) => (
+          {filteredCategories && filteredCategories.length && filteredCategories.map((category, idx) => (
             <MTBCategorySelectItem
               key={idx}
               onClick={() => handleCategoryClick(category)}
