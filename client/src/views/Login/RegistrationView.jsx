@@ -31,6 +31,7 @@ export const debounce = (func, wait) => {
 
 export default function RegistrationView() {
   const navigate = useNavigate();
+  const [subcategoryFilter, setSubcategoryFilter] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     username: "",
@@ -91,20 +92,19 @@ export default function RegistrationView() {
       });
     }
   }, [part]);
-  let timeout
+  let timeout;
   useEffect(() => {
-    let filtered
-    console.log("🚀 ~ useEffect ~ searchTerm:", searchTerm)
-    
-    if(searchTerm.length) {
-      console.log('filtering', categoriesJS.length)
+    let filtered;
+    console.log("🚀 ~ useEffect ~ searchTerm:", searchTerm);
+
+    if (searchTerm.length) {
+      console.log("filtering", categoriesJS.length);
       filtered = JSON.parse(JSON.stringify(categoriesJS)).filter((subCategory) =>
         subCategory.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
-    }
-    else { 
-      console.log('not filtering', categoriesJS.length)
-      filtered = categoriesJS
+    } else {
+      console.log("not filtering", categoriesJS.length);
+      filtered = categoriesJS;
     }
     setFilteredSubCategories(filtered);
   }, [searchTerm]);
@@ -172,10 +172,15 @@ export default function RegistrationView() {
   };
 
   const handleInputChange = useCallback((value, name) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    if (name === "subcategoryFilter") {
+      setSubcategoryFilter(value); 
+      setSearchTerm(value); 
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
     setSearchTerm(value);
     if (name === "zipCode") {
       setInputTouched({
@@ -620,31 +625,37 @@ export default function RegistrationView() {
             <>
               <MTBInput
                 type='category'
-                name={"subcategory"}
+                name={"subcategoryFilter"}
                 placeholder='Type the category to filter options'
                 autoComplete='subcategory'
                 itemName={"name"}
                 itemValue={"value"}
-                value={
-                  Array.isArray(formData.subcategory)
-                    ? formData.subcategory.map((el) =>  el.subcategories[0] || el.name)
-                    : [searchTerm]
-                }
+                value={subcategoryFilter}
                 onChange={handleInputChange}
                 options={filteredSubCategories}
                 helper={
-                  errors.subcategory && {
-                    type: "warning",
-                    text: errors.subcategory,
-                  }
+                  errors.subcategory
+                    ? {
+                        type: "warning",
+                        text: errors.subcategory,
+                      }
+                    : Array.isArray(formData.subcategory) && formData.subcategory.length > 0
+                    ? {
+                        type: "info",
+                        text: formData.subcategory
+                          .map((el, idx) => `${idx + 1}. ${el.subcategories[0] || el.name}`)
+                          .join(", "),
+                        style: {color: "#00AAD6"},
+                      }
+                    : undefined
                 }
               />
 
-                <MTBCategorySelector
-                  onChange={handleCategoryChange}
-                  data={formData}
-                  filteredCategories={filteredSubCategories}
-                />
+              <MTBCategorySelector
+                onChange={handleCategoryChange}
+                data={formData}
+                filteredCategories={filteredSubCategories}
+              />
             </>
           )}
           {part === 3 && (
@@ -731,7 +742,7 @@ export default function RegistrationView() {
               formData.firstName &&
               formData.lastName &&
               (formData.city !== "" || formData.zipCode !== "") &&
-              formData.subcategory !== "" &&
+              formData.subcategory.length !== 0 &&
               !!uploadedImage
             ) && (
               <MTBButton
@@ -739,7 +750,7 @@ export default function RegistrationView() {
                   borderRadius: "16px",
                   width: "10px",
                   flex: 1,
-                  backgroundColor: formData.subcategory !== "" ? "#D9D9D9" : "#D9D9D9",
+                  backgroundColor: formData.subcategory.length > 2 ? "#F18926" : "#D9D9D9",
                 }}
                 onClick={handleNextPart}
                 isLoading={isLoading}>
@@ -754,7 +765,7 @@ export default function RegistrationView() {
             formData.firstName &&
             formData.lastName &&
             (formData.city !== "" || formData.zipCode !== "") &&
-            formData.subcategory !== "" &&
+            formData.subcategory.length !== 0 &&
             !!uploadedImage && (
               <MTBButton onClick={handleSubmit} isLoading={isLoading}>
                 Submit
