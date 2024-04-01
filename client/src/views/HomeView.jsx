@@ -35,12 +35,12 @@ const options = [
     title: "Home",
   },
   {
-    path: "/admin/my-info",
+    path: "/admin/my-business",
     icon: {
       inactive: clientCatalogInactiveIcon,
       active: clientCatalogActiveIcon,
     },
-    title: "My Info",
+    title: "My Business",
   },
   {
     path: "/admin/my-events",
@@ -117,13 +117,20 @@ export default function HomeView() {
             <div id='Menu-option-logo' style={{flex: 1}} onClick={handleExpand}>
               <img src={logo} alt='logo' />
               {isExpanded && (
-                <div style={{fontFamily: "Outfit", fontWeight: 700, alignSelf: "center"}}>
+                <div
+                  style={{
+                    fontFamily: "Outfit",
+                    fontWeight: 700,
+                    alignSelf: "center",
+                    fontSize: "24px",
+                  }}>
                   Dashboard
                 </div>
               )}
             </div>
             <div
               style={{
+                fontFamily: "Poppins",
                 flex: 5,
                 backgroundColor: "white",
                 display: "flex",
@@ -144,82 +151,66 @@ export default function HomeView() {
                     children={({isActive}) => (
                       <>
                         <ReactSVG src={isActive ? item.icon.active : item.icon.inactive} />
-                        {isExpanded && <span style={{marginLeft: "16px"}}>{item.title}</span>}
+                        {isExpanded && <span style={{marginLeft: "8px"}}>{item.title}</span>}
                       </>
                     )}
                   />
                 ))}
             </div>
-            <div style={{flex: 8}}></div>
+            <div style={{display: "flex", flex: 4}}></div>
+
             <div
               style={{
-                height: "1px",
-                backgroundColor: "#717272",
-              }}></div>
-            <div style={{flex: 0.5}}></div>
-            <div style={{display: "flex", flex: 2, paddingTop: "16px"}} className='Menu-option'>
-              <div
-                style={{
-                  height: "1px",
-                  backgroundColor: "#797676",
-                }}></div>
+                display: "flex",
+                flex: 3,
+                paddingTop: "16px",
+                alignContent: "center",
+              }}
+              className='Menu-option'>
               <div
                 style={{
                   flex: 1,
                   backgroundColor: "white",
                   display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-evenly",
+                  flexDirection: "column-reverse",
+                  justifyContent: "normal",
                   gap: "10px",
                   padding: "8px",
                   borderRadius: "10px",
                 }}>
                 <NavLink
-                  key={options[options.length - 2].path}
-                  className={isExpanded ? "Menu-option-expanded" : "Menu-option"}
-                  to={options[options.length - 2].path}>
-                  <ReactSVG src={options[options.length - 2].icon} />
-                  {isExpanded && (
-                    <span style={{marginLeft: "16px"}}>{options[options.length - 2].title}</span>
-                  )}
-                </NavLink>
-                <NavLink
                   key={options[options.length - 1].path}
-                  className={isExpanded ? "Menu-option-expanded" : "Menu-option"}
+                  style={{backgroundColor: !isExpanded ? null : "white"}}
+                  className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
                   to={options[options.length - 1].path}>
                   <ReactSVG src={options[options.length - 1].icon} />
                   {isExpanded && (
-                    <span style={{marginLeft: "16px"}}>{options[options.length - 1].title}</span>
+                    <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
+                      {options[options.length - 1].title}
+                    </span>
                   )}
                 </NavLink>
+                <NavLink
+                  key={options[options.length - 2].path}
+                  style={{backgroundColor: !isExpanded ? null : "white", fontFamily: "Poppins", fontWeight: 500}}
+                  className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
+                  to={options[options.length - 2].path}>
+                  <ReactSVG src={options[options.length - 2].icon} />
+                  {isExpanded && (
+                    <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
+                      {options[options.length - 2].title}
+                    </span>
+                  )}
+                </NavLink>
+                <div
+                  style={{
+                    height: "1px",
+                    backgroundColor: "#71727255",
+                  }}></div>
               </div>
             </div>
-            <div style={{flex: 1}}></div>
           </div>
         </div>
-        {/* <div display='flex' justifyContent='center' alignItems='center'>
-          {true && (
-            <Link
-              // to={`/admin/accounts/clientidentification/${state?.user._id}`}
-              state={{user: state.user}}>
-              <img
-                style={{
-                  height: 40,
-                  width: 40,
-                  borderRadius: "50%",
-                  backgroundColor: "#919292",
-                  zIndex: 10000,
-                  right: 32,
-                  position: "absolute",
-                  top: 16,
-                }}
-                src={"https://www.gravatar.com/avatar/205e460b479e2e5b48aec07710c08d50?s=200"}
-                alt='ProfileIcon'
-              />
-            </Link>
-          )}
-        </div> */}
-        {/* <div className='Topbar'></div> */}
         <div className='View'>
           <Outlet />
         </div>

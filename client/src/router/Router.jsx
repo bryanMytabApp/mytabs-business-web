@@ -12,7 +12,7 @@ import HomeMainView from "../views/HomeMain/HomeMainView";
 import ClientCatalogView from "../views/ClientCatalog/ClientCatalogView";
 import UserCatalogView from "../views/UserCatalog/UserCatalogView";
 import SubscriptionSuccess from "../views/Subscription/SubscriptionSuccess";
-import MyInfoView from "../views/MyInfo/MyInfoView";
+import MyBusinessView from "../views/MyBusiness/MyBusinessView";
 import AnalyticsView from "../views/Analytics/AnalyticsView";
 import UpgradesAddonsView from "../views/UpgradesAddons/UpgradesAddonsView";
 import ShopView from "../views/Shop/ShopView";
@@ -94,8 +94,8 @@ const router = createBrowserRouter([
             loader: () => routerHandler(true),
           },
           {
-            path: "my-info",
-            element: <MyInfoView />,
+            path: "my-business",
+            element: <MyBusinessView />,
             loader: () => routerHandler(true),
           },
           {
