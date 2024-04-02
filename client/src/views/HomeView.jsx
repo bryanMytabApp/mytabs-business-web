@@ -1,7 +1,6 @@
 import React, {useEffect, useState} from "react";
-import {Outlet, redirect, NavLink, useLocation, Link} from "react-router-dom";
+import {Outlet, redirect, NavLink, useLocation, Link, useNavigate} from "react-router-dom";
 import {ReactSVG} from "react-svg";
-
 import "./HomeView.css";
 import logo from "../assets/menu/HomeviewTab.svg";
 import homeInactiveIcon from "../assets/menu/homeInactive.svg";
@@ -24,6 +23,7 @@ import logout from "../assets/menu/logout.svg";
 
 import {UserDataProvider} from "../utils/UserDataProvider";
 import {getCookie} from "../utils/Tools.ts";
+import {MTBLoading} from "../components";
 
 const options = [
   {
@@ -96,11 +96,23 @@ export const LoaderHome = () => {
 
 export default function HomeView() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleExpand = () => {
     setIsExpanded(!isExpanded);
   };
+
+  const logoutFn = () => {
+    setIsLoading(true);
+    localStorage.clear();
+    setTimeout(() => {
+      setIsLoading(false);
+      navigate("/login");
+    }, 1000);
+  };
+
   useEffect(() => {
     const selectedMenuOption = options.find(
       (x) => x.path.substring(1) === location.pathname.split("/")[1].split("-")
@@ -111,110 +123,126 @@ export default function HomeView() {
 
   return (
     <UserDataProvider>
-      <div className='HomeView'>
-        <div className={isExpanded ? "Sidebar-expanded" : "Sidebar"}>
-          <div className='Menu'>
-            <div id='Menu-option-logo' style={{flex: 1}} onClick={handleExpand}>
-              <img src={logo} alt='logo' />
-              {isExpanded && (
-                <div
-                  style={{
-                    fontFamily: "Outfit",
-                    fontWeight: 700,
-                    alignSelf: "center",
-                    fontSize: "24px",
-                  }}>
-                  Dashboard
-                </div>
-              )}
-            </div>
-            <div
-              style={{
-                fontFamily: "Poppins",
-                flex: 5,
-                backgroundColor: "white",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-evenly",
-                gap: "10px",
-                padding: "8px",
-                marginTop: "32px",
-                borderRadius: "10px",
-              }}>
-              {options
-                .filter((item) => !["Logout", "Configuration"].includes(item.title))
-                .map((item) => (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    className={({isActive}) => (!isActive ? "Menu-option-expanded" : "Menu-option")}
-                    children={({isActive}) => (
-                      <>
-                        <ReactSVG src={isActive ? item.icon.active : item.icon.inactive} />
-                        {isExpanded && <span style={{marginLeft: "8px"}}>{item.title}</span>}
-                      </>
-                    )}
-                  />
-                ))}
-            </div>
-            <div style={{display: "flex", flex: 4}}></div>
-
-            <div
-              style={{
-                display: "flex",
-                flex: 3,
-                paddingTop: "16px",
-                alignContent: "center",
-              }}
-              className='Menu-option'>
+      {isLoading ? (
+        <MTBLoading />
+      ) : (
+        <div className='HomeView'>
+          <div className={isExpanded ? "Sidebar-expanded" : "Sidebar"}>
+            <div className='Menu'>
+              <div id='Menu-option-logo' style={{flex: 1}} onClick={handleExpand}>
+                <img src={logo} alt='logo' />
+                {isExpanded && (
+                  <div
+                    style={{
+                      fontFamily: "Outfit",
+                      fontWeight: 700,
+                      alignSelf: "center",
+                      fontSize: "24px",
+                    }}>
+                    Dashboard
+                  </div>
+                )}
+              </div>
               <div
                 style={{
-                  flex: 1,
+                  fontFamily: "Poppins",
+                  flex: 5,
                   backgroundColor: "white",
                   display: "flex",
-                  flexDirection: "column-reverse",
-                  justifyContent: "normal",
+                  flexDirection: "column",
+                  justifyContent: "space-evenly",
                   gap: "10px",
                   padding: "8px",
+                  marginTop: "32px",
                   borderRadius: "10px",
                 }}>
-                <NavLink
-                  key={options[options.length - 1].path}
-                  style={{backgroundColor: !isExpanded ? null : "white"}}
-                  className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
-                  to={options[options.length - 1].path}>
-                  <ReactSVG src={options[options.length - 1].icon} />
-                  {isExpanded && (
-                    <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
-                      {options[options.length - 1].title}
-                    </span>
-                  )}
-                </NavLink>
-                <NavLink
-                  key={options[options.length - 2].path}
-                  style={{backgroundColor: !isExpanded ? null : "white", fontFamily: "Poppins", fontWeight: 500}}
-                  className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
-                  to={options[options.length - 2].path}>
-                  <ReactSVG src={options[options.length - 2].icon} />
-                  {isExpanded && (
-                    <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
-                      {options[options.length - 2].title}
-                    </span>
-                  )}
-                </NavLink>
+                {options
+                  .filter((item) => !["Logout", "Configuration"].includes(item.title))
+                  .map((item) => (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      className={({isActive}) =>
+                        !isActive ? "Menu-option-expanded" : "Menu-option"
+                      }
+                      children={({isActive}) => (
+                        <>
+                          <ReactSVG src={isActive ? item.icon.active : item.icon.inactive} />
+                          {isExpanded && <span style={{marginLeft: "8px"}}>{item.title}</span>}
+                        </>
+                      )}
+                    />
+                  ))}
+              </div>
+              <div style={{display: "flex", flex: 4}}></div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flex: 3,
+                  paddingTop: "16px",
+                  alignContent: "center",
+                }}
+                className='Menu-option'>
                 <div
                   style={{
-                    height: "1px",
-                    backgroundColor: "#71727255",
-                  }}></div>
+                    flex: 1,
+                    backgroundColor: "white",
+                    display: "flex",
+                    flexDirection: "column-reverse",
+                    justifyContent: "normal",
+                    gap: "10px",
+                    padding: "8px",
+                    borderRadius: "10px",
+                  }}>
+                  <div
+                    onClick={() => logoutFn()}
+                    style={{
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      backgroundColor: !isExpanded ? null : "white",
+                      borderRadius: "10px",
+                    }}
+                    className={isExpanded ? "Menu-option" : "Menu-option-expanded"}>
+                    <ReactSVG src={options[options.length - 1].icon} />
+                    {isExpanded && (
+                      <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
+                        {options[options.length - 1].title}
+                      </span>
+                    )}
+                  </div>
+
+                  <NavLink
+                    key={options[options.length - 2].path}
+                    style={{
+                      backgroundColor: !isExpanded ? null : "white",
+                      fontFamily: "Poppins",
+                      fontWeight: 500,
+                    }}
+                    className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
+                    to={options[options.length - 2].path}>
+                    <ReactSVG src={options[options.length - 2].icon} />
+                    {isExpanded && (
+                      <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
+                        {options[options.length - 2].title}
+                      </span>
+                    )}
+                  </NavLink>
+                  <div
+                    style={{
+                      height: "1px",
+                      backgroundColor: "#71727255",
+                    }}></div>
+                </div>
               </div>
             </div>
           </div>
+          <div className='View'>
+            <Outlet />
+          </div>
         </div>
-        <div className='View'>
-          <Outlet />
-        </div>
-      </div>
+      )}
     </UserDataProvider>
   );
 }
