@@ -1,7 +1,6 @@
 import React, {useEffect, useState} from "react";
 import {Outlet, redirect, NavLink, useLocation, Link, useNavigate} from "react-router-dom";
 import {ReactSVG} from "react-svg";
-import ReactLoading from "react-loading";
 import "./HomeView.css";
 import logo from "../assets/menu/HomeviewTab.svg";
 import homeInactiveIcon from "../assets/menu/homeInactive.svg";
@@ -24,6 +23,7 @@ import logout from "../assets/menu/logout.svg";
 
 import {UserDataProvider} from "../utils/UserDataProvider";
 import {getCookie} from "../utils/Tools.ts";
+import {MTBLoading} from "../components";
 
 const options = [
   {
@@ -105,13 +105,12 @@ export default function HomeView() {
   };
 
   const logoutFn = () => {
-    setIsLoading(true); // Start loading
+    setIsLoading(true);
     localStorage.clear();
-    // Simulate some delay if needed, then redirect
     setTimeout(() => {
-      setIsLoading(false); // End loading
+      setIsLoading(false);
       navigate("/login");
-    }, 1000); // Adjust time as needed, or remove setTimeout if not required
+    }, 1000);
   };
 
   useEffect(() => {
@@ -125,7 +124,7 @@ export default function HomeView() {
   return (
     <UserDataProvider>
       {isLoading ? (
-        <ReactLoading type='spin' height={36} width={36} color='#00AAFD' />
+        <MTBLoading />
       ) : (
         <div className='HomeView'>
           <div className={isExpanded ? "Sidebar-expanded" : "Sidebar"}>
@@ -196,18 +195,6 @@ export default function HomeView() {
                     padding: "8px",
                     borderRadius: "10px",
                   }}>
-                  {/* <NavLink
-                  key={options[options.length - 1].path}
-                  style={{backgroundColor: !isExpanded ? null : "white"}}
-                  className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
-                  to={options[options.length - 1].path}>
-                  <ReactSVG src={options[options.length - 1].icon} />
-                  {isExpanded && (
-                    <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
-                      {options[options.length - 1].title}
-                    </span>
-                  )}
-                </NavLink> */}
                   <div
                     onClick={() => logoutFn()}
                     style={{
