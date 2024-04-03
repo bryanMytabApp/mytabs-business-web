@@ -14,24 +14,22 @@ content: "";
  */
 
 .view {
-    background: url("../../assets/subsImage.png") repeat center center fixed;
-  /* position: relative; */
+  background: url("../../assets/subsImage.png") repeat center center fixed;
   width: 100%;
-  height: 100vh;
+  height: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
-  z-index: 0;
 }
 
 h1 {
-  color: #F09925;
-  font-size: 22px;
+  color:var(--primary-orange-color);
+  font-size: 36px;
 }
 
 .contentContainer {
-
   width: 95%;
+  height: 90%;
+  margin-top: 36px;
 }
 
 .titleContainer {
@@ -40,9 +38,9 @@ h1 {
 }
 
 .mainContainer {
-
   border-radius: 10px;
   padding: 15px;
+  padding-bottom: 60px;
   box-sizing: border-box;
   width: 100%;
   height: 90%;
@@ -55,36 +53,157 @@ h1 {
   grid-template-rows: 2;
   grid-gap: 20px;
   background: linear-gradient(0deg, rgba(253, 253, 253, 0.3), rgba(253, 253, 253, 0.3)),
-      linear-gradient(102.1deg, rgba(255, 255, 255, 0.24) 6.16%, rgba(255, 255, 255, 0.015) 86.42%);
+    linear-gradient(102.1deg, rgba(255, 255, 255, 0.24) 6.16%, rgba(255, 255, 255, 0.015) 86.42%);
 }
 
 .upgradeItemTitle {
   font-weight: 700;
   font-family: Outfit;
   font-size: 36px;
+  grid-row: 1;
 }
 
 .subTitle {
   grid-column: 2;
   grid-row: 1;
-  font-size: 24px;
+  font-size: 28px;
   justify-self: center;
   font-family: Outfit;
   font-weight: 700;
+  margin-bottom: 24px;
+  margin-top: 20px;
 }
 
 .upgradeItem-1 {
   grid-column: 1;
   grid-row: 2;
-  background: rgba(253, 253, 253, 0.3);
+  border-right: solid #fff 1px;
+  padding-right: 16px;
+  display: grid;
+  grid-template-columns: 3;
+  grid-template-rows: 3;
 }
 
 .upgradeItem-2 {
   grid-row: 2;
   grid-column: 2;
+  border-right: solid #fff 1px;
+  padding-right: 16px;
+  display: grid;
+  grid-template-columns: 3;
+  grid-template-rows: 3;
 }
 
 .upgradeItem-3 {
-  grid-row:2;
+  grid-row: 2;
   grid-column: 3;
+  display: grid;
+  grid-template-columns: 3;
+  grid-template-rows: 3;
+}
+.upgradeItem-1,.upgradeItem-2,.upgradeItem-3 {
+  padding-right: 10%;
+  padding-left: 10%;
+}
+
+.baseButton {
+  margin-right: 10px;
+  display: flex;
+  cursor: pointer;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  font-weight: bold;
+
+}
+
+.exportButton {
+  background: none;
+  color: var(---gray-500-color);
+  border: 1px solid var(---gray-500-color);
+  border-radius: 32px;
+  width: 100%;
+  justify-content: center;
+}
+
+.createEventButton {
+  background: var(--primary-orange-color);
+  color: white;
+  border: none;
+  border-radius: 32px;
+  width: 100%;
+  justify-content: center;
+  font-family: "Poppins";
+}
+
+.upgradeItemBenefits {
+  grid-row: 2;
+  color: var(---gray-500-color);
+}
+
+.buttonPosition {
+  grid-row: 3;
+  grid-column: 1/span 3;
+  display: flex;
+  justify-self: center;
+  margin-top: 32px;
+  /* margin-bottom:60px; */
+  width: 100%;
+  height: 40px;
+  align-self: flex-end;
+}
+
+
+.priceHTML{
+  display: inline-flex;
+  font-size: 40px;
+  margin:0;
+    font-family: Outfit;
+      font-weight: 700;
+}
+h2 span {
+  margin:0;
+  display: flex;
+  font-size: 24px;
+  font-weight: 700;
+  font-family: Outfit;
+  align-self: flex-end;
+  color: var(---gray-500-color);
+}
+h3{
+  padding: 0;
+  margin:0;
+  margin-top: 20px;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.spanLineStyle{
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  position: relative;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.benefitText {
+  font-family: Outfit;
+  color: var(---gray-500-color);
+}
+
+.bulletIcon {
+  background: #43A4C226;
+  position: relative;
+  border-radius: 25px;
+  height: 20px;
+  width: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row;
+  flex: 1 1 1;
+  background-color: var(--primary-blue-color);
+
 }
