@@ -18,6 +18,8 @@ import UpgradesAddonsView from "../views/UpgradesAddons/UpgradesAddonsView";
 import ShopView from "../views/Shop/ShopView";
 import MyTabsConfigurationView from "../views/MyTabsConfiguration/MyTabsConfigurationView";
 import EventsView from "../views/Events/EventsView";
+import EventCreate from "../views/Events/EventCreate";
+
 const routerHandler = (isIntern) => {
   const _idToken = localStorage.getItem("idToken");
 
@@ -101,6 +103,11 @@ const router = createBrowserRouter([
           {
             path: "my-events",
             element: <EventsView />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/create",
+            element: <EventCreate />,
             loader: () => routerHandler(true),
           },
           {
