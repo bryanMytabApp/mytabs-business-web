@@ -10,5 +10,7 @@
     "deploy": "cd client && npm run deploy"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+  }
 }

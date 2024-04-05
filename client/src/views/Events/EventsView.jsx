@@ -22,28 +22,8 @@ import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import moment from 'moment'
 import { useNavigate } from "react-router-dom";
-
-function createData(
-  name,
-  date,
-  startDate,
-  endDate,
-  zipCode,
-  createdAt,
-) {
-  return { name, date, startDate, endDate, zipCode, createdAt, id: (Math.random() * 100).toString() };
-}
-
-const items = [
-  createData('Event 1', moment().toString(), moment().toString(), moment().toString(), '12345', moment().toString()),
-  createData('Event with long name', moment().toString(), moment().toString(), moment().toString(), '12345', moment().toString()),
-  createData('Event with longger name', moment().toString(), moment().toString(), moment().toString(), '12345', moment().toString()),
-  createData('Event with longger name', moment().toString(), moment().toString(), moment().toString(), '12345', moment().toString()),
-  // createData('Event 1', moment().toString(), moment().toString(), moment().toString(), '12345', moment().toString()),
-  // createData('Event with long name', moment().toString(), moment().toString(), moment().toString(), '12345', moment().toString()),
-  // createData('Event with longger name', moment().toString(), moment().toString(), moment().toString(), '12345', moment().toString()),
-  // createData('Event with longger name', moment().toString(), moment().toString(), moment().toString(), '12345', moment().toString()),
-];
+import { getEventsByUserId } from "../../services/eventService";
+import { getEventPicture } from "../../utils/common"
 
 const ChildCheckbox = ({ checked, onChange }) => {
   const label = { inputProps: { 'aria-label': 'Checkbox demo' } }
@@ -55,11 +35,14 @@ const ChildCheckbox = ({ checked, onChange }) => {
     />
   )
 }
-
+let userId
 const EventsView = () => {
+  
   const [selectedItems, setSelectedItems] = useState([])
-  const [page, setPage] = useState(1)
+  const [items, setItems] = useState([])
+  const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(items.length)
+
   const navigation = useNavigate();
   const handleChange = (event, id) => {
     if(event.target.checked) {
@@ -148,6 +131,31 @@ const EventsView = () => {
 
   const createMultipleClasses = (classes = []) => classes.join(' ');
 
+  useEffect(() => {
+    const token = localStorage.getItem("idToken");
+    userId = parseJwt(token);
+    getEventsByUserId(userId)
+      .then(res => {
+        setItems(res.data)
+      })
+    .catch(err => console.error(err))
+  }, []);
+
+  const parseJwt = (token) => {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map(function (c) {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join("")
+    );
+
+    return JSON.parse(jsonPayload)["custom:user_id"];
+  };
+
  return (
     <div className={styles.view}>
       <div className={styles.contentContainer}>
@@ -169,7 +177,7 @@ const EventsView = () => {
                 className={styles.input}
                 type="text"
                 value={''}
-                placeholder="Search now"
+                placeholder="Search"
                 onBlur={() => {}}
                 onChange={(e) => (e.target.value)}
               />
@@ -181,7 +189,10 @@ const EventsView = () => {
                 </span>
                 Export
               </button>
-              <button className={createMultipleClasses([styles.baseButton, styles.createEventButton])}>
+              <button
+                className={createMultipleClasses([styles.baseButton, styles.createEventButton])}
+                onClick={() => navigation("/admin/my-events/create")}
+              >
                 <span class="material-symbols-outlined">
                   add
                 </span>
@@ -207,7 +218,7 @@ const EventsView = () => {
                     <div className={styles.tableHeader}>Advertisement</div>
                   </TableCell>
                   <TableCell>
-                    <div className={styles.tableHeader}>Name</div>
+                    <div className={styles.tableHeader}>Event name</div>
                   </TableCell>
                   <TableCell>
                     <div className={styles.tableHeader}>Date</div>
@@ -246,7 +257,7 @@ const EventsView = () => {
                     <TableCell component="th" scope="row" >
                       <div className={styles.advertisementImg}>
                         <img
-                          src="https://s3-alpha-sig.figma.com/img/e805/dd2c/a6e72d26c01948e9692de91ca803243b?Expires=1712534400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=SvFgtYtj8ELTLlZqbU5vbARpxtalXSwWtdnDaRwnyB4jqBKUk4p5r4r0TI3ZyM6-QawrGk5L~BUAWTcIYiYrTjHpOkcdPWP90YLGvdC3ZSYJutmD47cBu8YlxieELzQvoaeE5J382IgJo4VO6hcn~RJ2Q2iKGiHFOJ~jVLcvPAVTVTuDq-5ohep22xy4KlopBc71LH1T98LW3PBpNlO2WEjLKQxDqZQUmUG09R5LI038iPLFkfjFtTtAxH21U1RU1V3DHwfO6IJsIK15kfvL~-9gS7uX1PGMwdGufD6GrVaVGvn7J5DN4k-6bac9is4J2FBSretUqRyoas80l3iizQ__"
+                          src={getEventPicture(row._id)}
                           alt={row.name}
                           width="70" height="70"
                         />
@@ -256,8 +267,8 @@ const EventsView = () => {
                       {row.name}
                     </TableCell>
                     <TableCell >{moment(row.date).format('DD/MM/yyyy').toString()}</TableCell>
-                    <TableCell >{moment(row.startDate).format('DD/MM/yyyy').toString()}</TableCell>
-                    <TableCell >{moment(row.endDate).format('DD/MM/yyyy').toString()}</TableCell>
+                    <TableCell >{moment(row.startDate).format('DD/MM/yyyy hh:mm').toString()}</TableCell>
+                    <TableCell >{moment(row.endDate).format('DD/MM/yyyy hh:mm').toString()}</TableCell>
                     <TableCell >{row.zipCode}</TableCell>
                     <TableCell >{moment(row.createdAt).format('DD/MM/yyyy').toString()}</TableCell>
                     <TableCell >

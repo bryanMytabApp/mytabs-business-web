@@ -20,6 +20,7 @@ export default function MTBSelector({
   options = [],
   itemName = "name",
   helper = {type: "", text: ""},
+  styles = {},
   appearDisabled = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -57,7 +58,9 @@ export default function MTBSelector({
     <div ref={ref} className='mtb-selector-container' style={{position: "relative"}}>
       <div
         className={appearDisabled ? "mtb-selector-value-disabled" : "mtb-selector-value"}
-        onClick={() => setIsOpen(!isOpen)}>
+        onClick={() => setIsOpen(!isOpen)}
+        style={{ ...styles}}
+      >
         {displayValue}
         <div
           style={{
