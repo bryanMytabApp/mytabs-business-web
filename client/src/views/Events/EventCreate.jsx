@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import selectIcon from "../../assets/atoms/selectIcon.svg";
 import selectIconActive from "../../assets/atoms/selectIconActive.svg";
 import { MTBDropZone, MTBInput, MTBSelector } from "../../components";
+import { State, City } from 'country-state-city';
 import { createEvent, getEventsByUserId, getPresignedUrlForEvent } from "../../services/eventService";
 import axios from "axios";
 
@@ -35,11 +36,14 @@ const cityList = [
 let userId
 const EventCreate = () => {
   const [selectedItem, setSelectedItem] = useState("")
-  const [step, setStep] = useState(1)
+  const [states, setStates] = useState([])
+  const [cities, setCities] = useState([])
+  const [step, setStep] = useState(2)
   const [uploadedImage, setUploadedImage] = useState(null)
   const [item, setItem] = useState({
     name: '',
     city: '',
+    state: '',
     description: '',
     date: null,
     startDate: null,
@@ -52,7 +56,7 @@ const EventCreate = () => {
   const navigation = useNavigate();
   const handleGoBack = () => navigation("/admin/my-events")
   const createMultipleClasses = (classes = []) => classes.filter(cl => cl).join(' ');
-
+  const countryCode = 'US';
   const handleContinue = (nextStep, lastStep = false) => {
     if(!lastStep) {
       setStep(nextStep)
@@ -123,6 +127,14 @@ const EventCreate = () => {
     if(attr === 'zipCode' && (value.length > 5 || isNaN(value)) ) {
       return
     }
+    if(attr === 'state') {
+      setItem(prev => ({
+        ...prev,
+        [attr]: value,
+        city: '',
+      }))
+      return
+    }
     setItem(prev => ({
       ...prev,
       [attr]: value
@@ -140,7 +152,21 @@ const EventCreate = () => {
   useEffect(() => {
     const token = localStorage.getItem("idToken");
     userId = parseJwt(token);
+    let availableStates = State.getStatesOfCountry(countryCode);
+    setStates(availableStates)
+    console.log("🚀 ~ useEffect ~ availableStates:", availableStates)
   }, []);
+
+  useEffect(() => {
+    if(!item.state) {
+      return
+    }
+    let selectedState = states.find(state => state.name === item.state)
+    let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
+    console.log("🚀 ~ useEffect ~ availableCities:", availableCities)
+    setCities(availableCities)
+    console.log("🚀 ~ useEffect ~ currentState:", selectedState)
+  }, [item.state]);
 
   const parseJwt = (token) => {
     const base64Url = token.split(".")[1];
@@ -489,16 +515,16 @@ const EventCreate = () => {
                     </div>
                     <span style={{ width: '47%' }}>
                       <MTBSelector
-                        onBlur={() => ("city")}
-                        name={"city"}
-                        placeholder='City'
-                        autoComplete='city'
-                        value={item.city}
+                        onBlur={() => ("state")}
+                        name={"state"}
+                        placeholder='State'
+                        autoComplete='State'
+                        value={item.state}
                         itemName={"name"}
                         itemValue={"name"}
-                        options={cityList}
+                        options={states}
                         onChange={(selected, fieldName) => {
-                          handleItemChange('city', selected);
+                          handleItemChange('state', selected);
                         }}
                         styles={{
                           display: 'flex',
@@ -512,7 +538,7 @@ const EventCreate = () => {
                       />
                     </span>
                   </div>
-                  <div >
+                  <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between' }}>
                     <div className={styles.inputContainer} style={{ width: '47%' }}>
                       <input
                         className={styles.input}
@@ -523,6 +549,31 @@ const EventCreate = () => {
                         onChange={(e) => handleItemChange('zipCode',e.target.value)}
                       />
                     </div>
+                    <span style={{ width: '47%' }}>
+                      <MTBSelector
+                        onBlur={() => ("city")}
+                        name={"city"}
+                        placeholder='City'
+                        autoComplete='City'
+                        value={item.city}
+                        itemName={"name"}
+                        itemValue={"name"}
+                        options={cities}
+                        onChange={(selected, fieldName) => {
+                          handleItemChange('city', selected);
+                        }}
+                        appearDisabled={!item.state}
+                        styles={{
+                          display: 'flex',
+                          background: '#FCFCFC',
+                          borderRadius: '10px',
+                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                          width: '100%',
+                          height: '28px',
+                        }}
+                      />
+                    </span>
                   </div>
                 </span>              
               )}
