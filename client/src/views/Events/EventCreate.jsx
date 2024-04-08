@@ -6,7 +6,6 @@ import {
 } from '@mui/material/'
 import {toast} from "react-toastify";
 import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import moment from 'moment'
@@ -45,7 +44,6 @@ const EventCreate = () => {
     city: '',
     state: '',
     description: '',
-    date: null,
     startDate: null,
     endDate: null,
     address1: '',
@@ -67,9 +65,8 @@ const EventCreate = () => {
 
   const _createEvent = async () => {
     let itemCopy = Object.assign({}, item)
-    itemCopy.date = moment(itemCopy.date).toString()
-    itemCopy.startDate = moment(itemCopy.date).toString()
-    itemCopy.endDate = moment(itemCopy.date).toString()
+    itemCopy.startDate = moment(itemCopy.startDate).toString()
+    itemCopy.endDate = moment(itemCopy.endDate).toString()
     itemCopy.userId = userId
 
     let data
@@ -142,11 +139,11 @@ const EventCreate = () => {
   }
 
   const disabledButtonOnStepTwo = () => {
-    return !item.name || !item.date || !item.startDate || !item.endDate
+    return !item.name || !item.startDate || !item.endDate
   }
 
   const disabledButtonOnStepThree = () => {
-    return !item.description || (addressOption === 1 && (!item.city || item.zipCode.length < 5 || !item.address1))
+    return addressOption === 1 && (!item.city || item.zipCode.length < 5 || !item.address1)
   }
 
   useEffect(() => {
@@ -331,32 +328,6 @@ const EventCreate = () => {
               When does your event start and end?
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', flexDirection: 'column', width: '100%',marginBottom: '30px' }}>
-              <div style={{ width: '100%' }}>
-                <DemoContainer components={['DatePicker']} >
-                  <DatePicker
-                    minDate={moment()}
-                    value={item.date}
-                    label="Pick a date"
-                    sx={{
-                      display: 'flex',
-                      background: '#FCFCFC',
-                      borderRadius: '10px',
-                      boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                      boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                      maxWidth: '500px',
-                      width: '48%',
-                      minHeight: '28px',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        border: 'none'
-                      },
-                      '& .MuiInputLabel-root': {
-                        transformOrigin: '0px 35px'
-                      }
-                    }}
-                    onChange={(newValue) => handleItemChange('date',newValue)}
-                  />
-                </DemoContainer>
-              </div>
               <div style={{ width: '100%', display: 'flex', marginTop: '10px', justifyContent: 'space-between' }}>
                 <DemoContainer components={['DateTimePicker']} sx={{ width: '48%' }} >
                   <DateTimePicker
@@ -379,6 +350,7 @@ const EventCreate = () => {
                     value={item.startDate}
                     label="Start time" 
                     maxDateTime={item.endDate ? item.endDate : null}
+                    minDateTime={moment()}
                     onChange={(newValue) => handleItemChange('startDate',newValue)}
                   />
                 </DemoContainer>
@@ -400,7 +372,7 @@ const EventCreate = () => {
                         transformOrigin: '0px 35px'
                       }
                     }}
-                    minDateTime={item.startDate ? item.startDate : null}
+                    minDateTime={item.startDate ? item.startDate : moment()}
                     onChange={(newValue) => handleItemChange('endDate',newValue)}
                   />
                 </DemoContainer>

@@ -114,3 +114,7 @@ input:focus{
   padding-left: 3px;
   box-sizing: border-box;
 }
+
+.outfitFamily {
+  font-family: Outfit;
+}

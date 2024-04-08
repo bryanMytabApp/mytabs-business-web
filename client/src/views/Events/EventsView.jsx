@@ -221,9 +221,6 @@ const EventsView = () => {
                     <div className={styles.tableHeader}>Event name</div>
                   </TableCell>
                   <TableCell>
-                    <div className={styles.tableHeader}>Date</div>
-                  </TableCell>
-                  <TableCell>
                     <div className={styles.tableHeader}>Start time</div>
                   </TableCell>
                   <TableCell>
@@ -264,14 +261,31 @@ const EventsView = () => {
                       </div>
                     </TableCell>
                     <TableCell component="th" scope="row" >
-                      {row.name}
+                      <span className={styles.outfitFamily}>
+                        {row.name}
+                      </span>
                     </TableCell>
-                    <TableCell >{moment(row.date).format('DD/MM/yyyy').toString()}</TableCell>
-                    <TableCell >{moment(row.startDate).format('DD/MM/yyyy hh:mm').toString()}</TableCell>
-                    <TableCell >{moment(row.endDate).format('DD/MM/yyyy hh:mm').toString()}</TableCell>
-                    <TableCell >{row.zipCode}</TableCell>
-                    <TableCell >{moment(row.createdAt).format('DD/MM/yyyy').toString()}</TableCell>
                     <TableCell >
+                      <span className={styles.outfitFamily}>
+                        {moment(row.startDate).format('DD/MM/yyyy hh:mm').toString()}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className={styles.outfitFamily}>
+                        {moment(row.endDate).format('DD/MM/yyyy hh:mm').toString()}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className={styles.outfitFamily}>
+                        {row.zipCode}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className={styles.outfitFamily}>
+                        {moment(row.createdAt).format('DD/MM/yyyy').toString()}
+                      </span>
+                    </TableCell>
+                    <TableCell>
                       <Chip
                         label="Actions"
                         aria-label="more"
