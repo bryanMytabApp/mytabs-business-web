@@ -38,7 +38,7 @@ const EventCreate = () => {
   const [selectedItem, setSelectedItem] = useState("")
   const [states, setStates] = useState([])
   const [cities, setCities] = useState([])
-  const [step, setStep] = useState(2)
+  const [step, setStep] = useState(0)
   const [uploadedImage, setUploadedImage] = useState(null)
   const [item, setItem] = useState({
     name: '',
