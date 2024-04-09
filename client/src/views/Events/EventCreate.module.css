@@ -82,6 +82,7 @@ h1 {
 }
 .input {
   border: none;
+  width: 100%;
 }
 .inputContainer span {
   color: #8F8F8F;
@@ -103,3 +104,62 @@ input:focus{
 textarea:focus {
   outline: none;
 }
+
+.add-another-ticket-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  height: 10%;
+}
+
+.add-another-ticket-text {
+  font-family: Outfit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 18px;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.primary-color {
+  color: #00AAD6;
+}
+
+.secondary-color {
+  color: #514F4F;
+}
+
+.tickets-viewer-container {
+  width: 30%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-top: 10px;
+}
+
+.outfit-font {
+  font-family: Outfit;
+  font-weight: 400;
+  line-height: 18px;
+  font-size: 16px;
+  color: #514F4F;
+}
+
+.individual-ticket-container {
+  display: flex;
+  align-items: center;
+  padding-right: 25px;
+  margin-bottom: 15px;
+}
+
+.ticket-list-container {
+  overflow-y: scroll;
+  max-height: 310px;
+}
+
+.delete-icon {
+  cursor: pointer;
+} 
+.delete-icon:hover {
+  color: red;
+} 
