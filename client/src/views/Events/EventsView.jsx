@@ -9,21 +9,18 @@ import {
   TableRow,
   Paper,
   Checkbox,
-  TablePagination,
+  Pagination,
   Chip,
   Menu,
   MenuItem,
   IconButton,
-  Button
 } from '@mui/material/'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
-import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import moment from 'moment'
 import { useNavigate } from "react-router-dom";
 import { getEventsByUserId } from "../../services/eventService";
-import { getEventPicture } from "../../utils/common"
+import { applySearch, getEventPicture } from "../../utils/common"
 
 const ChildCheckbox = ({ checked, onChange }) => {
   const label = { inputProps: { 'aria-label': 'Checkbox demo' } }
@@ -37,11 +34,13 @@ const ChildCheckbox = ({ checked, onChange }) => {
 }
 let userId
 const EventsView = () => {
-  
   const [selectedItems, setSelectedItems] = useState([])
   const [items, setItems] = useState([])
-  const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(items.length)
+  const [page, setPage] = useState(1)
+  const [numbersOfPage, setNumbersOfPage] = useState(0)
+  const [shownItems, setShownItems] = useState([])
+  const [searchTerm, setSearchTerm] = useState("")
+
 
   const navigation = useNavigate();
   const handleChange = (event, id) => {
@@ -72,21 +71,10 @@ const EventsView = () => {
   const handleChangePage = (event, newPage) => {
     setPage(newPage)
   }
-  const handleDelete = (event, newPage) => {
-    setPage(newPage)
-  }
-  // const handleClick = (event, newPage) => {
-  //   setPage(newPage)
-  // }
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  }
 
   const handleChangeMainCheckbox = (value) => {
     if(value) {
-      let newSelectedItems = items.map(item => item.id)
+      let newSelectedItems = items.map(item => item._id)
       setSelectedItems(newSelectedItems)
       return
     }
@@ -94,9 +82,7 @@ const EventsView = () => {
   }
 
   const [anchorEl, setAnchorEl] = useState(null);
-  const open = Boolean(anchorEl);
-  const [anchorEl1, setAnchorEl1] = useState(null);
-  const open1 = Boolean(anchorEl1);
+  const open = Boolean(anchorEl)
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -105,24 +91,9 @@ const EventsView = () => {
     setAnchorEl(null);
   };
 
-  const handleClick1 = (event) => {
-    setAnchorEl1(event.currentTarget);
-  };
-  const handleClose1 = () => {
-    setAnchorEl1(null);
-  };
-  const handleCloseTest = (e, a) => {
-    console.log(e.target.value)
-    setAnchorEl1(null);
-  };
   const options = [
     'Edit',
     'Delete',
-  ];
-
-  const options1 = [
-    '5',
-    '10',
   ];
 
   const handleGoBack = () => navigation("/admin/home")
@@ -130,16 +101,6 @@ const EventsView = () => {
   const ITEM_HEIGHT = 48;
 
   const createMultipleClasses = (classes = []) => classes.join(' ');
-
-  useEffect(() => {
-    const token = localStorage.getItem("idToken");
-    userId = parseJwt(token);
-    getEventsByUserId(userId)
-      .then(res => {
-        setItems(res.data)
-      })
-    .catch(err => console.error(err))
-  }, []);
 
   const parseJwt = (token) => {
     const base64Url = token.split(".")[1];
@@ -155,6 +116,25 @@ const EventsView = () => {
 
     return JSON.parse(jsonPayload)["custom:user_id"];
   };
+
+  useEffect(() => {
+    const token = localStorage.getItem("idToken");
+    userId = parseJwt(token);
+    getEventsByUserId(userId)
+      .then(res => {
+        setItems(res.data)
+        setNumbersOfPage(Math.ceil(res.data.length / 4))
+      })
+      .catch(err => console.error(err))
+  }, []);
+
+  useEffect(() => {
+    let itemsFiltered = JSON.parse(JSON.stringify(items))
+    itemsFiltered = applySearch(searchTerm, itemsFiltered, ['name', 'description'])
+    setNumbersOfPage(Math.ceil(itemsFiltered.length / 4));
+    itemsFiltered = itemsFiltered.slice((page * 4) - 4, page * 4)
+    setShownItems(itemsFiltered)
+  }, [searchTerm, items, page]);
 
  return (
     <div className={styles.view}>
@@ -176,10 +156,10 @@ const EventsView = () => {
               <input
                 className={styles.input}
                 type="text"
-                value={''}
+                value={searchTerm}
                 placeholder="Search"
                 onBlur={() => {}}
-                onChange={(e) => (e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className={styles.buttonsContainer}>
@@ -238,16 +218,16 @@ const EventsView = () => {
                 </TableRow>
               </TableHead>
               <TableBody >
-                {items.map((row) => (
+                {shownItems.map((row) => (
                   <TableRow
-                    key={row.name}
+                    key={row._id}
                     sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                     classes={{tableRow: styles.tableRow}}
                   >
                     <TableCell component="th" scope="row" >
                       <ChildCheckbox
-                        checked={testChecked(row.id)}
-                        onChange={e => handleChange(e, row.id)}
+                        checked={testChecked(row._id)}
+                        onChange={e => handleChange(e, row._id)}
                         color="secondary"
                       />
                     </TableCell>
@@ -267,12 +247,12 @@ const EventsView = () => {
                     </TableCell>
                     <TableCell >
                       <span className={styles.outfitFamily}>
-                        {moment(row.startDate).format('DD/MM/yyyy hh:mm').toString()}
+                        {moment(row.startDate).format('DD/MM/yyyy hh:mma').toString()}
                       </span>
                     </TableCell>
                     <TableCell>
                       <span className={styles.outfitFamily}>
-                        {moment(row.endDate).format('DD/MM/yyyy hh:mm').toString()}
+                        {moment(row.endDate).format('DD/MM/yyyy hh:mma').toString()}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -327,54 +307,7 @@ const EventsView = () => {
               </TableBody>
             </Table>
           </TableContainer>
-          <div>
-            <IconButton aria-label="delete">
-              <KeyboardArrowLeftIcon />
-            </IconButton>
-            <input type="text" value={1} accept="number" className={styles.paginatorContainer} />
-            <IconButton aria-label="delete">
-              <KeyboardArrowRightIcon />
-            </IconButton>
-            <Button
-              id="demo-customized-button"
-              variant="contained"
-              disableElevation
-              sx={{
-                backgroundColor: '#FCFCFC',
-                color: '#676565',
-                border: 'none',
-                textTransform: 'none',
-                borderRadius: '10px'
-              }}
-              disableFocusRipple={true}
-              onClick={handleClick1}
-              size="small"
-              endIcon={<KeyboardArrowDownIcon />}
-            >
-              4/length
-            </Button>
-            <Menu
-              id="long-menu1"
-              MenuListProps={{
-                'aria-labelledby': 'long-button',
-              }}
-              anchorEl={anchorEl1}
-              open={open1}
-              onClose={handleClose1}
-              PaperProps={{
-                style: {
-                  maxHeight: ITEM_HEIGHT * 4.5,
-                  width: '20ch',
-                },
-              }}
-            >
-              {options1.map((option) => (
-                <MenuItem key={option} selected={option === 'Pyxis'} onClick={handleCloseTest}>
-                  {option}
-                </MenuItem>
-              ))}
-            </Menu>
-          </div>
+          <Pagination count={numbersOfPage} page={page} onChange={handleChangePage} />
         </div>
       </div>
     </div>

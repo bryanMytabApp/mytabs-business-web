@@ -57,7 +57,7 @@ const EventCreate = () => {
   const [addressOption, setAddressOption] = useState(0)
   const [tickets, setTickets] = useState([baseTicket])
   const [ticketSelectedIndex, setTicketSelectedIndex] = useState(0)
-  
+
   const [item, setItem] = useState({
     name: '',
     city: '',
