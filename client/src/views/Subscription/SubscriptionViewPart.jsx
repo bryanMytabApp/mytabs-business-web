@@ -8,14 +8,15 @@ import backArrow from "../../assets/backArrow.svg";
 import {MTBSubscriptionRateCard} from "../../components";
 import lockIcon from "../../assets/lock.svg";
 import {useStripe, useElements} from "@stripe/react-stripe-js";
-import {createCheckoutSession} from "../../services/paymentService";
+import {createCheckoutSession, updateCustomerSubscription} from "../../services/paymentService";
 
 let userId;
-const SubscriptionViewPart = ({state}) => {
+const SubscriptionViewPart = ( { state } ) => {
+
   const {sessionId} = useParams();
   const stripe = useStripe();
   const location = useLocation();
-  const {plan, price, paymentArray} = location.state || {plan: "Basic", price: 0, paymentArray: []};
+  const {plan, price, paymentArray, isUpdating} = location.state || {plan: "Basic", price: 0, paymentArray: []};
   const [selectedPaymentPlan, setSelectedPaymentPlan] = useState("monthly");
   const [selectedRate, setSelectedRate] = useState(13.99);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,11 +61,22 @@ const SubscriptionViewPart = ({state}) => {
     return JSON.parse(jsonPayload)["custom:user_id"];
   };
 
-  useEffect(() => {
+  useEffect( () => {
     const token = localStorage.getItem("idToken");
     userId = parseJwt(token);
   }, []);
 
+  const initiateCheckout = async (sessionID) => {
+    try {
+      const result = await stripe.redirectToCheckout({sessionId: sessionID});
+      // Handle success
+      if (result) {
+        console.error("Stripe Checkout error:", result.error.message);
+      }
+    } catch (error) {
+      console.error("Error in redirectToCheckout:", error);
+    }
+  };
 
   const getPaymentSubscriptionId = ( paymentMethod ) => {
    
@@ -73,6 +85,56 @@ const SubscriptionViewPart = ({state}) => {
     })._id;
     return res;
   };
+
+ const handleSubmitUpdate = async (event) => {
+   handleShowPaymentForm();
+   const subscriptionId = getPaymentSubscriptionId(selectedPaymentPlan);
+   console.log( 'plan', plan )
+   const subs = {"Basic":1, "Plus":2,"Premium":3}
+   console.log('sublevel', selectedPaymentPlan)
+   const sessionData = {
+     userId: userId,
+     sublevel: selectedPaymentPlan,
+     level: subs[plan],
+   };
+
+   try {
+     if (!userId || !subscriptionId) {
+       throw new Error("User not found and sessionID ");
+     }
+     if (userId && subscriptionId) {
+       const response = await updateCustomerSubscription(sessionData);
+       console.log("🚀 ~ handleSubmit ~ response:", response, sessionData);
+       if (!response.data.sessionId) {
+         throw new Error("No client secret returned from server");
+       }
+       let paymentData = {
+         price: price + selectedRate,
+         plan: plan,
+       };
+       localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
+       const clientSecret = response.data.sessionId;
+       console.log("🚀 ~ handleSubmit ~ clientSecret:", clientSecret);
+
+      //  const checkout = await stripe.redirectToCheckout({
+      //    sessionId: response.data.sessionId,
+      //  } );
+       const checkout = await initiateCheckout(response.data.sessionId);
+       if (!checkout) {
+         throw new Error("Unable to redirect to checkout");
+       }
+       console.log("🚀 ~ handleSubmit ~ checkout:", checkout);
+
+       checkout.mount("#mytabsStripe");
+     }
+   } catch (error) {
+     console.error("Failed to create subscription:", error);
+     setShowPaymentForm(false);
+   } finally {
+     setIsLoading(false);
+   }
+ };
+
 
   const handleSubmit = async (event) => {
     handleShowPaymentForm();
@@ -89,7 +151,7 @@ const SubscriptionViewPart = ({state}) => {
         throw new Error("User not found and sessionID ");
       }
       if (userId && subscriptionId) {
-   
+       
         const response = await createCheckoutSession(sessionData);
         console.log("🚀 ~ handleSubmit ~ response:", response);
         if (!response.client_secret) {
@@ -264,7 +326,7 @@ const SubscriptionViewPart = ({state}) => {
               Back
             </div>
             <MTBButton
-              onClick={handleSubmit}
+              onClick={isUpdating ? handleSubmitUpdate : handleSubmit}
               style={{
                 borderRadius: "16px",
                 width: "100%",

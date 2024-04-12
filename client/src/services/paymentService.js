@@ -23,4 +23,24 @@ export const getSystemSubscriptions = async () => {
   } catch ( error ) {
     console.error("Error getting system subscriptions", error.response || error)
   }
+};
+
+export const updateCustomerSubscription = async (subscriptionData) => {
+  try {
+    const response = await http.put( "payments/subscription/update", subscriptionData );
+    console.log( "update response:", response );
+    return response;
+  } catch ( error ) {
+    console.error("Error updating customer subscription", error.response || error)
+  }
+};
+
+export const getCustomerSubscription = async (userIdObj) => {
+  try {
+    const response = await http.post( "payments/subscription/customer", userIdObj );
+    console.log( "get response:", response );
+    return response;
+  } catch ( error ) {
+    console.error("Error getting customer subscription", error.response || error)
+  }
 }

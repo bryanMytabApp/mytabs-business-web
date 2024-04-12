@@ -18,6 +18,7 @@ code {
 /* Figma Styles of your File */
 :root {
   /* Colors */
+  ---gray-500-color: #929191;
   --primary-orange-color: #F09925;
   --primary-blue-color: #00AAD6;
   --gradient: linear-gradient(-90deg,

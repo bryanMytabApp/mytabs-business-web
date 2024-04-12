@@ -26,8 +26,9 @@ const SubscriptionSuccess = () => {
   };
 
   useEffect(() => {
-    let planData = JSON.parse(localStorage.getItem("checkoutResult"));
-    setSelectedPlan(planData.plan);
+    let planData = JSON.parse( localStorage.getItem( "checkoutResult" ) );
+    console.log(planData)
+    setSelectedPlan(planData.plan );
     setSelectedPrice(planData.price);
     setSelectedBenefits(planBenefits["Basic"]);
   }, []);
