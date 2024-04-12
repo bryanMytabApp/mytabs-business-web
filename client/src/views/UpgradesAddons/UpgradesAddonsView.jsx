@@ -44,8 +44,9 @@ const UpgradesAddonsView = () => {
 
   const getCustomerSubscriptionWrapper = async ({ userId, subscriptionList}) => {
     let res = await getCustomerSubscription( {userId} )
-    
-    let subItem = subscriptionList.find( ( el ) => el.priceId == res.data.priceId )
+    console.log( 'res', res )
+    console.log('')
+    let subItem = subscriptionList.find( ( el ) => el.priceId == res.priceId )
     setCurrentLevel( subItem.level )
     setCurrentSublevel( subItem.sublevel )
     return res
