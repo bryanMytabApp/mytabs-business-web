@@ -2,6 +2,7 @@ import React, {useState, useEffect} from "react";
 import styles from "./UpgradesAddonsView.module.css";
 import {useNavigate, useLocation} from "react-router-dom";
 import {IconButton} from "@mui/material/";
+import { MTBModalGeneric } from "../../components";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import UpgradeItem from "./UpgradeItem";
 import {
@@ -13,6 +14,7 @@ import {useStripe} from "@stripe/react-stripe-js";
 let userId;
 
 const UpgradesAddonsView = () => {
+  const [isOpen, setIsOpen] = useState(true);
   const [ showPaymentForm, setShowPaymentForm ] = useState( false );
   const [ currentLevel, setCurrentLevel ] = useState( 1 );
   const [ currentSublevel, setCurrentSublevel ] = useState( 1 );
@@ -46,14 +48,14 @@ const UpgradesAddonsView = () => {
     let res = await getCustomerSubscription( {userId} )
     console.log( 'res', res )
     console.log('')
-    let subItem = subscriptionList.find( ( el ) => el.priceId == res.priceId )
+    let subItem = subscriptionList.find( ( el ) => el.priceId == res.data.priceId )
     setCurrentLevel( subItem.level )
     setCurrentSublevel( subItem.sublevel )
     return res
   }
 
   useEffect( () => {
-  
+    setIsOpen(true)
     const token = localStorage.getItem("idToken");
     userId = parseJwt( token );
      
@@ -154,7 +156,8 @@ const UpgradesAddonsView = () => {
     }
   };
 
-  return (
+  return ( <>
+   { isOpen ? <MTBModalGeneric isOpen={isOpen} /> :
     <div className={styles.view}>
       <div className={styles.contentContainer}>
         <div className={styles.titleContainer}>
@@ -199,7 +202,8 @@ const UpgradesAddonsView = () => {
           />
         </div>
       </div>
-    </div>
+    </div>}
+  </>
   );
 };
 
