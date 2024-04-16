@@ -19,6 +19,7 @@ import ShopView from "../views/Shop/ShopView";
 import MyTabsConfigurationView from "../views/MyTabsConfiguration/MyTabsConfigurationView";
 import EventsView from "../views/Events/EventsView";
 import EventCreate from "../views/Events/EventCreate";
+import EventEdit from "../views/Events/EventEdit";
 
 const routerHandler = (isIntern) => {
   const _idToken = localStorage.getItem("idToken");
@@ -108,6 +109,11 @@ const router = createBrowserRouter([
           {
             path: "my-events/create",
             element: <EventCreate />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId",
+            element: <EventEdit />,
             loader: () => routerHandler(true),
           },
           {

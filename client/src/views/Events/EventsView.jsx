@@ -19,8 +19,10 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import moment from 'moment'
 import { useNavigate } from "react-router-dom";
-import { getEventsByUserId } from "../../services/eventService";
+import { deleteEvent, getEventsByUserId } from "../../services/eventService";
 import { applySearch, getEventPicture } from "../../utils/common"
+import { toast } from "react-toastify";
+import { MTBMenuActions } from "../../components";
 
 const ChildCheckbox = ({ checked, onChange }) => {
   const label = { inputProps: { 'aria-label': 'Checkbox demo' } }
@@ -40,7 +42,6 @@ const EventsView = () => {
   const [numbersOfPage, setNumbersOfPage] = useState(0)
   const [shownItems, setShownItems] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
-
 
   const navigation = useNavigate();
   const handleChange = (event, id) => {
@@ -84,11 +85,27 @@ const EventsView = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl)
 
-  const handleClick = (event) => {
+  const handleClick = (event, item) => {
+    console.log("🚀 ~ handleClick ~ item:", item)
     setAnchorEl(event.currentTarget);
   };
-  const handleClose = () => {
-    setAnchorEl(null);
+  const handleClose = (e, item, type, index) => {
+    console.log("🚀 ~ handleClose ~ index:", index)
+    console.log("🚀 ~ handleClose ~ item:", item.name)
+    if(item === "backdropClick") {
+      setAnchorEl(null);
+      return
+    }
+    // if(type === 'Delete') {
+    //   deleteEvent(item)
+    //     .then(res => {
+    //       init()
+    //       toast.success("Ad deleted!");
+    //     })
+    //     .catch(err => {
+    //       toast.error("Cannot delete ad");
+    //     })
+    // }
   };
 
   const options = [
@@ -120,13 +137,21 @@ const EventsView = () => {
   useEffect(() => {
     const token = localStorage.getItem("idToken");
     userId = parseJwt(token);
+    init()
+  }, []);
+
+  const init = () => {
     getEventsByUserId(userId)
       .then(res => {
         setItems(res.data)
         setNumbersOfPage(Math.ceil(res.data.length / 4))
       })
       .catch(err => console.error(err))
-  }, []);
+  }
+
+  const editEvent = (rowId) => {
+    navigation('/admin/my-events/' + rowId)
+  }
 
   useEffect(() => {
     let itemsFiltered = JSON.parse(JSON.stringify(items))
@@ -147,7 +172,7 @@ const EventsView = () => {
             My Ads
           </h1>
         </div>
-        <div className={styles.tableContainer}>
+        <div className={styles.tableContainer} style={{ position: 'relative' }}>
           <div className={styles.tableActions}>
             <div className={styles.inputContainer}>
               <span class="material-symbols-outlined" className={createMultipleClasses([styles['search-icon'], 'material-symbols-outlined'])}>
@@ -218,11 +243,12 @@ const EventsView = () => {
                 </TableRow>
               </TableHead>
               <TableBody >
-                {shownItems.map((row) => (
+                {shownItems.map((row, index) => (
                   <TableRow
                     key={row._id}
                     sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                     classes={{tableRow: styles.tableRow}}
+                    // onClick={() => editEvent(row._id)}
                   >
                     <TableCell component="th" scope="row" >
                       <ChildCheckbox
@@ -266,41 +292,7 @@ const EventsView = () => {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label="Actions"
-                        aria-label="more"
-                        id="long-button"
-                        variant="outlined"
-                        sx={{
-                          backgroundColor: '#FCFCFC',
-                          color: '#676565',
-                          border: '1px solid #D3D3D3'
-                        }}
-                        onClick={handleClick}
-                        deleteIcon={<KeyboardArrowDownIcon />}
-                        onDelete={handleClick}
-                      />
-                      <Menu
-                        id="long-menu"
-                        MenuListProps={{
-                          'aria-labelledby': 'long-button',
-                        }}
-                        anchorEl={anchorEl}
-                        open={open}
-                        onClose={handleClose}
-                        PaperProps={{
-                          style: {
-                            maxHeight: ITEM_HEIGHT * 4.5,
-                            width: '20ch',
-                          },
-                        }}
-                      >
-                        {options.map((option) => (
-                          <MenuItem key={option} selected={option === 'Pyxis'} onClick={handleClose}>
-                            {option}
-                          </MenuItem>
-                        ))}
-                      </Menu>
+                      <MTBMenuActions row={row} callback={init}/>
                     </TableCell>
                   </TableRow>
                 ))}
