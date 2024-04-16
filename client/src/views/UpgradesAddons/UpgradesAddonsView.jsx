@@ -13,6 +13,7 @@ import {useStripe} from "@stripe/react-stripe-js";
 let userId;
 
 const UpgradesAddonsView = () => {
+  const [activeButtons, setActiveButtons] = useState(["Basic", "Plus", "Premium"])
   const [ showPaymentForm, setShowPaymentForm ] = useState( false );
   const [ currentLevel, setCurrentLevel ] = useState( 1 );
   const [ currentSublevel, setCurrentSublevel ] = useState( 1 );
@@ -46,6 +47,15 @@ const UpgradesAddonsView = () => {
     let res = await getCustomerSubscription( {userId} )
     
     let subItem = subscriptionList.find( ( el ) => el.priceId == res.data.priceId )
+    if(subItem.level == 3){
+      setActiveButtons(["Premium"])
+    }
+    if(subItem.level == 2){
+      setActiveButtons(["Plus", "Premium"])
+    }
+    if(subItem.level == 1){
+      setActiveButtons(["Basic", "Plus", "Premium"])
+    }
     setCurrentLevel( subItem.level )
     setCurrentSublevel( subItem.sublevel )
     return res
@@ -165,6 +175,7 @@ const UpgradesAddonsView = () => {
           <UpgradeItem
             onClick={() => handleSelectPlan("Basic", 0)}
             index={1}
+            isDisabled={activeButtons.length < 3}
             isSelected={currentLevel === 1}
             price={0}
             plan={"Basic"}
@@ -179,6 +190,7 @@ const UpgradesAddonsView = () => {
           <UpgradeItem
             onClick={() => handleSelectPlan("Plus", 5.99)}
             index={2}
+            isDisabled={activeButtons.length < 2}
             isSelected={currentLevel === 2}
             price={5.99}
             plan={"Plus"}
@@ -188,6 +200,7 @@ const UpgradesAddonsView = () => {
           <UpgradeItem
             onClick={() => handleSelectPlan("Premium", 10.99)}
             index={3}
+            isDisabled={activeButtons.length < 1}
             isSelected={currentLevel === 3}
             price={10.99}
             plan={"Premium"}

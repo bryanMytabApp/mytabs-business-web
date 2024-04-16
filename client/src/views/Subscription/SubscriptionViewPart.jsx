@@ -18,14 +18,14 @@ const SubscriptionViewPart = ( { state } ) => {
   const [prorationMessage, setProrationMessage] = useState("");
   const stripe = useStripe();
   const location = useLocation();
-  const {plan, price, paymentArray, isUpdating} = location.state || {plan: "Basic", price: 0, paymentArray: []};
+  const {plan, price, paymentArray, isUpdating} = location.state || {plan: "Basic", price: 0, paymentArray: [], isUpdating: false};
   const [selectedPaymentPlan, setSelectedPaymentPlan] = useState("monthly");
   const [selectedRate, setSelectedRate] = useState(13.99);
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
 
-  const backButton = (isUpdating) => navigation(isUpdating ? "/admin/upgrades-and-add-ons":"/subscription");
   const navigation = useNavigate();
+  const backButton = (isUpdating) => navigation(isUpdating ? "/admin/upgrades-and-add-ons":"/subscription");
   const CARD_ELEMENT_OPTIONS = {
     style: {
       base: {
@@ -68,12 +68,16 @@ const SubscriptionViewPart = ( { state } ) => {
     userId = parseJwt(token);
   }, []);
 
-  const initiateCheckout = async (sessionID) => {
+  const initiateCheckout = async (sessionID, paymentData) => {
     try {
       const result = await stripe.redirectToCheckout({sessionId: sessionID});
-      // Handle success
+      // Handle 
+      console.log(1)
       if (result) {
-        console.error("Stripe Checkout error:", result.error.message);
+        console.error( "Stripe Checkout error:", result.error.message );
+
+        localStorage.setItem( "checkoutResult", JSON.stringify( paymentData ) );
+
       }
     } catch (error) {
       console.error("Error in redirectToCheckout:", error);
@@ -115,13 +119,20 @@ const handleSubmitUpdate = async (event) => {
       if (!response.data.sessionId) {
         throw new Error("No client secret returned from server");
       }
-      const clientSecret = response.data.sessionId;
-      await initiateCheckout( clientSecret );
+      if ( !price || !selectedRate || !plan ) {
+        alert("price not found")
+        console.error("Price, selectedRate or plan is not defined");
+      }
       let paymentData = {
         price: price + selectedRate,
         plan: plan,
       };
-      localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
+      
+      localStorage.setItem( "checkoutResult", JSON.stringify( paymentData ) );
+      const clientSecret = response.data.sessionId;
+      await initiateCheckout( clientSecret, paymentData );
+
+      console.log(paymentData, "paymenteDATa")
     }
   } catch (error) {
     console.error("Failed to create subscription:", error);
@@ -171,6 +182,11 @@ const handleSubmitUpdate = async (event) => {
       console.error("Failed to create subscription:", error);
       setShowPaymentForm(false);
     } finally {
+      let paymentData = {
+        price: price + selectedRate,
+        plan: plan,
+      };
+      localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
       setIsLoading(false);
     }
   };

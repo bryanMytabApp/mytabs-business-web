@@ -10,7 +10,15 @@ import { getToken } from '../../services/authService';
 export const LoaderLogin = () => {
   const isLoggedIn = getCookie("token") !== null;
 
-  if (isLoggedIn) {
+  if ( isLoggedIn ) {
+     let paymentData = {
+       price:13.99,
+       plan: "Basic",
+     };
+
+     localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
+  
+    
     return redirect("/admin");
   }
 
