@@ -183,31 +183,31 @@ const EventEdit = () => {
     try {
       let res = await updateEvent(itemCopy)
       data = res.data
-      toast.success("Event Created!");
+      toast.success("Saved changes!");
     } catch (error) {
-      toast.error("cannot create event");
+      toast.error("Cannot save changes");
       console.error(error);
       return
     }
-
-    let presignedUrl
-    try {
-      let res = await getPresignedUrlForEvent(data._id)
-      presignedUrl = res.data
-    } catch (error) {
-      toast.error("cannot create presigned url");
-      console.error(error);
-      return
-    }
-
-    const base64Response = await fetch(uploadedImage);
-    const blob = await base64Response.blob();
-    try {
-      await axios.put(presignedUrl, blob)
-      toast.success("image was successfully uploaded");
-    } catch (error) {
-      toast.error("cannot put image on");
-      handleGoBack()
+    if(uploadedImage) {
+      let presignedUrl
+      try {
+        let res = await getPresignedUrlForEvent(data._id)
+        presignedUrl = res.data
+      } catch (error) {
+        toast.error("cannot create presigned url");
+        console.error(error);
+        return
+      }
+  
+      const base64Response = await fetch(uploadedImage);
+      const blob = await base64Response.blob();
+      try {
+        await axios.put(presignedUrl, blob)
+        toast.success("Image was successfully uploaded");
+      } catch (error) {
+        toast.error("Cannot upload image");
+      }
     }
     handleGoBack()
   }
