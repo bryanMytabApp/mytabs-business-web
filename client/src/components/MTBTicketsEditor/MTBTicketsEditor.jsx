@@ -181,7 +181,7 @@ const MTBTicketsEditor = ({ tickets, setTickets, handleContinue, showNext }) => 
             </span>
           </div>
         </span>
-        <span style={{ width: '50%' }}>
+        <div style={{ width: '50%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', }}>
           <span>
             <div className={styles.title} style={{ marginBottom: 0, fontWeight: 700 }}>
               Select ticketing options
@@ -280,7 +280,7 @@ const MTBTicketsEditor = ({ tickets, setTickets, handleContinue, showNext }) => 
               </div>
             )}
           </span>
-        </span>
+        </div>
       </div>
       {showNext && (
         <button

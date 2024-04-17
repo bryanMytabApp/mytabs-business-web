@@ -267,6 +267,9 @@ const EventEdit = () => {
             <div style={{
                 display: 'flex',
                 width: '100%',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '90%',
               }}
             >
               <div
@@ -309,7 +312,10 @@ const EventEdit = () => {
               <div
                 className={styles.contentDivider}
                 style={{
-                  width: '56%'
+                  width: '56%',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignContent: 'center',
                 }}
               >
                 <span style={{ width: '100%' }}>
