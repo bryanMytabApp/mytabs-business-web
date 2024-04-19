@@ -20,6 +20,7 @@ import MyTabsConfigurationView from "../views/MyTabsConfiguration/MyTabsConfigur
 import EventsView from "../views/Events/EventsView";
 import EventCreate from "../views/Events/EventCreate";
 import EventEdit from "../views/Events/EventEdit";
+import PasswordRecovery from "../views/Login/PasswordRecovery";
 
 const routerHandler = (isIntern) => {
   const _idToken = localStorage.getItem("idToken");
@@ -40,6 +41,11 @@ const router = createBrowserRouter([
       {
         path: "login",
         element: <LoginView />,
+        loader: () => routerHandler(false),
+      },
+      {
+        path: "password-recovery",
+        element: <PasswordRecovery />,
         loader: () => routerHandler(false),
       },
       {
