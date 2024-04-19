@@ -10,13 +10,16 @@ export default function MTBButton({
   style = {},
   image = null,
   icon = null,
+  override = false,
+  outlined = false,
+  hasOwnClassName = false,
+  ownClassName = {},
 }) {
   let classes = "MTB-button";
   if (secondary) {
     classes += " secondary";
   }
 
-  
   const imageNewStyles = {
     backgroundSize: "cover",
     backgroundPosition: "center",
@@ -37,7 +40,7 @@ export default function MTBButton({
 
   return image ? (
     <button
-      className={classes}
+      className={!hasOwnClassName ? classes : ownClassName}
       style={{
         ...style,
         backgroundImage: image ? `url(${image})` : null,
@@ -49,7 +52,7 @@ export default function MTBButton({
     </button>
   ) : (
     <button
-      className={classes}
+      className={!hasOwnClassName ? classes : ownClassName}
       style={{...style}}
       disabled={disabled || isLoading}
       onClick={onClick}>

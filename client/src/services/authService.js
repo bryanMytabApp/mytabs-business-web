@@ -28,18 +28,18 @@ export const getUserByAttribute = async (params) => {
   }
 };
 
-export const forgotPassword = async (params) => {
+export const requestResetPassword = async (params) => {
   try {
-    const response = await http.post("auth/forgotPassword", params);
+    const response = await http.post("auth/request-reset-password", params);
     return response.data;
   } catch (error) {
     throw new Error(error);
   }
 };
 
-export const confirmForgotPassword = async (params) => {
+export const confirmResetPassword = async (params) => {
   try {
-    const response = await http.post("auth/confirmForgotPassword", params);
+    const response = await http.post("auth/confirm-reset-password", params);
     return response.data;
   } catch (error) {
     throw new Error(error);
@@ -68,3 +68,4 @@ function enhanceError(error) {
   }
   return error;
 }
+

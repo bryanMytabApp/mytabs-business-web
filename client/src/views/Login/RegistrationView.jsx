@@ -95,15 +95,12 @@ export default function RegistrationView() {
   let timeout;
   useEffect(() => {
     let filtered;
-    console.log("🚀 ~ useEffect ~ searchTerm:", searchTerm);
 
     if (searchTerm.length) {
-      console.log("filtering", categoriesJS.length);
       filtered = JSON.parse(JSON.stringify(categoriesJS)).filter((subCategory) =>
         subCategory.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     } else {
-      console.log("not filtering", categoriesJS.length);
       filtered = categoriesJS;
     }
     setFilteredSubCategories(filtered);
@@ -173,8 +170,8 @@ export default function RegistrationView() {
 
   const handleInputChange = useCallback((value, name) => {
     if (name === "subcategoryFilter") {
-      setSubcategoryFilter(value); 
-      setSearchTerm(value); 
+      setSubcategoryFilter(value);
+      setSearchTerm(value);
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -358,7 +355,6 @@ export default function RegistrationView() {
     e.preventDefault();
     const phoneNumberInput = formData.phoneNumber;
     let phoneNumberWithPlus = `+1${formData.phoneNumber}`;
-    console.log({phoneNumberWithPlus});
     const phoneNumber = parsePhoneNumberFromString(phoneNumberInput);
 
     let signUpPayload = {
