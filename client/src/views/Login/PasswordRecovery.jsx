@@ -41,7 +41,6 @@ export default function PasswordRecovery() {
   });
   const [searchTerm, setSearchTerm] = useState("");
 
-
   const [inputTouched, setInputTouched] = useState({verificationCode: false, city: false});
   const [imageFile, setImageFile] = useState();
   const [errors, setErrors] = useState({});
@@ -68,7 +67,6 @@ export default function PasswordRecovery() {
     }
   }, [part]);
   let timeout;
- 
 
   const validatePassword = (password) => {
     let newState = {
@@ -87,35 +85,14 @@ export default function PasswordRecovery() {
     validatePassword(formData.password);
   }, [formData.password]);
 
-  const checkExistenceDebounced = debounce(async (name, value, setErrors) => {
-    if (!value.trim()) return;
-    if (name === "phoneNumber") {
-      value = `1${value}`;
-    }
-    const encodeValue = encodeURIComponent(value);
 
-    value = name === "username" ? encodeValue : value;
-    try {
-      const response = await getUserExistance({attribute: name, value});
-    } catch (error) {
-      let nameText = name.charAt(0).toUpperCase() + name.slice(1);
-      if (error.enhancedMessage) {
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          [name]: `${name == "phoneNumber" ? "Phone" : nameText} already exists.`,
-        }));
-      }
-    }
-  }, 500);
 
   const handleInputChange = useCallback((value, name) => {
-   
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    
-  
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
     if (name === "verificationCode") {
       setInputTouched({
         verificationCode: true,
@@ -124,9 +101,7 @@ export default function PasswordRecovery() {
     }
 
     setErrors((prevErrors) => ({...prevErrors, [name]: undefined}));
-    if (["email", "username", "phoneNumber"].includes(name)) {
-      checkExistenceDebounced(name, value, setErrors);
-    }
+
   }, []);
 
   const returnBack = () => {
@@ -195,12 +170,8 @@ export default function PasswordRecovery() {
   const handleNextPart = async () => {
     let newErrors = validateForm();
     setErrors(newErrors);
-   
-    if (part === 0) {
-      const asyncErrors = await validateUserExistence(formData);
-      newErrors = {...newErrors, ...asyncErrors};
-    }
 
+  
     if (Object.keys(newErrors).length === 0 && part < 3) {
       setPart((prevPart) => prevPart + 1);
     } else {
@@ -218,24 +189,31 @@ export default function PasswordRecovery() {
       console.error("handleNextPart failed");
     }
     try {
-      let res = await requestResetPassword(formData)
-    } catch ( error ) {
-      console.error( error )
+      let res = await requestResetPassword(formData);
+    } catch (error) {
+      console.error(error);
     }
   };
 
   const handleConfirmPassword = async () => {
     try {
+      let res = await confirmResetPassword(formData);
+      console.log( "res", res );
       await handleNextPart();
-    } catch ( error ) {
-      console.error( "handleNextPart failed" );
+    } catch (error) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        verificationCode: "Verification code is incorrect.",
+      }));
+      toast.error("verification code is incorrect.");
+      console.error(error);
     }
     try {
-      let res = await confirmResetPassword( formData );
-    } catch ( error ) {
-      console.error( error );
+      
+    } catch (error) {
+      console.error("handleNextPart failed");
     }
-  }
+  };
   const validateUserExistence = async (formData) => {
     const errors = {};
     if (formData.email) {
@@ -249,50 +227,13 @@ export default function PasswordRecovery() {
     return errors;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const phoneNumberInput = formData.phoneNumber;
-    let phoneNumberWithPlus = `+1${formData.phoneNumber}`;
-
-    const phoneNumber = parsePhoneNumberFromString(phoneNumberInput);
-
-    let signUpPayload = {
-      ...formData,
-      phoneNumber: phoneNumberWithPlus,
-      isAdmin: true,
-    };
-
-    try {
-      const response = await signUp(signUpPayload);
-      localStorage.setItem("idToken", response.IdToken);
-      toast.success("Welcome!");
-      navigate("/subscription");
-    } catch (error) {
-      let errorMessage = "An unexpected error occurred. Please try again.";
-
-      if (error.enhancedMessage) {
-        errorMessage = error.enhancedMessage;
-      } else if (error.response && error.response.data) {
-        errorMessage = error.response.data.message || errorMessage;
-      }
-      setPart(0);
-      toast.error(errorMessage);
-    }
+  const handleGoToLogin = async (e) => {
+    navigate("/login");
   };
 
-  const isFormFilled = () => {
-    const requiredFieldsFilled = Object.values(formData).every((value) => {
-      if (typeof value === "string") {
-        return value.trim() !== "";
-      }
-      return value !== undefined;
-    });
-    const locationFilled = formData.verificationCode.trim() !== "" || formData.city.trim() !== "";
-    const imageUploaded = imageFile !== undefined;
-    return requiredFieldsFilled && locationFilled && imageUploaded;
-  };
 
-  document.title = "My Tabs - Registration";
+
+  document.title = "My Tabs - Password Recovery";
 
   return (
     <div className='Login-view' ref={myRef}>
@@ -447,8 +388,8 @@ export default function PasswordRecovery() {
             formData.password &&
             formData.confirmPassword &&
             formData.verificationCode !== "" && (
-              <MTBButton onClick={handleSubmit} isLoading={isLoading}>
-                Submit
+              <MTBButton onClick={handleGoToLogin} isLoading={isLoading}>
+                Go to Login
               </MTBButton>
             )}
         </div>
