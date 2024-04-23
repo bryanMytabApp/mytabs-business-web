@@ -16,6 +16,9 @@ import {parsePhoneNumberFromString} from "libphonenumber-js";
 import chevronIcon from "../../assets/atoms/chevron.svg";
 import {getUserExistance} from "../../services/userService";
 import categoriesJS from "../../utils/data/categories";
+import { getPresignedUrlForBusiness } from "../../services/businessService";
+import { parseJwt } from "../../utils/common";
+import axios from "axios";
 let subCategoryList;
 export const debounce = (func, wait) => {
   let timeout;
@@ -95,15 +98,12 @@ export default function RegistrationView() {
   let timeout;
   useEffect(() => {
     let filtered;
-    console.log("🚀 ~ useEffect ~ searchTerm:", searchTerm);
 
     if (searchTerm.length) {
-      console.log("filtering", categoriesJS.length);
       filtered = JSON.parse(JSON.stringify(categoriesJS)).filter((subCategory) =>
         subCategory.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     } else {
-      console.log("not filtering", categoriesJS.length);
       filtered = categoriesJS;
     }
     setFilteredSubCategories(filtered);
@@ -173,8 +173,8 @@ export default function RegistrationView() {
 
   const handleInputChange = useCallback((value, name) => {
     if (name === "subcategoryFilter") {
-      setSubcategoryFilter(value); 
-      setSearchTerm(value); 
+      setSubcategoryFilter(value);
+      setSearchTerm(value);
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -358,7 +358,6 @@ export default function RegistrationView() {
     e.preventDefault();
     const phoneNumberInput = formData.phoneNumber;
     let phoneNumberWithPlus = `+1${formData.phoneNumber}`;
-    console.log({phoneNumberWithPlus});
     const phoneNumber = parsePhoneNumberFromString(phoneNumberInput);
 
     let signUpPayload = {
@@ -366,12 +365,12 @@ export default function RegistrationView() {
       phoneNumber: phoneNumberWithPlus,
       isAdmin: true,
     };
-
+    let token
     try {
       const response = await signUp(signUpPayload);
+      token = response.IdToken
       localStorage.setItem("idToken", response.IdToken);
       toast.success("Welcome!");
-      navigate("/subscription");
     } catch (error) {
       let errorMessage = "An unexpected error occurred. Please try again.";
 
@@ -382,8 +381,32 @@ export default function RegistrationView() {
       }
       setPart(0);
       toast.error(errorMessage);
+      return
     }
+    let userId = parseJwt(token);
+    if(uploadedImage) {
+      let presignedUrl
+      try {
+        let res = await getPresignedUrlForBusiness(userId)
+        presignedUrl = res.data
+      } catch (error) {
+        toast.error("cannot create presigned url");
+        console.error(error);
+        return
+      }
+  
+      const base64Response = await fetch(uploadedImage);
+      const blob = await base64Response.blob();
+      try {
+        await axios.put(presignedUrl, blob)
+        toast.success("Image was successfully uploaded");
+      } catch (error) {
+        toast.error("Cannot upload image");
+      }
+    }
+    navigate("/subscription");
   };
+  
 
   const isFormFilled = () => {
     const requiredFieldsFilled = Object.values(formData).every((value) => {

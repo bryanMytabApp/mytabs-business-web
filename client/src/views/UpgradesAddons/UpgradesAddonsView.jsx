@@ -15,6 +15,7 @@ let userId;
 
 const UpgradesAddonsView = () => {
   const [isOpen, setIsOpen] = useState(true);
+  const [activeButtons, setActiveButtons] = useState(["Basic", "Plus", "Premium"])
   const [ showPaymentForm, setShowPaymentForm ] = useState( false );
   const [ currentLevel, setCurrentLevel ] = useState( 1 );
   const [ currentSublevel, setCurrentSublevel ] = useState( 1 );
@@ -49,6 +50,15 @@ const UpgradesAddonsView = () => {
     console.log( 'res', res )
     console.log('')
     let subItem = subscriptionList.find( ( el ) => el.priceId == res.data.priceId )
+    if(subItem.level == 3){
+      setActiveButtons(["Premium"])
+    }
+    if(subItem.level == 2){
+      setActiveButtons(["Plus", "Premium"])
+    }
+    if(subItem.level == 1){
+      setActiveButtons(["Basic", "Plus", "Premium"])
+    }
     setCurrentLevel( subItem.level )
     setCurrentSublevel( subItem.sublevel )
     return res
@@ -80,7 +90,6 @@ const UpgradesAddonsView = () => {
     setLevelPayment(plan);
     const planMap = {Basic: 1, Plus: 2, Premium: 3};
     const subsFiltered = systemSubscriptions.filter((sub) => sub.level === planMap[plan]);
-    console.log('añeñe',subsFiltered, systemSubscriptions);
     setPaymentArray(subsFiltered);
     setSelectedPaymentPlan(plan);
     setSelectedPrice(price);
@@ -112,7 +121,6 @@ const UpgradesAddonsView = () => {
 
   const handleSubmit = async (event) => {
     handleShowPaymentForm();
-    console.log("l2velpaymeeensts", levelPayment);
     const subscriptionId = getPaymentSubscriptionId("monthly", levelPayment);
 
     const sessionData = {
@@ -169,10 +177,11 @@ const UpgradesAddonsView = () => {
         <div className={styles.mainContainer}>
           <div className={styles.subTitle}>Subscription Plans</div>
           <UpgradeItem
-            onClick={() => handleSelectPlan("Basic", 7.99)}
+            onClick={() => handleSelectPlan("Basic", 0)}
             index={1}
+            isDisabled={activeButtons.length < 3}
             isSelected={currentLevel === 1}
-            price={7.99}
+            price={0}
             plan={"Basic"}
             benefits={[
               "3 ad spaces",
@@ -183,19 +192,21 @@ const UpgradesAddonsView = () => {
             bottomText={"Plan included in cost of subscription"}
           />
           <UpgradeItem
-            onClick={() => handleSelectPlan("Plus", 10.99)}
+            onClick={() => handleSelectPlan("Plus", 5.99)}
             index={2}
+            isDisabled={activeButtons.length < 2}
             isSelected={currentLevel === 2}
-            price={10.99}
+            price={5.99}
             plan={"Plus"}
             benefits={["10 ad spaces", "Dedicated ad spaces", "Basic tier features included"]}
             bottomText={"Plan included in cost of subscription"}
           />
           <UpgradeItem
-            onClick={() => handleSelectPlan("Premium", 13.99)}
+            onClick={() => handleSelectPlan("Premium", 10.99)}
             index={3}
+            isDisabled={activeButtons.length < 1}
             isSelected={currentLevel === 3}
-            price={13.99}
+            price={10.99}
             plan={"Premium"}
             benefits={["25 ad spaces", "Tour/Season space included", "Plus tier features included"]}
             bottomText={"Plan included in cost of subscription"}

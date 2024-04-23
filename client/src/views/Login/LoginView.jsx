@@ -10,7 +10,15 @@ import { getToken } from '../../services/authService';
 export const LoaderLogin = () => {
   const isLoggedIn = getCookie("token") !== null;
 
-  if (isLoggedIn) {
+  if ( isLoggedIn ) {
+     let paymentData = {
+       price:13.99,
+       plan: "Basic",
+     };
+
+     localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
+  
+    
     return redirect("/admin");
   }
 
@@ -26,6 +34,9 @@ export default function LoginView() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const goToPasswordRecovery = () => {
+    navigate("/password-recovery");
+  }
   const handleUsername = (value) => {
     if (invalid.username) {
       setInvalid({...invalid, username: undefined});
@@ -135,7 +146,7 @@ export default function LoginView() {
               }
             }
           />
-          <div className='Forgot-password'>Forgot your password?</div>
+          <div onClick={goToPasswordRecovery} className='Forgot-password'>Forgot your password?</div>
         </form>
 
         <div className='Actions'></div>

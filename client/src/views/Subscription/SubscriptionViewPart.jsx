@@ -13,17 +13,19 @@ import {createCheckoutSession, updateCustomerSubscription} from "../../services/
 let userId;
 const SubscriptionViewPart = ( { state } ) => {
 
-  const {sessionId} = useParams();
+  const { sessionId } = useParams();
+  const [ prorationAmount, setProrationAmount ] = useState( 0 );
+  const [prorationMessage, setProrationMessage] = useState("");
   const stripe = useStripe();
   const location = useLocation();
-  const {plan, price, paymentArray, isUpdating} = location.state || {plan: "Basic", price: 0, paymentArray: []};
+  const {plan, price, paymentArray, isUpdating} = location.state || {plan: "Basic", price: 0, paymentArray: [], isUpdating: false};
   const [selectedPaymentPlan, setSelectedPaymentPlan] = useState("monthly");
   const [selectedRate, setSelectedRate] = useState(13.99);
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
 
-
   const navigation = useNavigate();
+  const backButton = (isUpdating) => navigation(isUpdating ? "/admin/upgrades-and-add-ons":"/subscription");
   const CARD_ELEMENT_OPTIONS = {
     style: {
       base: {
@@ -66,12 +68,16 @@ const SubscriptionViewPart = ( { state } ) => {
     userId = parseJwt(token);
   }, []);
 
-  const initiateCheckout = async (sessionID) => {
+  const initiateCheckout = async (sessionID, paymentData) => {
     try {
       const result = await stripe.redirectToCheckout({sessionId: sessionID});
-      // Handle success
+      // Handle 
+      console.log(1)
       if (result) {
-        console.error("Stripe Checkout error:", result.error.message);
+        console.error( "Stripe Checkout error:", result.error.message );
+
+        localStorage.setItem( "checkoutResult", JSON.stringify( paymentData ) );
+
       }
     } catch (error) {
       console.error("Error in redirectToCheckout:", error);
@@ -86,54 +92,55 @@ const SubscriptionViewPart = ( { state } ) => {
     return res;
   };
 
- const handleSubmitUpdate = async (event) => {
-   handleShowPaymentForm();
-   const subscriptionId = getPaymentSubscriptionId(selectedPaymentPlan);
-   console.log( 'plan', plan )
-   const subs = {"Basic":1, "Plus":2,"Premium":3}
-   console.log('sublevel', selectedPaymentPlan)
-   const sessionData = {
-     userId: userId,
-     sublevel: selectedPaymentPlan,
-     level: subs[plan],
-   };
 
-   try {
-     if (!userId || !subscriptionId) {
-       throw new Error("User not found and sessionID ");
-     }
-     if (userId && subscriptionId) {
-       const response = await updateCustomerSubscription(sessionData);
-       console.log("🚀 ~ handleSubmit ~ response:", response, sessionData);
-       if (!response.data.sessionId) {
-         throw new Error("No client secret returned from server");
-       }
-       let paymentData = {
-         price: price + selectedRate,
-         plan: plan,
-       };
-       localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
-       const clientSecret = response.data.sessionId;
-       console.log("🚀 ~ handleSubmit ~ clientSecret:", clientSecret);
+const handleSubmitUpdate = async (event) => {
+  handleShowPaymentForm();
+  
+  const subscriptionId = getPaymentSubscriptionId(selectedPaymentPlan);
+  const subs = {Basic: 1, Plus: 2, Premium: 3};
+  const sessionData = {
+    userId: userId,
+    sublevel: selectedPaymentPlan,
+    level: subs[ plan ],
+    newSubId: subscriptionId
+  };
 
-      //  const checkout = await stripe.redirectToCheckout({
-      //    sessionId: response.data.sessionId,
-      //  } );
-       const checkout = await initiateCheckout(response.data.sessionId);
-       if (!checkout) {
-         throw new Error("Unable to redirect to checkout");
-       }
-       console.log("🚀 ~ handleSubmit ~ checkout:", checkout);
+  try {
+    if (!userId || !subscriptionId) {
+      throw new Error("User not found and sessionID ");
+    }
+    if (userId && subscriptionId) {
+      const response = await updateCustomerSubscription( sessionData );
+      console.log("🚀 ~ handleSubmitUpdate ~ response:", response.data);
+      if (response.data && response.data.prorationDetails) {
+        setProrationAmount(response.data.prorationDetails.price);
+        setProrationMessage(response.data.prorationDetails.price_data);
+      }
+      if (!response.data.sessionId) {
+        throw new Error("No client secret returned from server");
+      }
+      if ( !price || !selectedRate || !plan ) {
+        alert("price not found")
+        console.error("Price, selectedRate or plan is not defined");
+      }
+      let paymentData = {
+        price: price + selectedRate,
+        plan: plan,
+      };
+      
+      localStorage.setItem( "checkoutResult", JSON.stringify( paymentData ) );
+      const clientSecret = response.data.sessionId;
+      await initiateCheckout( clientSecret, paymentData );
 
-       checkout.mount("#mytabsStripe");
-     }
-   } catch (error) {
-     console.error("Failed to create subscription:", error);
-     setShowPaymentForm(false);
-   } finally {
-     setIsLoading(false);
-   }
- };
+      console.log(paymentData, "paymenteDATa")
+    }
+  } catch (error) {
+    console.error("Failed to create subscription:", error);
+    setShowPaymentForm(false);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
 
   const handleSubmit = async (event) => {
@@ -175,6 +182,11 @@ const SubscriptionViewPart = ( { state } ) => {
       console.error("Failed to create subscription:", error);
       setShowPaymentForm(false);
     } finally {
+      let paymentData = {
+        price: price + selectedRate,
+        plan: plan,
+      };
+      localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
       setIsLoading(false);
     }
   };
@@ -187,7 +199,6 @@ const SubscriptionViewPart = ( { state } ) => {
           flexDirection: "row",
           justifyContent: "space-around",
           alignItems: "center",
-         
         }}
         className='Subcrition-main'>
         <div style={{display: "flex"}} className='Subscription-options-rates'>
@@ -286,6 +297,8 @@ const SubscriptionViewPart = ( { state } ) => {
                 }}>
                 Total: ${price + selectedRate} /month
               </div>
+        
+
               <div
                 className=''
                 style={{
@@ -314,7 +327,7 @@ const SubscriptionViewPart = ( { state } ) => {
           </div>
           <div className='Subscription-footer'>
             <div
-              onClick={() => navigation("/subscription")}
+              onClick={backButton}
               style={{
                 display: "flex",
                 flex: 2,

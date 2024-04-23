@@ -3,7 +3,7 @@ import styles from "./UpgradesAddonsView.module.css";
 
 import checkIcon from "../../assets/atoms/check.svg";
 
-const UpgradeItem = ({isSelected, price, plan, benefits, index, onClick}) => {
+const UpgradeItem = ({isSelected, price, plan, benefits, index, onClick, isDisabled}) => {
   const createMultipleClasses = (classes = []) => classes.join(" ");
   const priceHTML = isSelected ? (
     <>
@@ -33,11 +33,16 @@ const UpgradeItem = ({isSelected, price, plan, benefits, index, onClick}) => {
         ))}
       </div>
       <div className={styles.buttonPosition}>
-        {isSelected ? (
+        
+        {isSelected  ? (
           <button className={createMultipleClasses([styles.baseButton, styles.exportButton])}>
             Current Plan
           </button>
         ) : (
+            isDisabled ? 
+             ( <button className={createMultipleClasses([styles.baseButton, styles.exportButton])}>
+              Downgrade
+          </button>) :
           <button onClick={onClick} className={createMultipleClasses([styles.baseButton, styles.createEventButton])}>
             Upgrade Plan
           </button>

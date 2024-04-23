@@ -4,6 +4,7 @@ import chevronIcon from "../../assets/atoms/chevron.svg";
 import warning from "../../assets/warning.svg";
 import success from "../../assets/success.svg";
 import info from "../../assets/info.svg";
+import { createMultipleClasses } from "../../utils/common";
 
 const helperIcon = {
   warning: warning,
@@ -25,7 +26,7 @@ export default function MTBSelector({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
-  console.log(helper)
+  
   const displayValue =
     value && options.find((option) => option[itemName] === value)
       ? value 
@@ -54,11 +55,19 @@ export default function MTBSelector({
     };
   }, []);
 
+  const handleOpen = () => {
+    if(appearDisabled)
+      return;
+    setIsOpen(prev => !prev)
+  }
+
   return (
     <div ref={ref} className='mtb-selector-container' style={{position: "relative"}}>
       <div
-        className={appearDisabled ? "mtb-selector-value-disabled" : "mtb-selector-value"}
-        onClick={() => setIsOpen(!isOpen)}
+        className={createMultipleClasses([  
+          appearDisabled ? "mtb-selector-value-disabled" : "mtb-selector-value",
+        ])}
+        onClick={handleOpen}
         style={{ ...styles}}
       >
         {displayValue}
