@@ -10,7 +10,6 @@ export default function MTBButton({
   style = {},
   image = null,
   icon = null,
-  outlined = false,
   override = false,
   outlined = false,
   hasOwnClassName = false,

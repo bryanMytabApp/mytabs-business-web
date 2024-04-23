@@ -1,3 +1,29 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.contentContainer {
+  display: flex;
+  background-color: white;
+  padding: 20px;
+  border-radius: 25px;
+  max-width: 500px;
+  width: 120%;
+  height: 500px;
+  align-items: center;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
 .baseButton {
   margin-right: 10px;
   display: flex;
@@ -44,7 +70,7 @@
   font-size: 16px;
   font-weight: 700;
   line-height: 24px;
-  color:var(--primary-blue-color);
+  color: var(--primary-blue-color);
 }
 
 .title {

@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useState} from "react";
-import "./MTBModal.css";
 import MTBButton from "../MTBButton/MTBButton";
-
+import { createMultipleClasses } from "../../utils/common";
 import styles from "./MTBModalGeneric.module.css";
 export default function MTBModalGeneric({
   data,
@@ -11,11 +10,8 @@ export default function MTBModalGeneric({
   isOther,
   onSubCategoriesChange,
 }) {
-  const createMultipleClasses = (classes = []) => classes.join(" ");
   const currentPlan = 'Premium';
   const subscriptionEndDate = '2024-04-25'
-  const [subCategories, setSubCategories] = useState([]);
-  const [otherCategory, setOtherCategory] = useState("");
 
   const handleClick = (_subCategory) => {};
 
@@ -24,14 +20,14 @@ export default function MTBModalGeneric({
   const handleGoBack = () => {};
 
   const handleContinue = () => {
-    setOtherCategory("");
+   
     onClose();
   };
   if (!isOpen) return <div></div>;
   return (
     <>
-      <div className='MTB-modal-overlay' onClick={onClose}>
-        <div className='MTB-modal-content' onClick={(e) => e.stopPropagation()}>
+      <div className={styles.overlay} onClick={onClose}>
+        <div className={styles.contentContainer} onClick={(e) => e.stopPropagation()}>
           <div className={styles.modalHeader}>
             <div className={styles.title}>
               <div>Are you sure you want to cancel?</div>
