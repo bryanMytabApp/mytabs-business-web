@@ -179,13 +179,17 @@ const MyBusiness = () => {
   }
 
   const _updateEvent = async () => {
-    
     let itemCopy = Object.assign({}, item)
     itemCopy.categories = subcategories
     itemCopy.userId = userId
 
     try {
-      await updateBusiness(itemCopy)
+      let res = await updateBusiness(itemCopy)
+      if(res.data?._id) {
+        setItem(res.data)
+      }
+      setEditEnabled(false)
+      toast.success("Business updated successfully");
     } catch (error) {
       toast.error("Cannot save changes");
       console.error(error);
@@ -211,7 +215,6 @@ const MyBusiness = () => {
         toast.error("Cannot upload image");
       }
     }
-    handleGoBack()
   }
 
   const handleClickEdit = () => {
