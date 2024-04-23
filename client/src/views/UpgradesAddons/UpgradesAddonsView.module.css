@@ -207,3 +207,13 @@ h3{
   background-color: var(--primary-blue-color);
 
 }
+
+.cancelSubscriptionButton {
+  display: flex;
+  justify-content: flex-end;
+ text-decoration: underline;
+ margin-top: 16px;
+ color: var(---gray-500-color);
+  font-family: 'Outfit';
+  cursor: pointer;
+}

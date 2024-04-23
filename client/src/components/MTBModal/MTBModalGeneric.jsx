@@ -6,23 +6,10 @@ export default function MTBModalGeneric({
   data,
   isOpen,
   onClose,
-  category,
-  isOther,
-  onSubCategoriesChange,
+  handleContinue,
+  subscriptionEndDate,
+  currentPlan
 }) {
-  const currentPlan = 'Premium';
-  const subscriptionEndDate = '2024-04-25'
-
-  const handleClick = (_subCategory) => {};
-
-  const handleOtherCategory = (value) => {};
-
-  const handleGoBack = () => {};
-
-  const handleContinue = () => {
-   
-    onClose();
-  };
   if (!isOpen) return <div></div>;
   return (
     <>
@@ -47,7 +34,7 @@ export default function MTBModalGeneric({
             <MTBButton
               hasOwnClassName={true}
               ownClassName={createMultipleClasses([styles.baseButton, styles.cancelButton])}
-              onClick={handleGoBack}>
+              onClick={onClose}>
               No, go back
             </MTBButton>
             <MTBButton
