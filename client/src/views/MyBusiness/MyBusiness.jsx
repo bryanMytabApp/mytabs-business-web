@@ -1,0 +1,614 @@
+import axios from "axios";
+import styles from './MyBusiness.module.css'
+import moment from 'moment'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { toast } from "react-toastify";
+import { IconButton } from '@mui/material/'
+import { MTBSelector } from "../../components";
+import { getUserById } from "../../services/userService";
+import { useNavigate } from "react-router-dom";
+import { State, City } from 'country-state-city';
+import { processImage } from "../../components/MTBDropZone/MTBDropZone";
+import { createMultipleClasses, getBusinessPicture } from "../../utils/common"
+import React, { useEffect, useRef, useState } from "react";
+import { getPresignedUrlForEvent, updateEvent } from "../../services/eventService";
+import qrCode from '../../assets/qr-test.png'
+import { getBusiness, getPresignedUrlForBusiness, updateBusiness } from "../../services/businessService";
+const countryCode = 'US';
+let userId
+
+const businessTypes = [
+  {
+    name: 'Entity/Individual',
+    value: 0
+  },
+  {
+    name: 'Group/Organization',
+    value: 1
+  },
+  {
+    name: 'Business/Corp',
+    value: 2
+  },
+]
+
+const MyBusiness = () => {
+  const [states, setStates] = useState([])
+  const [item, setItem] = useState({
+    type: 'Entity/Individual'
+  })
+  const [tickets, setTickets] = useState([])
+  const [cities, setCities] = useState([])
+  const [subcategories, setSubcategories] = useState([])
+  const [editScreen, setEditScreen] = useState(0)
+  const [uploadedImage, setUploadedImage] = useState(null)
+  const [editEnabled, setEditEnabled] = useState(false)
+
+  const navigation = useNavigate();
+
+  const handleGoBack = () => navigation("/admin/home")
+
+  const parseJwt = (token) => {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map(function (c) {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join("")
+    );
+
+    return JSON.parse(jsonPayload)["custom:user_id"];
+  };
+
+  const init = () => {
+    getBusiness(userId)
+      .then(res => {
+        let item = res.data
+        setItem(res.data)
+        console.log("🚀 ~ init ~ item:", item)
+      })
+      .catch(err => console.error(err))
+    getUserById(userId)
+      .then(res => {
+        let item = res.data
+        let subcategories = item.subcategory.map(sub => {
+          if(sub.text)
+            return sub.text
+          else if(sub.subcategories.length)
+            return sub.subcategories[0]
+          return sub.name
+        })
+        setSubcategories(subcategories)
+      })
+      .catch(err => console.error(err))
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem("idToken");
+    userId = parseJwt(token);
+    init()
+    let availableStates = State.getStatesOfCountry(countryCode);
+    setStates(availableStates)
+  }, []);
+
+  useEffect(() => {
+    if(!item.state) {
+      return
+    }
+    let selectedState = states.find(state => state.name === item.state)
+    let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
+    setCities(availableCities)
+  }, [item.state])
+
+  const changeEditScreen = (next) => {
+    if(next === 0 && !ticketsValidated()) {
+      toast.error('Please fill the tickets with errors')
+      return
+    }
+    setEditScreen(next)
+  }
+
+  const validateTicket = (ticket = {}, index) => {
+    let error = false
+    if(ticket.option === 'External link') {
+      if((!ticket.link1 && !ticket.link2 && !ticket.link3) || !ticket.type) {
+        error = true
+      }
+    } else {
+      if(!ticket.type) {
+        error = true
+      }
+    }
+    return {
+      ...ticket,
+      error
+    }
+  }
+
+  const ticketsValidated = () => {
+    let ticketsCopy = JSON.parse(JSON.stringify(tickets))
+    ticketsCopy = ticketsCopy.map(ticket => validateTicket(ticket))
+    setTickets(ticketsCopy)
+    if(ticketsCopy.some(t => t.error)) {
+      return false
+    }
+    return true
+  }
+  
+  const handleItemChange = (attr, value) => {
+    if(attr === 'description' && value.length >= 140) {
+      return
+    }
+    if(attr === 'zipCode' && (value.length > 5 || isNaN(value)) ) {
+      return
+    }
+    if(attr === 'phoneNumber' && (value.length > 10 || isNaN(value)) ) {
+      return
+    }
+    if(attr === 'state') {
+      setItem(prev => ({
+        ...prev,
+        [attr]: value,
+        city: '',
+      }))
+      return
+    }
+    setItem(prev => ({
+      ...prev,
+      [attr]: value
+    }))
+  }
+
+  const inputref = useRef(null);
+
+  const uploadFile = () => {
+    if (inputref.current) {
+      inputref.current.click()
+    }
+  }
+
+  const processFile = async (e) => {
+    let file = e.target.files[0]
+    
+    const processedImageUrl = await processImage(URL.createObjectURL(file), 30)
+
+    setUploadedImage(processedImageUrl);
+  }
+
+  const _updateEvent = async () => {
+    
+    let itemCopy = Object.assign({}, item)
+    itemCopy.categories = subcategories
+    itemCopy.userId = userId
+
+    try {
+      await updateBusiness(itemCopy)
+    } catch (error) {
+      toast.error("Cannot save changes");
+      console.error(error);
+      return
+    }
+    if(uploadedImage) {
+      let presignedUrl
+      try {
+        let res = await getPresignedUrlForBusiness(userId)
+        presignedUrl = res.data
+      } catch (error) {
+        toast.error("cannot create presigned url");
+        console.error(error);
+        return
+      }
+  
+      const base64Response = await fetch(uploadedImage);
+      const blob = await base64Response.blob();
+      try {
+        await axios.put(presignedUrl, blob)
+        toast.success("Image was successfully uploaded");
+      } catch (error) {
+        toast.error("Cannot upload image");
+      }
+    }
+    handleGoBack()
+  }
+
+  const handleClickEdit = () => {
+    if(!editEnabled) {
+      setEditEnabled(prev => !prev)
+      return
+    }
+    _updateEvent()
+  }
+  
+ return (
+    <div className={styles.view}>
+      <div className={styles.contentContainer}>
+      <input
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={(e) => processFile(e)}
+        ref={inputref}
+      />
+        <div className={styles.titleContainer}>
+          <IconButton aria-label="delete" onClick={handleGoBack}>
+            <ArrowBackIcon />
+          </IconButton>
+          <h1>
+            My Business
+          </h1>
+        </div>
+        <div className={styles.tableContainer}>
+          {/* <div className={styles.buttonsContainer}>
+            <button
+              className={
+                createMultipleClasses([
+                  styles.contentSelector,
+                  styles['outfit-font'],
+                  editScreen == 0 ? styles['primary-background'] : styles['white-background'],
+                  editScreen == 0 ? styles['white-color'] : styles['secundary-color'],
+                ])}
+              onClick={() => changeEditScreen(0)}
+            >
+              General Details
+            </button>
+            <button
+              className={
+                createMultipleClasses([
+                  styles.contentSelector,
+                  styles['outfit-font'],
+                  editScreen == 1 ? styles['primary-background'] : styles['white-background'],
+                  editScreen == 1 ? styles['white-color'] : styles['secundary-color'],
+                ])}
+              onClick={() => changeEditScreen(1)}
+            >
+              Specific details
+            </button>
+          </div> */}
+          <div
+            className={createMultipleClasses([
+              styles['sub-content-container'],
+              styles['left-container'],
+            ])}>
+            <div
+              className={styles['media-container']}
+            >
+              <div className={styles['sub-media-container']}>
+                <img
+                  src={uploadedImage ? uploadedImage : getBusinessPicture(userId)}
+                  alt={item.name}
+                  style={{ borderRadius: '10px' }}
+                  width="200" height="160"
+                />
+                <button
+                  className={createMultipleClasses([
+                    styles.baseButton,
+                    styles.buttonAbsolute2,
+                    styles['primary-background']
+                  ])}
+                  onClick={uploadFile}
+                >
+                  Submit
+                  <span class="material-symbols-outlined">
+                    arrow_upward
+                  </span>
+                </button>
+              </div>
+              <div className={styles['sub-media-container']}>
+                <img
+                  src={qrCode}
+                  alt={item.name}
+                  style={{ borderRadius: '10px' }}
+                  width="390" height="160"
+                />
+                <button
+                  className={createMultipleClasses([
+                    styles.baseButton,
+                    styles.buttonAbsolute2,
+                    styles['primary-background']
+                  ])}
+                  // onClick={uploadFile}
+                >
+                  Download
+                  <span class="material-symbols-outlined" style={{marginLeft: '10px'}}>
+                    cloud_download
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div
+            className={createMultipleClasses([
+              styles['sub-content-container'],
+              styles['right-container']
+            ])}
+          >
+            <div style={{ width: '100%',padding: '0 10%', boxSizing: 'border-box' }}>
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ width: '55%' }}>
+                  <div className={styles.title} style={{ marginBottom: 0 }}>
+                    Business Name
+                  </div>
+                  <div
+                    className={createMultipleClasses([
+                      styles.inputContainer,
+                      editEnabled ? '' : styles.disabled
+                    ])}
+                    style={{ width: '100%' }}
+                  >
+                    <input
+                      className={createMultipleClasses([
+                        styles.input,
+                        editEnabled ? '' : styles.disabled
+                      ])}
+                      type="text"
+                      value={item.name}
+                      placeholder="Business Name Field"
+                      onBlur={() => {}}
+                      disabled={!editEnabled}
+                      onChange={(e) => handleItemChange('name',e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div style={{ width: '35%' }}>
+                  <div className={styles.title} style={{ marginBottom: 0 }}>
+                    Designation
+                  </div>
+                  <div
+                    className={createMultipleClasses([
+                      styles.inputContainer,
+                      editEnabled ? '' : styles.disabled
+                    ])}
+                    style={{ width: '100%' }}
+                  >
+                    <input
+                      className={createMultipleClasses([
+                        styles.input,
+                        editEnabled ? '' : styles.disabled
+                      ])}
+                      type="text"
+                      value={item.designation}
+                      placeholder="Designation"
+                      onBlur={() => {}}
+                      disabled={!editEnabled}
+                      onChange={(e) => handleItemChange('designation',e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ width: '48%' }}>
+                  <div className={styles.title} style={{ marginBottom: 0 }}>
+                    Business Type
+                  </div>
+                  <div style={{ width: '100%' }}>
+                    <MTBSelector
+                      onBlur={() => ("type")}
+                      name={"type"}
+                      placeholder='Business type'
+                      autoComplete='State'
+                      value={item.type}
+                      itemName={"name"}
+                      itemValue={"name"}
+                      options={businessTypes}
+                      onChange={(selected, fieldName) => {
+                        handleItemChange('type', selected);
+                      }}
+                      appearDisabled={!editEnabled}
+                      styles={{
+                        display: 'flex',
+                        background: '#FCFCFC',
+                        borderRadius: '10px',
+                        boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                        boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                        width: '100%',
+                        height: '50px',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ width: '48%' }}>
+                  <div className={styles.title} style={{ marginBottom: 0 }}>
+                    Phone number
+                  </div>
+                  <div
+                    className={createMultipleClasses([
+                      styles.inputContainer,
+                      editEnabled ? '' : styles.disabled
+                    ])}
+                    style={{ width: '100%' }}
+                  >
+                    <input
+                      className={createMultipleClasses([
+                        styles.input,
+                        editEnabled ? '' : styles.disabled
+                      ])}
+                      type="text"
+                      value={item.phoneNumber}
+                      placeholder="Phone number"
+                      onBlur={() => {}}
+                      disabled={!editEnabled}
+                      onChange={(e) => handleItemChange('phoneNumber',e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div style={{ width: '100%' }}>
+                <div style={{ width: '100%' }}>
+                  <div className={styles.title} style={{ marginBottom: 0 }}>
+                    Description
+                  </div>
+                  <div
+                    className={createMultipleClasses([
+                      styles.inputContainer,
+                      editEnabled ? '' : styles.disabled
+                    ])}
+                    style={{ marginBottom: '0px' }}
+                  >
+                    <textarea
+                      className={createMultipleClasses([
+                        styles.input,
+                        editEnabled ? '' : styles.disabled
+                      ])}
+                      style={{ width: '100%', height: '60px', resize: 'none' }}
+                      cols="20" rows="1"
+                      value={item.description}
+                      disabled={!editEnabled}
+                      placeholder="Description 140 characters"
+                      onBlur={() => {}}
+                      onChange={(e) => handleItemChange('description',e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div style={{ width: '100%' }}>
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                  <div style={{ width: '48%' }}>
+                    <div className={styles.title} style={{ marginBottom: 0 }}>
+                      Location
+                    </div>
+                    <div style={{ width: '100%', margin: '7px 0 0 0' }}>
+                      <MTBSelector
+                        onBlur={() => ("state")}
+                        name={"state"}
+                        placeholder='State'
+                        autoComplete='State'
+                        value={item.state}
+                        itemName={"name"}
+                        itemValue={"name"}
+                        options={states}
+                        onChange={(selected, fieldName) => {
+                          handleItemChange('state', selected);
+                        }}
+                        appearDisabled={!editEnabled}
+                        styles={{
+                          display: 'flex',
+                          background: '#FCFCFC',
+                          borderRadius: '10px',
+                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                          width: '100%',
+                          height: '50px',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ width: '48%' }}>
+                    <MTBSelector
+                      onBlur={() => ("city")}
+                      name={"city"}
+                      placeholder='City'
+                      autoComplete='City'
+                      value={item.city}
+                      itemName={"name"}
+                      itemValue={"name"}
+                      options={cities}
+                      onChange={(selected, fieldName) => {
+                        handleItemChange('city', selected);
+                      }}
+                      appearDisabled={!item.state || !editEnabled}
+                      styles={{
+                        display: 'flex',
+                        background: '#FCFCFC',
+                        borderRadius: '10px',
+                        boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                        boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                        width: '100%',
+                        height: '50px',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div style={{ width: '100%', marginTop: '10px' }}>
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                  <div
+                    className={createMultipleClasses([
+                      styles.inputContainer,
+                      editEnabled ? '' : styles.disabled
+                    ])}
+                    style={{ width: '48%' }}
+                  >
+                    <input
+                      className={createMultipleClasses([
+                        styles.input,
+                        editEnabled ? '' : styles.disabled
+                      ])}
+                      type="text"
+                      value={item.zipCode}
+                      placeholder="Zip Code"
+                      onBlur={() => {}}
+                      disabled={!editEnabled}
+                      onChange={(e) => handleItemChange('zipCode',e.target.value)}
+                    />
+                  </div>
+                  <div
+                    className={createMultipleClasses([
+                      styles.inputContainer,
+                      editEnabled ? '' : styles.disabled
+                    ])}
+                    style={{ width: '48%' }}
+                  >
+                    <input
+                      className={createMultipleClasses([
+                        styles.input,
+                        editEnabled ? '' : styles.disabled
+                      ])}
+                      type="text"
+                      value={item.address1}
+                      placeholder="Street"
+                      onBlur={() => {}}
+                      disabled={!editEnabled}
+                      onChange={(e) => handleItemChange('address1',e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              {item._id && (
+                <div style={{ width: '100%' }}>
+                  <div className={styles.title} style={{ marginBottom: 0 }}>
+                    Categories
+                  </div>
+                  <div style={{ width: '100%', display: 'flex' }}>
+                    {subcategories.map(sub => (
+                      <div
+                        className={createMultipleClasses([
+                          styles['subcategory-container'],
+                          editEnabled ? '' : styles.disabled
+                        ])}
+                      >
+                        {sub}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div> 
+          <button
+            className={createMultipleClasses([
+              styles.baseButton,
+              styles.buttonAbsolute,
+              styles['primary-background']
+            ])}
+            style={{ marginTop: '0px' }}
+            onClick={handleClickEdit}
+          >
+            {editEnabled ? 'Save' : 'Edit'}
+            <span class="material-symbols-outlined" style={{ fontSize: '17px', marginLeft: '5px' }}>
+              {editEnabled ? 'save' : 'edit'}
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+ )
+};
+
+export default MyBusiness;
+

@@ -12,6 +12,11 @@ export const getEventPicture = (id = '') => {
 	return generateAssetUrl(`events/${id}`)
 }
 
+export const getBusinessPicture = (id = '') => {
+	return generateAssetUrl(`business/${id}`)
+}
+
+export const createMultipleClasses = (classes = []) => classes.filter(cl => cl).join(' ');
 
 export const applySearch = (search, items, attrs = []) => {
 	if(!search)
@@ -46,3 +51,18 @@ export const normalizeText = (text, toLower = false) => {
 export const normalizeIncludes = (str, search) => {
 	return normalizeText( str, true ).includes( normalizeText(search, true) )
 }
+
+export const parseJwt = (token) => {
+	const base64Url = token.split(".")[1];
+	const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+	const jsonPayload = decodeURIComponent(
+		atob(base64)
+			.split("")
+			.map(function (c) {
+				return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+			})
+			.join("")
+	);
+
+	return JSON.parse(jsonPayload)["custom:user_id"];
+};
