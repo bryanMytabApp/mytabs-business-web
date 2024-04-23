@@ -43,4 +43,14 @@ export const getCustomerSubscription = async (userIdObj) => {
   } catch ( error ) {
     console.error("Error getting customer subscription", error.response || error)
   }
+};
+
+export const cancelCustomerSubscription = async (userId) => {
+  try {
+    const response = await http.post( "payments/subscription/cancel", {userId} );
+    console.log( "cancel response:", response );
+    return response.data;
+  } catch ( error ) {
+    console.error("Error canceling customer subscription", error.response || error)
+  }
 }

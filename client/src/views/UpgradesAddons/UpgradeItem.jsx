@@ -1,10 +1,9 @@
 import React from "react";
 import styles from "./UpgradesAddonsView.module.css";
-
+import { createMultipleClasses } from "../../utils/common";
 import checkIcon from "../../assets/atoms/check.svg";
 
 const UpgradeItem = ({isSelected, price, plan, benefits, index, onClick, isDisabled}) => {
-  const createMultipleClasses = (classes = []) => classes.join(" ");
   const priceHTML = isSelected ? (
     <>
       <h2 className={styles.priceHTML}>Included</h2>

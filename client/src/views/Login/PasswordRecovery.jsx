@@ -232,7 +232,6 @@ export default function PasswordRecovery() {
   };
 
 
-
   document.title = "My Tabs - Password Recovery";
 
   return (
