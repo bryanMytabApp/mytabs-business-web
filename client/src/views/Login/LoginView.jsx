@@ -5,26 +5,26 @@ import logo from "../../assets/logo.png";
 import {getCookie} from "../../utils/Tools.ts";
 import "./LoginView.css";
 import {MTBButton, MTBInput} from "../../components/";
-import { getToken } from '../../services/authService';
+import {getToken} from "../../services/authService";
+import {getCustomerSubscription} from "../../services/paymentService";
+import {parseJwt} from "../../utils/common";
 
 export const LoaderLogin = () => {
   const isLoggedIn = getCookie("token") !== null;
 
-  if ( isLoggedIn ) {
-     let paymentData = {
-       price:13.99,
-       plan: "Basic",
-     };
+  if (isLoggedIn) {
+    let paymentData = {
+      price: 13.99,
+      plan: "Basic",
+    };
 
-     localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
-  
-    
+    localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
+
     return redirect("/admin");
   }
 
   return null;
 };
-
 
 export default function LoginView() {
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ export default function LoginView() {
 
   const goToPasswordRecovery = () => {
     navigate("/password-recovery");
-  }
+  };
   const handleUsername = (value) => {
     if (invalid.username) {
       setInvalid({...invalid, username: undefined});
@@ -67,18 +67,22 @@ export default function LoginView() {
 
     setIsLoading(true);
     try {
-       let res = await getToken({ username: username.trim(), password: password });
+      let res = await getToken({username: username.trim(), password: password});
 
-   
-        localStorage.setItem( "refToken", res.RefreshToken )
-        localStorage.setItem('idToken', res.IdToken)
-        toast.success("Welcome!");
-      
-      navigate("/subscription")
-      
-    } catch ( error ) {
+      localStorage.setItem("refToken", res.RefreshToken);
+      localStorage.setItem("idToken", res.IdToken);
+      toast.success("Welcome!");
+      let userId = parseJwt(res.IdToken);
+
+      let a = await getCustomerSubscription({userId});
+      if (+a.data.currentPeriodEnd > new Date().getTime() / 1000) {
+        navigate("/admin/dashboards");
+      } else {
+        navigate("/subscription");
+      }
+    } catch (error) {
       toast.error("Invalid user and/or password");
-      console.error(error)
+      console.error(error);
       setIsLoading(false);
     }
   };
@@ -146,17 +150,27 @@ export default function LoginView() {
               }
             }
           />
-          <div onClick={goToPasswordRecovery} className='Forgot-password'>Forgot your password?</div>
+          <div onClick={goToPasswordRecovery} className='Forgot-password'>
+            Forgot your password?
+          </div>
         </form>
 
         <div className='Actions'></div>
         <div className='Footer'>
-          <div style={{display: "flex", flex: 5, marginLeft: "10px", boxSizing:"border-box", alignItems: "center", paddingLeft: "20px"}}>
+          <div
+            style={{
+              display: "flex",
+              flex: 5,
+              marginLeft: "10px",
+              boxSizing: "border-box",
+              alignItems: "center",
+              paddingLeft: "20px",
+            }}>
             <span>
-              <span class='agree-text'>By continuing, you agree to My Tabs{ " "}</span>
+              <span class='agree-text'>By continuing, you agree to My Tabs </span>
               <span class='agree-text-underline'>terms of service</span>
-              <span class='agree-text'>{" "}</span>
-              <span class='agree-text'>and{" " }</span>
+              <span class='agree-text'> </span>
+              <span class='agree-text'>and </span>
               <span class='agree-text-underline'> privacy notice</span>
               <span class='agree-text'>.</span>
             </span>
