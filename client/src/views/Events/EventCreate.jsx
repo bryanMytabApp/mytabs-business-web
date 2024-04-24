@@ -505,7 +505,7 @@ const EventCreate = () => {
                   </div>
                 </div>
                 <div>
-                  Business adress
+                  Business address
                 </div>
               </span>
               <span
