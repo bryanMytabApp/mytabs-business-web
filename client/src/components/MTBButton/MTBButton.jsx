@@ -48,7 +48,7 @@ export default function MTBButton({
       }}
       disabled={disabled || isLoading}
       onClick={onClick}>
-      {isLoading ? <ReactLoading type='spin' height={36} width={36} color='#E090AD' /> : children}
+      {isLoading ? <ReactLoading type='spin' height={36} width={36} color='#00AAD6' /> : children}
     </button>
   ) : (
     <button
@@ -56,7 +56,7 @@ export default function MTBButton({
       style={{...style}}
       disabled={disabled || isLoading}
       onClick={onClick}>
-      {isLoading ? <ReactLoading type='spin' height={36} width={36} color='#E090AD' /> : children}
+      {isLoading ? <ReactLoading type='spin' height={24} width={24} color='#00AAD6' /> : children}
     </button>
   );
 }

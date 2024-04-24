@@ -8,7 +8,8 @@ export default function MTBModalGeneric({
   onClose,
   handleContinue,
   subscriptionEndDate,
-  currentPlan
+  currentPlan,
+  isLoading
 }) {
   if (!isOpen) return <div></div>;
   return (
@@ -38,6 +39,7 @@ export default function MTBModalGeneric({
               No, go back
             </MTBButton>
             <MTBButton
+              isLoading={isLoading}
               hasOwnClassName={true}
               ownClassName={createMultipleClasses([styles.baseButton, styles.acceptButton])}
               onClick={handleContinue}>
