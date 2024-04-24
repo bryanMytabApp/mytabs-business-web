@@ -9,14 +9,14 @@ import {parseJwt} from "../../utils/common";
 import {
   getSystemSubscriptions,
   getCustomerSubscription,
-  cancelCustomerSubscription
+  cancelCustomerSubscription,
 } from "../../services/paymentService";
-import { toast } from "react-toastify";
+import {toast} from "react-toastify";
 import moment from "moment";
 let userId;
 let currentSubscription;
 let currentLevelString;
-const SUBSCRIPTION_PLANS = ["Basic", "Plus", "Premium"]
+const SUBSCRIPTION_PLANS = ["Basic", "Plus", "Premium"];
 const UpgradesAddonsView = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeButtons, setActiveButtons] = useState(SUBSCRIPTION_PLANS);
@@ -27,16 +27,18 @@ const UpgradesAddonsView = () => {
   const [selectedPrice, setSelectedPrice] = useState(0);
   const [systemSubscriptions, setSystemSubscriptions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [ paymentArray, setPaymentArray ] = useState( [] );
-  const [endOfSubscription, setEndOfSubscription] = useState('');
+  const [paymentArray, setPaymentArray] = useState([]);
+  const [endOfSubscription, setEndOfSubscription] = useState("");
   const navigation = useNavigate();
   const handleGoBack = () => navigation("/admin/home");
 
   const getCustomerSubscriptionWrapper = async ({userId, subscriptionList}) => {
     let res = await getCustomerSubscription({userId});
-    
+
     currentSubscription = res.data;
-    let endOfSubscriptionDate = moment(currentSubscription.currentPeriodEnd*1000).format('MM-DD-YYYY');
+    let endOfSubscriptionDate = moment(currentSubscription.currentPeriodEnd * 1000).format(
+      "MM-DD-YYYY"
+    );
     setEndOfSubscription(endOfSubscriptionDate);
     let subItem = subscriptionList.find((el) => el.priceId == res.data.priceId);
     if (subItem.level == 3) {
@@ -61,17 +63,16 @@ const UpgradesAddonsView = () => {
     const fetchSystemSubscriptions = async () => {
       try {
         const response = await getSystemSubscriptions();
-        if ( response.data ) {
-          setSystemSubscriptions( response.data );
-          getCustomerSubscriptionWrapper( { userId, subscriptionList: response.data } );
-          console.log( response.data );
+        if (response.data) {
+          setSystemSubscriptions(response.data);
+          getCustomerSubscriptionWrapper({userId, subscriptionList: response.data});
+          console.log(response.data);
         } else {
-          console.log( "No data received from getSystemSubscriptions" );
+          console.log("No data received from getSystemSubscriptions");
         }
-      } catch ( error ) {
-        console.error( "Failed to fetch system subscriptions:", error );
+      } catch (error) {
+        console.error("Failed to fetch system subscriptions:", error);
       }
-
     };
     fetchSystemSubscriptions();
   }, []);
@@ -88,19 +89,20 @@ const UpgradesAddonsView = () => {
     });
   };
 
-  const handleContinue = async () => {    
+  const handleContinue = async () => {
     try {
-      let res = await cancelCustomerSubscription( userId );
-      res = JSON.parse(res)
-      if ( res.status === "success" ) {
-        toast.success( res.message);
+      setIsLoading(true);
+      let res = await cancelCustomerSubscription(userId);
+      res = JSON.parse(res);
+      if (res.status === "success") {
+        toast.success(res.message);
       }
-      if (res.status== "error") {
-        toast.error( res.message );
+      if (res.status == "error") {
+        toast.error(res.message);
       }
-      
+      setIsLoading(false);
     } catch (error) {
-      console.error("Failed to cancel subscription:", error)
+      console.error("Failed to cancel subscription:", error);
     }
     setIsOpen(false);
   };
@@ -114,6 +116,7 @@ const UpgradesAddonsView = () => {
           handleContinue={handleContinue}
           subscriptionEndDate={endOfSubscription}
           currentPlan={currentLevelString}
+          isLoading={isLoading}
         />
       ) : (
         <div className={styles.view}>
