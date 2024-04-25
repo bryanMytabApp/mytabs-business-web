@@ -54,6 +54,7 @@ const EventCreate = () => {
   const [cities, setCities] = useState([])
   const [step, setStep] = useState(0)
   const [uploadedImage, setUploadedImage] = useState(null)
+  const [creationInProccess, setCreationInProccess] = useState(false)
   const [addressOption, setAddressOption] = useState(0)
   const [tickets, setTickets] = useState([baseTicket])
   const [ticketSelectedIndex, setTicketSelectedIndex] = useState(0)
@@ -88,6 +89,7 @@ const EventCreate = () => {
   }
 
   const _createEvent = async () => {
+    setCreationInProccess(true)
     let itemCopy = Object.assign({}, item)
     itemCopy.startDate = moment(itemCopy.startDate).toString()
     itemCopy.endDate = moment(itemCopy.endDate).toString()
@@ -106,12 +108,15 @@ const EventCreate = () => {
 
     let presignedUrl
     try {
-      let res = await getPresignedUrlForEvent(data._id)
+      let res = await getPresignedUrlForEvent({
+        id: data._id,
+        userId
+      })
       presignedUrl = res.data
-      console.log("🚀 ~ const_createEvent= ~ presignedUrl:", presignedUrl)
     } catch (error) {
       toast.error("cannot create presigned url");
       console.error(error);
+      handleGoBack()
       return
     }
 
@@ -843,7 +848,12 @@ const EventCreate = () => {
               </span>
             </div>
             <button
-              className={createMultipleClasses([styles.baseButton, styles.createEventButton])}
+              className={createMultipleClasses([
+                styles.baseButton,
+                styles.createEventButton,
+                creationInProccess ? styles.disabled : ''
+              ])}
+              disabled={creationInProccess}
               style={{ marginTop: '0px' }}
               onClick={() => handleContinue(4, true)}
             >

@@ -20,8 +20,8 @@ export const getEvent = (userId, eventId) => {
   return http.get(`/event/${userId}/id/${eventId}`)
 };
 
-export const getPresignedUrlForEvent = (userId) => {
-  return http.post(`/event/presigned-url`, { userId })
+export const getPresignedUrlForEvent = (data) => {
+  return http.post(`/event/presigned-url`, data)
 };
 
 
