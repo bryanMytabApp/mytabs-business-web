@@ -192,7 +192,10 @@ const EventEdit = () => {
     if(uploadedImage) {
       let presignedUrl
       try {
-        let res = await getPresignedUrlForEvent(data._id)
+        let res = await getPresignedUrlForEvent({
+          id: data._id,
+          userId
+        })
         presignedUrl = res.data
       } catch (error) {
         toast.error("cannot create presigned url");
@@ -349,127 +352,129 @@ const EventEdit = () => {
                     />
                   </div>
                 </span>
-                <div className={styles.title} style={{ marginBottom: 0 }}>
-                  Start time, end time and location
-                </div>
-                <div className={styles.gridContainer}>
-                  <DemoContainer components={['DateTimePicker']} sx={{ width: '100%' }} >
-                    <DateTimePicker
-                      sx={{
-                        display: 'flex',
-                        background: '#FCFCFC',
-                        borderRadius: '10px !important',
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div className={styles.title} style={{ marginBottom: 0 }}>
+                    Start time, end time and location
+                  </div>
+                  <div className={styles.gridContainer}>
+                    <DemoContainer components={['DateTimePicker']} sx={{ width: '100%' }} >
+                      <DateTimePicker
+                        sx={{
+                          display: 'flex',
+                          background: '#FCFCFC',
+                          borderRadius: '10px !important',
 
-                        boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                        boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                        // maxWidth: '500px',
-                        // width: '50%',
-                        minHeight: '28px',
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          border: 'none',
-                          borderRadius: '10px'
-                        },
-                        '& .MuiInputLabel-root': {
-                          transformOrigin: '0px 35px'
-                        },
-                      }}
-                      value={item.startDate}
-                      label="Start time" 
-                      maxDateTime={item.endDate}
-                      minDateTime={moment()}
-                      onChange={(newValue) => handleItemChange('startDate', newValue)}
-                    />
-                  </DemoContainer>
-                  <DemoContainer components={['DateTimePicker']} sx={{ width: '100%' }} >
-                    <DateTimePicker
-                      value={item.endDate}
-                      label="End time"
-                      sx={{
-                        display: 'flex',
-                        background: '#FCFCFC',
-                        borderRadius: '10px',
-                        boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                        boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                        minHeight: '28px',
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          border: 'none'
-                        },
-                        '& .MuiInputLabel-root': {
-                          transformOrigin: '0px 35px'
-                        },
-                      }}
-                      minDateTime={item.startDate}
-                      onChange={(newValue) => handleItemChange('endDate', newValue)}
-                    />
-                  </DemoContainer>
-                  <div style={{ width: '86.5%', margin: '7px 0 0 0' }}>
-                    <MTBSelector
-                      onBlur={() => ("state")}
-                      name={"state"}
-                      placeholder='State'
-                      autoComplete='State'
-                      value={item.state}
-                      itemName={"name"}
-                      itemValue={"name"}
-                      options={states}
-                      onChange={(selected, fieldName) => {
-                        handleItemChange('state', selected);
-                      }}
-                      styles={{
-                        display: 'flex',
-                        background: '#FCFCFC',
-                        borderRadius: '10px',
-                        boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                        boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                        width: '100%',
-                        height: '28px',
-                      }}
-                    />
-                  </div>
-                  <div style={{ width: '86.5%', margin: '7px 0 0 0' }}>
-                    <MTBSelector
-                      onBlur={() => ("city")}
-                      name={"city"}
-                      placeholder='City'
-                      autoComplete='City'
-                      value={item.city}
-                      itemName={"name"}
-                      itemValue={"name"}
-                      options={cities}
-                      onChange={(selected, fieldName) => {
-                        handleItemChange('city', selected);
-                      }}
-                      appearDisabled={!item.state}
-                      styles={{
-                        display: 'flex',
-                        background: '#FCFCFC',
-                        borderRadius: '10px',
-                        boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                        boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                        width: '100%',
-                        height: '28px',
-                      }}
-                    />
-                  </div>
-                  <div className={styles.inputContainer} style={{ margin: '0 10px 10px 0', width: '93%' }}>
-                    <input
-                      className={styles.input}
-                      type="text"
-                      value={item.zipCode}
-                      placeholder="Zip Code"
-                      onBlur={() => {}}
-                      onChange={(e) => handleItemChange('zipCode',e.target.value)}
-                    />
-                  </div>
-                  <div className={styles.inputContainer} style={{ margin: '0 10px 10px 0', width: '93%' }}>
-                    <input
-                      className={styles.input}
-                      type="text"
-                      value={item.address1}
-                      placeholder="Address1"
-                      onBlur={() => {}}
-                      onChange={(e) => handleItemChange('address1',e.target.value)}
-                    />
+                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                          // maxWidth: '500px',
+                          // width: '50%',
+                          minHeight: '28px',
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            border: 'none',
+                            borderRadius: '10px'
+                          },
+                          '& .MuiInputLabel-root': {
+                            transformOrigin: '0px 35px'
+                          },
+                        }}
+                        value={item.startDate}
+                        label="Start time" 
+                        maxDateTime={item.endDate}
+                        minDateTime={moment()}
+                        onChange={(newValue) => handleItemChange('startDate', newValue)}
+                      />
+                    </DemoContainer>
+                    <DemoContainer components={['DateTimePicker']} sx={{ width: '100%' }} >
+                      <DateTimePicker
+                        value={item.endDate}
+                        label="End time"
+                        sx={{
+                          display: 'flex',
+                          background: '#FCFCFC',
+                          borderRadius: '10px',
+                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                          minHeight: '28px',
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            border: 'none'
+                          },
+                          '& .MuiInputLabel-root': {
+                            transformOrigin: '0px 35px'
+                          },
+                        }}
+                        minDateTime={item.startDate}
+                        onChange={(newValue) => handleItemChange('endDate', newValue)}
+                      />
+                    </DemoContainer>
+                    <div style={{ width: '86.5%', margin: '7px 0 0 0' }}>
+                      <MTBSelector
+                        onBlur={() => ("state")}
+                        name={"state"}
+                        placeholder='State'
+                        autoComplete='State'
+                        value={item.state}
+                        itemName={"name"}
+                        itemValue={"name"}
+                        options={states}
+                        onChange={(selected, fieldName) => {
+                          handleItemChange('state', selected);
+                        }}
+                        styles={{
+                          display: 'flex',
+                          background: '#FCFCFC',
+                          borderRadius: '10px',
+                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                          width: '100%',
+                          height: '28px',
+                        }}
+                      />
+                    </div>
+                    <div style={{ width: '86.5%', margin: '7px 0 0 0' }}>
+                      <MTBSelector
+                        onBlur={() => ("city")}
+                        name={"city"}
+                        placeholder='City'
+                        autoComplete='City'
+                        value={item.city}
+                        itemName={"name"}
+                        itemValue={"name"}
+                        options={cities}
+                        onChange={(selected, fieldName) => {
+                          handleItemChange('city', selected);
+                        }}
+                        appearDisabled={!item.state}
+                        styles={{
+                          display: 'flex',
+                          background: '#FCFCFC',
+                          borderRadius: '10px',
+                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                          width: '100%',
+                          height: '28px',
+                        }}
+                      />
+                    </div>
+                    <div className={styles.inputContainer} style={{ margin: '0 10px 10px 0', width: '93%' }}>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        value={item.zipCode}
+                        placeholder="Zip Code"
+                        onBlur={() => {}}
+                        onChange={(e) => handleItemChange('zipCode',e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.inputContainer} style={{ margin: '0 10px 10px 0', width: '93%' }}>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        value={item.address1}
+                        placeholder="Address1"
+                        onBlur={() => {}}
+                        onChange={(e) => handleItemChange('address1',e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
