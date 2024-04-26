@@ -37,6 +37,8 @@ const ChildCheckbox = ({ checked, onChange }) => {
 }
 let userId
 
+let currentSubscription;
+
 const EventsView = () => {
   const [selectedItems, setSelectedItems] = useState([])
   const [items, setItems] = useState([])
