@@ -47,7 +47,7 @@ const EventsView = () => {
   const [shownItems, setShownItems] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
 const [systemSubscriptions, setSystemSubscriptions] = useState([]);
- const [currentLevel, setCurrentLevel] = useState(1);
+ const [currentLevel, setCurrentLevel] = useState(0);
  const [activeLength, setActiveLength] = useState(3);
  const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigate();
@@ -134,9 +134,12 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
     fetchSystemSubscriptions();
   }, [] );
   const handleCreateAd = () => {
-    if ( currentLevel == 1 && items.length < 3 ) {
-      navigation("/admin/my-events/create",);
-        
+    if( currentLevel == 0 ) {
+      toast.warn("You cannot create ads without a subscription")
+    }
+    else if ( currentLevel == 1 && items.length < 3 ) {
+      navigation("/admin/my-events/create");
+  
     } else if(currentLevel == 1 && items.length >= 3) {
 
       toast.warn("you can only upload up to 3 items in Basic subscription")
