@@ -22,7 +22,8 @@ import { useNavigate } from "react-router-dom";
 import { deleteEvent, getEventsByUserId } from "../../services/eventService";
 import { applySearch, getEventPicture } from "../../utils/common"
 import { toast } from "react-toastify";
-import { MTBMenuActions } from "../../components";
+import { MTBLoading, MTBMenuActions } from "../../components";
+import { getCustomerSubscription, getSystemSubscriptions } from "../../services/paymentService";
 
 const ChildCheckbox = ({ checked, onChange }) => {
   const label = { inputProps: { 'aria-label': 'Checkbox demo' } }
@@ -35,6 +36,9 @@ const ChildCheckbox = ({ checked, onChange }) => {
   )
 }
 let userId
+
+let currentSubscription;
+
 const EventsView = () => {
   const [selectedItems, setSelectedItems] = useState([])
   const [items, setItems] = useState([])
@@ -42,7 +46,10 @@ const EventsView = () => {
   const [numbersOfPage, setNumbersOfPage] = useState(0)
   const [shownItems, setShownItems] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
-
+const [systemSubscriptions, setSystemSubscriptions] = useState([]);
+ const [currentLevel, setCurrentLevel] = useState(1);
+ const [activeLength, setActiveLength] = useState(3);
+ const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigate();
   const handleChange = (event, id) => {
     if(event.target.checked) {
@@ -81,7 +88,68 @@ const EventsView = () => {
     }
     setSelectedItems([])
   }
+ const getCustomerSubscriptionWrapper = async ({userId, subscriptionList}) => {
+    let res = await getCustomerSubscription({userId});
 
+    currentSubscription = res.data;
+
+   let subItem = subscriptionList.find( ( el ) => el.priceId == res.data.priceId );
+   let len;
+    if (subItem.level == 3) {
+      len = 25;
+      setActiveLength(25)
+    }
+    if (subItem.level == 2) {
+      len = 10;
+      setActiveLength(10)
+    }
+    if (subItem.level == 1) {
+      len = 3;
+      setActiveLength(3)
+    }
+    setCurrentLevel(subItem.level);
+    await init(len);
+    return res;
+  };
+  useEffect(() => {
+    const token = localStorage.getItem("idToken");
+    userId = parseJwt(token);
+    setIsLoading(true);
+
+    const fetchSystemSubscriptions = async () => {
+      try {
+        const response = await getSystemSubscriptions();
+        if (response.data) {
+          setSystemSubscriptions(response.data);
+          getCustomerSubscriptionWrapper({userId, subscriptionList: response.data});
+          console.log(response.data);
+          setIsLoading(false);
+        } else {
+          console.log("No data received from getSystemSubscriptions");
+        }
+      } catch (error) {
+        console.error("Failed to fetch system subscriptions:", error);
+      }
+    };
+    fetchSystemSubscriptions();
+  }, [] );
+  const handleCreateAd = () => {
+    if ( currentLevel == 1 && items.length < 3 ) {
+      navigation("/admin/my-events/create",);
+        
+    } else if(currentLevel == 1 && items.length >= 3) {
+
+      toast.warn("you can only upload up to 3 items in Basic subscription")
+    }else if (currentLevel == 2 && items.length < 10) {
+      navigation("/admin/my-events/create");
+    } else if(currentLevel == 2 && items.length >= 10){
+      toast.warn("you can only upload up to 10 items in Plus subscription");
+    } else if(currentLevel == 3 && items.length < 25) {
+      navigation("/admin/my-events/create");  
+    } else if(currentLevel == 3 && items.length >= 25){
+      toast.warn("you can only upload up to 3 items in Premium subscription");  
+    }
+    };
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl)
 
@@ -103,7 +171,7 @@ const EventsView = () => {
     //       toast.success("Ad deleted!");
     //     })
     //     .catch(err => {
-    //       toast.error("Cannot delete ad");
+    //       toast.efrror("Cannot delete ad");
     //     })
     // }
   };
@@ -134,17 +202,13 @@ const EventsView = () => {
     return JSON.parse(jsonPayload)["custom:user_id"];
   };
 
-  useEffect(() => {
-    const token = localStorage.getItem("idToken");
-    userId = parseJwt(token);
-    init()
-  }, []);
+ 
 
-  const init = () => {
+  const init = async ( len ) => {
     getEventsByUserId(userId)
-      .then(res => {
-        setItems(res.data)
-        setNumbersOfPage(Math.ceil(res.data.length / 4))
+      .then( res => {
+        setItems(res.data.slice(0,len))
+        setNumbersOfPage(Math.ceil(res.data.slice(0,len).length / 4))
       })
       .catch(err => console.error(err))
   }
@@ -160,7 +224,11 @@ const EventsView = () => {
     itemsFiltered = itemsFiltered.slice((page * 4) - 4, page * 4)
     setShownItems(itemsFiltered)
   }, [searchTerm, items, page]);
-
+  if ( isLoading ) {
+    return <div className={styles.view}>
+      <MTBLoading />
+    </div>;
+  }
  return (
     <div className={styles.view}>
       <div className={styles.contentContainer}>
@@ -196,7 +264,7 @@ const EventsView = () => {
               </button>
               <button
                 className={createMultipleClasses([styles.baseButton, styles.createEventButton])}
-                onClick={() => navigation("/admin/my-events/create")}
+                onClick={handleCreateAd}
               >
                 <span class="material-symbols-outlined">
                   add
