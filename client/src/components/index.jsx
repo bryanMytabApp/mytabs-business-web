@@ -9,6 +9,7 @@ import MTBCategorySelector from "./MTBCategorySelector/MTBCategorySelector";
 import MTBModalGeneric from "./MTBModal/MTBModalGeneric";
 import MTBTicketsEditor from "./MTBTicketsEditor/MTBTicketsEditor";
 import MTBMenuActions from "./MTBMenuActions/MTBMenuActions";
+import MTBComingSoon from "./MTBComingSoon/MTBComingSoon";
 
 export {
   MTBButton,
@@ -22,4 +23,5 @@ export {
   MTBModalGeneric,
   MTBTicketsEditor,
   MTBMenuActions,
+  MTBComingSoon
 }
