@@ -1,7 +1,11 @@
 import React from 'react';
-
+import { MTBComingSoon } from '../../components';
 const Dashboard = () => {
-  return <div>Dashboard</div>
+  return (
+    <>
+      <MTBComingSoon />
+    </>
+  );
 };
 
 export default Dashboard;

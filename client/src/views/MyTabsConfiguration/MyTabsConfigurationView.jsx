@@ -1,7 +1,12 @@
 import React from "react";
+import { MTBComingSoon } from "../../components";
 
 const MyTabsConfigurationView = () => {
-  return <div>Configuration </div>;
+  return (
+    <>
+      <MTBComingSoon />
+    </>
+  );
 };
 
 export default MyTabsConfigurationView;

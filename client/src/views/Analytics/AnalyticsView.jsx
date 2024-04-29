@@ -1,7 +1,12 @@
 import React from "react";
+import {MTBComingSoon} from "../../components";
 
 const AnalyticsView = () => {
-  return <div>Analytics</div>
+  return (
+    <>
+      <MTBComingSoon />
+    </>
+  );
 };
 
 export default AnalyticsView;

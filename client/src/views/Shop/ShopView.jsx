@@ -1,7 +1,12 @@
 import React from "react";
+import { MTBComingSoon } from "../../components";
 
 const ShopView = () => {
-  return <div>Shop</div>
+  return (
+    <>
+      <MTBComingSoon />
+    </>
+  );
 };
 
 export default ShopView;

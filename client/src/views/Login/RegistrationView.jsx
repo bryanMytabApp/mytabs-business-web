@@ -17,9 +17,14 @@ import chevronIcon from "../../assets/atoms/chevron.svg";
 import {getUserExistance} from "../../services/userService";
 import categoriesJS from "../../utils/data/categories";
 import { getPresignedUrlForBusiness } from "../../services/businessService";
-import { parseJwt } from "../../utils/common";
+import { createMultipleClasses, parseJwt } from "../../utils/common";
 import axios from "axios";
+import { State, City } from 'country-state-city';
+import styles from '../MyBusiness/MyBusiness.module.css';
+
 let subCategoryList;
+const countryCode = 'US';
+
 export const debounce = (func, wait) => {
   let timeout;
   return function executedFunction(...args) {
@@ -45,7 +50,11 @@ export default function RegistrationView() {
     lastName: "",
     zipCode: "",
     city: "",
+    state: "",
+    address1: "",
     subcategory: [],
+    businessName: '',
+    designation: '',
   });
   const [validationState, setValidationState] = useState({
     hasUppercase: false,
@@ -64,6 +73,9 @@ export default function RegistrationView() {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
   const [part, setPart] = useState(0);
+  const [states, setStates] = useState([])
+  const [cities, setCities] = useState([])
+
   const filterSubCategorySetter = () => {
     subCategoryList = categoriesJS;
     setFilteredSubCategories(categoriesJS);
@@ -87,6 +99,20 @@ export default function RegistrationView() {
   useEffect(() => {
     filterSubCategorySetter();
   }, [part]);
+
+  useEffect(() => {
+    let availableStates = State.getStatesOfCountry(countryCode);
+    setStates(availableStates)
+  }, []);
+
+  useEffect(() => {
+    if(!formData.state) {
+      return
+    }
+    let selectedState = states.find(state => state.name === formData.state)
+    let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
+    setCities(availableCities)
+  }, [formData.state])
 
   useEffect(() => {
     if (myRef.current) {
@@ -172,6 +198,17 @@ export default function RegistrationView() {
   };
 
   const handleInputChange = useCallback((value, name) => {
+    if(name === 'zipCode' && (value.length > 5 || isNaN(value)) ) {
+      return
+    }
+    if(name === 'state') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        city: '',
+      }))
+      return
+    }
     if (name === "subcategoryFilter") {
       setSubcategoryFilter(value);
       setSearchTerm(value);
@@ -182,18 +219,6 @@ export default function RegistrationView() {
       }));
     }
     setSearchTerm(value);
-    if (name === "zipCode") {
-      setInputTouched({
-        zipCode: true,
-        city: false,
-      });
-    }
-    if (name === "city") {
-      setInputTouched({
-        zipCode: false,
-        city: true,
-      });
-    }
 
     setErrors((prevErrors) => ({...prevErrors, [name]: undefined}));
     if (["email", "username", "phoneNumber"].includes(name)) {
@@ -600,48 +625,150 @@ export default function RegistrationView() {
               <div className='Account-details' style={{color: "black"}}>
                 {secondHeaderText}
               </div>
-
-              <MTBInput
-                onBlur={() => {
-                  handleBlur("zipCode");
-                  handleBlur("city");
-                }}
-                type='number'
-                name='zipCode'
-                placeholder='Zip code'
-                autoComplete='zipCode'
-                value={formData.zipCode}
-                onChange={handleInputChange}
-                helper={
-                  errors.zipCode && {
-                    type: "warning",
-                    text: errors.zipCode,
-                  }
-                }
-                className={inputTouched.city ? "input-appears-disabled" : ""}
-                style={inputTouched.city ? styleInputDisabled : null}
-              />
-              <div className='or'>Or</div>
-              <MTBSelector
-                onBlur={() => handleBlur("city")}
-                name={"city"}
-                placeholder='City'
-                autoComplete='city'
-                value={formData.city}
-                itemName={"name"}
-                itemValue={"value"}
-                options={cityList}
-                onChange={(selected, fieldName) => {
-                  handleInputChange(selected, fieldName);
-                }}
-                helper={
-                  errors.city && {
-                    type: "warning",
-                    text: errors.city,
-                  }
-                }
-                appearDisabled={inputTouched.zipCode}
-              />
+              <div style={{ width: '100%' }}>
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                  <div style={{ width: '48%' }}>
+                    {/* <div className={styles.title} style={{ marginBottom: 0 }}>
+                      Location
+                    </div> */}
+                    <div style={{ width: '100%', margin: '7px 0 0 0' }}>
+                      <MTBSelector
+                        onBlur={() => ("state")}
+                        name={"state"}
+                        placeholder='State'
+                        autoComplete='State'
+                        value={formData.state}
+                        itemName={"name"}
+                        itemValue={"name"}
+                        options={states}
+                        onChange={(selected, fieldName) => {
+                          handleInputChange(selected, 'state');
+                        }}
+                        styles={{
+                          display: 'flex',
+                          background: '#FCFCFC',
+                          borderRadius: '10px',
+                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                          width: '100%',
+                          height: '50px',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ width: '48%' }}>
+                    <MTBSelector
+                      onBlur={() => ("city")}
+                      name={"city"}
+                      placeholder='City'
+                      autoComplete='City'
+                      value={formData.city}
+                      itemName={"name"}
+                      itemValue={"name"}
+                      options={cities}
+                      onChange={(selected, fieldName) => {
+                        handleInputChange(selected, 'city');
+                      }}
+                      appearDisabled={!formData.state}
+                      styles={{
+                        display: 'flex',
+                        background: '#FCFCFC',
+                        borderRadius: '10px',
+                        boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                        boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                        width: '100%',
+                        height: '50px',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div style={{ width: '100%', marginTop: '10px' }}>
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                  <div
+                    className={createMultipleClasses([
+                      styles.inputContainer,
+                    ])}
+                    style={{ width: '48%' }}
+                  >
+                    <input
+                      className={createMultipleClasses([
+                        styles.input,
+                      ])}
+                      type="text"
+                      value={formData.zipCode}
+                      placeholder="Zip Code"
+                      onBlur={() => {}}
+                      onChange={(e) => handleInputChange(e.target.value, 'zipCode')}
+                    />
+                  </div>
+                  <div
+                    className={createMultipleClasses([
+                      styles.inputContainer,
+                    ])}
+                    style={{ width: '48%' }}
+                  >
+                    <input
+                      className={createMultipleClasses([
+                        styles.input,
+                      ])}
+                      type="text"
+                      value={formData.address1}
+                      placeholder="Street"
+                      onBlur={() => {}}
+                      onChange={(e) => handleInputChange(e.target.value, 'address1')}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ width: '48%' }}>
+                  <div className={styles.title} style={{ marginBottom: 0 }}>
+                    Business Name
+                  </div>
+                  <div
+                    className={createMultipleClasses([
+                      styles.inputContainer,
+                    ])}
+                    style={{ width: '100%' }}
+                  >
+                    <input
+                      className={createMultipleClasses([
+                        styles.input,
+                      ])}
+                      type="text"
+                      value={formData.businessName}
+                      placeholder="Business Name Field"
+                      onBlur={() => {}}
+                      onChange={(e) => handleInputChange(e.target.value, 'businessName')}
+                    />
+                  </div>
+                </div>
+                <div style={{ width: '48%' }}>
+                  <div className={styles.title} style={{ marginBottom: 0 }}>
+                    Designation
+                  </div>
+                  <div
+                    className={createMultipleClasses([
+                      styles.inputContainer,
+                    ])}
+                    style={{ width: '100%' }}
+                  >
+                    <input
+                      className={createMultipleClasses([
+                        styles.input,
+                      ])}
+                      type="text"
+                      value={formData.designation}
+                      placeholder="Designation"
+                      onBlur={() => {}}
+                      onChange={(e) => handleInputChange(e.target.value, 'designation')}
+                    />
+                  </div>
+                </div>
+              </div>
             </>
           )}
           {part === 2 && (
@@ -729,10 +856,25 @@ export default function RegistrationView() {
                 backgroundColor:
                   formData.firstName &&
                   formData.lastName &&
-                  (formData.city !== "" || formData.zipCode !== "")
+                  formData.city &&
+                  formData.state &&
+                  formData.address1 &&
+                  formData.businessName &&
+                  formData.designation &&
+                  formData.zipCode
                     ? "#F18926"
                     : "#D9D9D9",
               }}
+              disabled={
+                !formData.firstName ||
+                !formData.lastName ||
+                !formData.city ||
+                !formData.state ||
+                !formData.address1 ||
+                !formData.businessName ||
+                !formData.designation ||
+                !formData.zipCode
+              }
               onClick={handleNextPart}
               isLoading={isLoading}>
               Continue

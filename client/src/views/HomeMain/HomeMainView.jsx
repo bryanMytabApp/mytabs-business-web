@@ -1,7 +1,12 @@
 import React from "react";
+import { MTBComingSoon } from "../../components";
 
 const HomeMainView = () => {
-  return <div>Home</div>
+  return (
+    <>
+      <MTBComingSoon />
+    </>
+  );
 };
 
 export default HomeMainView;

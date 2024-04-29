@@ -215,7 +215,8 @@ textarea:focus {
 .media-container {
   width: 80%;
   height: 90%;
-  background: url("../../assets/unsplash-business.png") repeat center center fixed;
+  background: url("../../assets/unsplash-business.png") no-repeat center center;
+  background-size: cover;
   display: flex;
   flex-direction: column;
   justify-content: space-around;

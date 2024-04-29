@@ -72,17 +72,30 @@ export default function LoginView() {
       localStorage.setItem("refToken", res.RefreshToken);
       localStorage.setItem("idToken", res.IdToken);
       toast.success("Welcome!");
+
       let userId = parseJwt(res.IdToken);
 
-      let customerSub = await getCustomerSubscription({userId});
-      if (+customerSub.data.currentPeriodEnd > new Date().getTime() / 1000) {
-        navigate("/admin/dashboards");
+      let customerSub;
+      try {
+        customerSub = await getCustomerSubscription({userId});
+      } catch (error) {
+        console.warn("Failed to fetch customer subscription:", error);
+        customerSub = null; // Handle missing subscription
+      }
+
+      if (customerSub) {
+        console.log("customerSub", customerSub);
+        if (+customerSub.data.currentPeriodEnd > new Date().getTime() / 1000) {
+          navigate("/admin/dashboards");
+        } else {
+          navigate("/subscription");
+        }
       } else {
         navigate("/subscription");
       }
     } catch (error) {
       toast.error("Invalid user and/or password");
-      console.error(error);
+      console.error("Login failed:", error);
       setIsLoading(false);
     }
   };
