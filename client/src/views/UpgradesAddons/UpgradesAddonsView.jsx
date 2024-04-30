@@ -2,7 +2,7 @@ import React, {useState, useEffect} from "react";
 import styles from "./UpgradesAddonsView.module.css";
 import {useNavigate, useLocation} from "react-router-dom";
 import {IconButton} from "@mui/material/";
-import {MTBModalGeneric} from "../../components";
+import {MTBLoading, MTBModalGeneric} from "../../components";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import UpgradeItem from "./UpgradeItem";
 import {parseJwt} from "../../utils/common";
@@ -13,11 +13,13 @@ import {
 } from "../../services/paymentService";
 import {toast} from "react-toastify";
 import moment from "moment";
+
 let userId;
 let currentSubscription;
 let currentLevelString;
 const SUBSCRIPTION_PLANS = ["Basic", "Plus", "Premium"];
 const UpgradesAddonsView = () => {
+  const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [activeButtons, setActiveButtons] = useState(SUBSCRIPTION_PLANS);
   const [currentLevel, setCurrentLevel] = useState(1);
@@ -26,7 +28,6 @@ const UpgradesAddonsView = () => {
   const [levelPayment, setLevelPayment] = useState(1);
   const [selectedPrice, setSelectedPrice] = useState(0);
   const [systemSubscriptions, setSystemSubscriptions] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [paymentArray, setPaymentArray] = useState([]);
   const [endOfSubscription, setEndOfSubscription] = useState("");
   const navigation = useNavigate();
@@ -36,6 +37,7 @@ const UpgradesAddonsView = () => {
     let res = await getCustomerSubscription({userId});
 
     currentSubscription = res.data;
+    console.log(currentSubscription,"currentSub")
     let endOfSubscriptionDate = moment(currentSubscription.currentPeriodEnd * 1000).format(
       "MM-DD-YYYY"
     );
@@ -59,14 +61,14 @@ const UpgradesAddonsView = () => {
   useEffect(() => {
     const token = localStorage.getItem("idToken");
     userId = parseJwt(token);
-
+    setIsLoading(true)
     const fetchSystemSubscriptions = async () => {
       try {
         const response = await getSystemSubscriptions();
         if (response.data) {
           setSystemSubscriptions(response.data);
           getCustomerSubscriptionWrapper({userId, subscriptionList: response.data});
-          console.log(response.data);
+          setIsLoading(false)
         } else {
           console.log("No data received from getSystemSubscriptions");
         }
@@ -106,7 +108,13 @@ const UpgradesAddonsView = () => {
     }
     setIsOpen(false);
   };
-
+  if (isLoading) {
+    return (
+      <div className={styles.view}>
+        <MTBLoading />
+      </div>
+    );
+  }
   return (
     <>
       {isOpen ? (
