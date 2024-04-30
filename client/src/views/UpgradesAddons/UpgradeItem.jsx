@@ -39,7 +39,7 @@ const UpgradeItem = ({isSelected, price, plan, benefits, index, onClick, isDisab
           </button>
         ) : (
             isDisabled ? 
-             ( <button className={createMultipleClasses([styles.baseButton, styles.exportButton])}>
+             ( <button onClick={onClick} className={createMultipleClasses([styles.baseButton, styles.exportButton])}>
               Downgrade
           </button>) :
           <button onClick={onClick} className={createMultipleClasses([styles.baseButton, styles.createEventButton])}>
