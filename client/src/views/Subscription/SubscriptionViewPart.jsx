@@ -93,7 +93,7 @@ const SubscriptionViewPart = ({state}) => {
   };
   const handleSubmitUpdate = async () => {
     setIsLoading(true);
-    const subscriptionId = getPaymentSubscriptionId(selectedPaymentPlan);
+    const subscriptionId = getPaymentSubscriptionId( selectedPaymentPlan );
     const sessionData = {
       userId,
       sublevel: selectedPaymentPlan,
@@ -130,27 +130,49 @@ const SubscriptionViewPart = ({state}) => {
     }
   };
 
-  const handleSubmit = async () => {
-    setShowPaymentForm(true);
+  const handleSubmit = async (event) => {
+    handleShowPaymentForm();
+
+    const subscriptionId = getPaymentSubscriptionId(selectedPaymentPlan);
+
     const sessionData = {
       userId: userId,
-      subscriptionId: getPaymentSubscriptionId(selectedPaymentPlan),
-      level: SUBSCRIPTION_PLANS.indexOf(plan) + 1,
-      priceId: selectedRate,
+      subscriptionId: subscriptionId,
     };
 
     try {
-      const response = await createCheckoutSession(sessionData);
-      if (response.data && response.data.sessionId) {
-        await initiateCheckout(response.data.sessionId);
-      } else {
-        throw new Error("No client secret returned from server");
+      if (!userId || !subscriptionId) {
+        throw new Error("User not found and sessionID ");
+      }
+      if (userId && subscriptionId) {
+        const response = await createCheckoutSession(sessionData);
+        console.log("🚀 ~ handleSubmit ~ response:", response);
+        if (!response.client_secret) {
+          throw new Error("No client secret returned from server");
+        }
+        const clientSecret = response.client_secret;
+        console.log("🚀 ~ handleSubmit ~ clientSecret:", clientSecret);
+
+        const checkout = await stripe.initEmbeddedCheckout({
+          clientSecret,
+        });
+        console.log("🚀 ~ handleSubmit ~ checkout:", checkout);
+        let paymentData = {
+          price: price + selectedRate,
+          plan: plan,
+        };
+        localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
+        checkout.mount("#mytabsStripe");
       }
     } catch (error) {
       console.error("Failed to create subscription:", error);
-      toast.error(`Error creating subscription: ${error.message}`);
       setShowPaymentForm(false);
     } finally {
+      let paymentData = {
+        price: price + selectedRate,
+        plan: plan,
+      };
+      localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
       setIsLoading(false);
     }
   };
