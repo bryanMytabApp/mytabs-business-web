@@ -77,7 +77,7 @@ const MyBusiness = () => {
         let subcategories = item.subcategory.map(sub => {
           if(sub.text)
             return sub.text
-          else if(sub.subcategories.length)
+          else if(sub.subcategories.length && sub.subcategories[0])
             return sub.subcategories[0]
           return sub.name
         })
