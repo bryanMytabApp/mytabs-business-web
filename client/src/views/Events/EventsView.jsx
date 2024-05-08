@@ -344,12 +344,12 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
                     </TableCell>
                     <TableCell >
                       <span className={styles.outfitFamily}>
-                        {moment(row.startDate).format('DD/MM/yyyy hh:mma').toString()}
+                        {moment(row.startDate).format('MM/DD/yyyy hh:mma').toString()}
                       </span>
                     </TableCell>
                     <TableCell>
                       <span className={styles.outfitFamily}>
-                        {moment(row.endDate).format('DD/MM/yyyy hh:mma').toString()}
+                        {moment(row.endDate).format('MM/DD/yyyy hh:mma').toString()}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -359,7 +359,7 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
                     </TableCell>
                     <TableCell>
                       <span className={styles.outfitFamily}>
-                        {moment(row.createdAt).format('DD/MM/yyyy').toString()}
+                        {moment(row.createdAt).format('MM/DD/yyyy').toString()}
                       </span>
                     </TableCell>
                     <TableCell>
