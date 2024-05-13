@@ -71,7 +71,7 @@ div.MTB-input input:focus-visible {
   justify-content: flex-start;
   align-items: center;
   margin-top: 4px;
-  width: 100%;
+  width: 40%;
 }
 
 .MTB-input .Helper-text {
@@ -83,11 +83,19 @@ div.MTB-input input:focus-visible {
 }
 
 .MTB-input .Helper-text span {
-  font-size: 14px !important;
+  font-size: 12px !important;
   font-style: normal !important;
   font-weight: 400 !important;
   line-height: normal !important;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  width: 70%;
+  display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+
 }
+
 
 .MTB-input.warning span,
 .MTB-input.warning input {
@@ -123,6 +131,7 @@ div.MTB-input input:focus-visible {
   align-items: center;
   position: relative;
   width: 100%;
+  min-width: 50%;
 }
 
 .input-container input {
