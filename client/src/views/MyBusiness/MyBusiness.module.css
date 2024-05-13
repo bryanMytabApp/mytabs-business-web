@@ -7,6 +7,7 @@
   justify-content: center;
   align-items: center;
   flex-direction: column;
+  padding-top: 2%;
 }
 h1 {
   color:#F09925;
@@ -14,13 +15,14 @@ h1 {
 }
 .titleContainer {
   position: absolute;
-  left: 80px;
-  top: 0;
+  left: 150px;
+  top: 10px;
   display: flex;
   align-items: center;
   align-self: flex-start;
 }
 .tableContainer {
+  margin-top:-5px;
   border-radius: 10px;
   padding: 15px;
   /* box-sizing: border-box; */
