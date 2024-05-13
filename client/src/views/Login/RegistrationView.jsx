@@ -201,8 +201,16 @@ export default function RegistrationView() {
     if(name === 'zipCode' && (value.length > 5 || isNaN(value)) ) {
       return
     }
-    if(name === 'state') {
-      setFormData(prev => ({
+    if ( name === "phoneNumber" ) {
+      const cleanedValue = value.replace(/[^0-9]/g, "");
+      if ( cleanedValue.length > 10 ) {
+        return;
+      }
+      value = cleanedValue;
+    }
+
+    if (name === "state") {
+      setFormData((prev) => ({
         ...prev,
         [name]: value,
         city: '',
@@ -515,7 +523,7 @@ export default function RegistrationView() {
               </table>
 
               <MTBInput
-                type='number'
+                type='text'
                 name='phoneNumber'
                 placeholder='Phone'
                 autoComplete='phone'
