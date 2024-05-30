@@ -2,7 +2,7 @@ service: mytabs-client-web
 
 provider:
   name: aws
-  runtime: nodejs16.x
+  runtime: nodejs18.x
   stage: ${self:custom.currentStage}
   deploymentPrefix: client
   deploymentBucket:
