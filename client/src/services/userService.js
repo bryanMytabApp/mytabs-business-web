@@ -8,6 +8,7 @@ export const getUserExistance = async ( {attribute, value} ) => {
     throw enhanceError(error, "Failed to check user existence.");
   }
 };
+
 export const getUserById = (userId) => {
   return http.get(`/user/${userId}`)
 };
@@ -39,4 +40,8 @@ function enhanceError(error, defaultErrorMessage = "An error occurred during the
 
 
   return error;
+}
+
+export const deleteUserAccount = (username) => {
+  return http.delete(`user/delete-cognito-user/${username}`)
 }

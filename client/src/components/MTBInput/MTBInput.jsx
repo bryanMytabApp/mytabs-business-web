@@ -1,4 +1,4 @@
-import React, {useState,useEffect} from "react";
+import React, {useState} from "react";
 import "./MTBInput.css";
 import warning from "../../assets/warning.svg";
 import success from "../../assets/success.svg";
@@ -26,12 +26,9 @@ export default function MTBInput({
   children = null,
   size = false,
   style = {},
-  isWeb = false,
-  options=[],
   pattern = "",
 }) {
   const [ showPassword, setShowPassword ] = useState( false );
-  const [filteredOptions, setFilteredOptions] = useState(options);
   const classes = ["MTB-input", helper.type, children != null && "start"];
 
   const handleKeyDown = (event) => {

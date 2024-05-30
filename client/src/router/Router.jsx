@@ -2,10 +2,10 @@ import React from "react";
 
 import {createBrowserRouter, RouterProvider, redirect} from "react-router-dom";
 import ErrorPage from "./ErrorPage";
-import LoginView, {LoaderLogin} from "../views/Login/LoginView";
+import LoginView from "../views/Login/LoginView";
 import RegistrationView from "../views/Login/RegistrationView";
 import Dashboard from "../views/Dashboards/Dashboard";
-import HomeView, { LoaderHome } from "../views/HomeView";
+import HomeView from "../views/HomeView";
 import SubscriptionView from "../views/Subscription/SubscriptionView";
 import SubscriptionViewPart from "../views/Subscription/SubscriptionViewPart";
 import HomeMainView from "../views/HomeMain/HomeMainView";
@@ -21,6 +21,7 @@ import EventsView from "../views/Events/EventsView";
 import EventCreate from "../views/Events/EventCreate";
 import EventEdit from "../views/Events/EventEdit";
 import PasswordRecovery from "../views/Login/PasswordRecovery";
+import DeleteAccountView from "../views/Login/DeleteAccountView";
 
 const routerHandler = (isIntern) => {
   const _idToken = localStorage.getItem("idToken");
@@ -46,6 +47,11 @@ const router = createBrowserRouter([
       {
         path: "password-recovery",
         element: <PasswordRecovery />,
+        loader: () => routerHandler(false),
+      },
+      {
+        path: "delete-account",
+        element: <DeleteAccountView />,
         loader: () => routerHandler(false),
       },
       {

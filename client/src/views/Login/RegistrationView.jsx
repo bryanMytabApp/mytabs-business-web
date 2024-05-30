@@ -121,7 +121,6 @@ export default function RegistrationView() {
       });
     }
   }, [part]);
-  let timeout;
   useEffect(() => {
     let filtered;
 
@@ -135,11 +134,6 @@ export default function RegistrationView() {
     setFilteredSubCategories(filtered);
   }, [searchTerm]);
 
-  const styleInputDisabled = {
-    opacity: "0.5",
-    backgroundColor: "f0f0f0",
-    borderColor: "black",
-  };
   const validatePassword = (password) => {
     let newState = {
       ...validationState,

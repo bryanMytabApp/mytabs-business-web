@@ -1,6 +1,5 @@
 import axios from "axios";
 import styles from './MyBusiness.module.css'
-import moment from 'moment'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { toast } from "react-toastify";
 import { IconButton } from '@mui/material/'
@@ -11,7 +10,6 @@ import { State, City } from 'country-state-city';
 import { processImage } from "../../components/MTBDropZone/MTBDropZone";
 import { createMultipleClasses, getBusinessPicture } from "../../utils/common"
 import React, { useEffect, useRef, useState } from "react";
-import { getPresignedUrlForEvent, updateEvent } from "../../services/eventService";
 import qrCode from '../../assets/qr-test.png'
 import { getBusiness, getPresignedUrlForBusiness, updateBusiness } from "../../services/businessService";
 const countryCode = 'US';

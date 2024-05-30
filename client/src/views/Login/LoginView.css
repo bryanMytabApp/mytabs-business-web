@@ -36,16 +36,25 @@
 
 .Login-view .Container-box {
   display: flex;
-  flex-direction: column;
-
   bottom: 0;
-  background: linear-gradient(0deg,
-      rgba(207, 245, 255, 0.9) 0%,
-      rgba(255, 255, 255, 0.9) 49.67639744281769%,
-      rgba(255, 251, 240, 0.9) 100%);
-
+  flex-direction: column;
   justify-content: space-between;
+  right: 0;
+  background: rgba(250, 248, 246, 0.47);
+  border-radius: 63px 0px 0px 0px;
+  padding: 32px;
   position: absolute;
+  left: 491px;
+  top: 0px;
+  box-shadow: -9px 0px 16px 0px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  backdrop-filter: blur(30px);
+}
+
+.Login-view .MainContent {
+  display: flex;
+  bottom: 0;
+  flex-direction: column;
   right: 0;
   background: rgba(250, 248, 246, 0.47);
   border-radius: 63px 0px 0px 0px;
@@ -239,9 +248,12 @@
 }
 
 .back-reg {
-  font-family: Outfit;
-  font-weight: 400;
+  padding: 12px;
+  display: flex;
+  align-items: center;
   font-size: 16px;
+  font-weight: 400;
+  font-family: Outfit;
 }
 
 .registration-back {
@@ -287,4 +299,19 @@
   left: 5%;
   top: 35%;
   width: 30%
+}
+
+.myTabsLogo {
+  border-radius: 20px;
+  top: 10%;
+  left: 5%;
+  position: absolute;
+}
+
+.formContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 110px 16%;
+  justify-content: center;
 }

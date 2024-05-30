@@ -1,27 +1,14 @@
 import React, {useState, useEffect, useCallback, useRef} from "react";
 import logo from "../../assets/logo.png";
 import "./LoginView.css";
-import {MTBButton, MTBInput, MTBInputValidator} from "../../components";
+import {MTBButton, MTBInput } from "../../components";
 import {toast} from "react-toastify";
 import {useNavigate} from "react-router-dom";
-import {requestResetPassword, signUp, confirmResetPassword} from "../../services/authService";
-import {parsePhoneNumberFromString} from "libphonenumber-js";
+import {requestResetPassword, confirmResetPassword} from "../../services/authService";
 import chevronIcon from "../../assets/atoms/chevron.svg";
-import {getUserExistance} from "../../services/userService";
-import categoriesJS from "../../utils/data/categories";
 import styles from "./PasswordRecovery.module.css";
+import { PasswordStrengthTable } from "../../components/PasswordStrengthTable";
 
-export const debounce = (func, wait) => {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
 
 export default function PasswordRecovery() {
   const createMultipleClasses = (classes = []) => classes.join(" ");
@@ -39,13 +26,9 @@ export default function PasswordRecovery() {
     hasLowercase: false,
     hasNumber: false,
   });
-  const [searchTerm, setSearchTerm] = useState("");
 
-  const [inputTouched, setInputTouched] = useState({verificationCode: false, city: false});
-  const [imageFile, setImageFile] = useState();
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const [uploadedImage, setUploadedImage] = useState(null);
   const [part, setPart] = useState(0);
 
   const firstHeaderText = [
@@ -66,7 +49,6 @@ export default function PasswordRecovery() {
       });
     }
   }, [part]);
-  let timeout;
 
   const validatePassword = (password) => {
     let newState = {
@@ -92,13 +74,6 @@ export default function PasswordRecovery() {
       ...prev,
       [name]: value,
     }));
-
-    if (name === "verificationCode") {
-      setInputTouched({
-        verificationCode: true,
-        city: false,
-      });
-    }
 
     setErrors((prevErrors) => ({...prevErrors, [name]: undefined}));
 
@@ -136,17 +111,12 @@ export default function PasswordRecovery() {
       }
     }
 
-    if (part === 2) {
-      // if (formData.subcategory.length === 0) {
-      //   errors.subcategory = "Select three subcategories.";
-      // }
-    }
     return errors;
   };
 
   const calculateCompletionPercentage = () => {
     let totalFields = Object.keys(formData).length - 1;
-    let filledFields = Object.values(formData).reduce((acc, value, index, array) => {
+    let filledFields = Object.values(formData).reduce((acc, value) => {
       if (typeof value === "string") {
         if (value.trim() !== "") {
           acc++;
@@ -157,14 +127,11 @@ export default function PasswordRecovery() {
       return acc;
     }, 0);
 
-    if (uploadedImage) {
-      filledFields += 1;
-    } else {
       totalFields += 1;
-    }
 
     return (filledFields / totalFields) * 100;
   };
+
   const completionPercentage = calculateCompletionPercentage();
 
   const handleNextPart = async () => {
@@ -189,7 +156,7 @@ export default function PasswordRecovery() {
       console.error("handleNextPart failed");
     }
     try {
-      let res = await requestResetPassword(formData);
+      await requestResetPassword(formData);
     } catch (error) {
       console.error(error);
     }
@@ -213,18 +180,6 @@ export default function PasswordRecovery() {
     } catch (error) {
       console.error("handleNextPart failed");
     }
-  };
-  const validateUserExistence = async (formData) => {
-    const errors = {};
-    if (formData.email) {
-      try {
-        await getUserExistance({attribute: "email", value: encodeURIComponent(formData.email)});
-      } catch (error) {
-        errors.email = "Email already exists.";
-      }
-    }
-
-    return errors;
   };
 
   const handleGoToLogin = async (e) => {
@@ -309,7 +264,6 @@ export default function PasswordRecovery() {
                   }
                 }
               />
-
               <MTBInput
                 onBlur={() => handleBlur("password")}
                 name='password'
@@ -397,43 +351,3 @@ export default function PasswordRecovery() {
     </div>
   );
 }
-
-export const PasswordStrengthTable = ({validationState}) => {
-  return (
-    <table>
-      <tr colspan='2'>
-        <td>
-          <MTBInputValidator
-            textRequirement={"One uppercase letter"}
-            isValid={validationState.hasUppercase}
-          />
-        </td>
-        <td>
-          <MTBInputValidator
-            textRequirement={"One special character"}
-            isValid={validationState.hasSymbol}
-          />
-        </td>
-      </tr>
-      <tr colspan='2'>
-        <td>
-          <MTBInputValidator textRequirement={"One number"} isValid={validationState.hasNumber} />
-        </td>
-        <td>
-          <MTBInputValidator
-            textRequirement={"11+ characters"}
-            isValid={validationState.hasAtLeastNumCharacters}
-          />
-        </td>
-      </tr>
-      <tr colspan='2'>
-        <td>
-          <MTBInputValidator
-            textRequirement={"One lowercase letter"}
-            isValid={validationState.hasLowercase}
-          />
-        </td>
-      </tr>
-    </table>
-  );
-};
