@@ -1,4 +1,6 @@
+import { Buffer } from 'buffer';
 import config from '../config.json'
+
 let { bucketUrl } = config
 
 export const generateAssetUrl = (src = '') => {
@@ -65,4 +67,17 @@ export const parseJwt = (token) => {
 	);
 
 	return JSON.parse(jsonPayload)["custom:user_id"];
+};
+
+export const getUserIdCognito =  async ( token ) => {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = Buffer.from(base64, "base64").toString();
+
+    return JSON.parse(jsonPayload)["cognito:username"];
+  } catch (err) {
+    console.error("Error parsing JWT:", err);
+    return null;
+  }
 };

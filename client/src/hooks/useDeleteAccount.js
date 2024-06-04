@@ -1,7 +1,8 @@
 import { toast } from "react-toastify";
-import { deleteUserAccount } from "../services/userService";
+import { deleteCognitoUser } from "../services/userService";
 import { useCallback, useState } from "react";
-import { getToken } from "../services/authService";
+import { loginMobile } from "../services/authService";
+import { getUserIdCognito } from "../utils/common";
 
 const useDeleteAccount = () => {
   const [errors, setErrors] = useState({});
@@ -23,18 +24,27 @@ const useDeleteAccount = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+  
+    const { email, password } = formData;
+  
     try {
-      setIsLoading(true);
-      const { email, password } = formData;
-      const res = await getToken({ username: email.trim(), password });
-      console.log('res: ', res)
-      const encodedEmail = encodeURIComponent(email);
-      await deleteUserAccount(encodedEmail);
+      const sessionData = await loginMobile({ username: email.trim(), password });
+      if (sessionData) {
+        const userIdCognito = await getUserIdCognito(sessionData.IdToken);
+        const response = await deleteCognitoUser(userIdCognito);
+  
+        if (response.status === 200) {
+          toast.success('User successfully deleted');
+          setFormData({ email: "", password: "" });
+        }
+      }
     } catch (error) {
       toast.error("Something went wrong");
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false)
-  }
+  };
 
   return {
     errors,

@@ -42,6 +42,6 @@ function enhanceError(error, defaultErrorMessage = "An error occurred during the
   return error;
 }
 
-export const deleteUserAccount = (username) => {
+export const deleteCognitoUser = (username) => {
   return http.delete(`user/delete-cognito-user/${username}`)
 }

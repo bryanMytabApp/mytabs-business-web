@@ -18,6 +18,15 @@ export const getToken = async (params) => {
   }
 };
 
+export const loginMobile = async (params) => {
+  try {
+    const response = await http.post("authMobile/log-in-Mobile", params);
+    return response.data;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
 export const getUserByAttribute = async (params) => {
   try {
     const response = await http.post( "auth/get-user-by-attribute", params );

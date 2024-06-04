@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from "react";
 import styles from "./UpgradesAddonsView.module.css";
-import {useNavigate, useLocation} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import {IconButton} from "@mui/material/";
 import {MTBLoading, MTBModalGeneric} from "../../components";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
