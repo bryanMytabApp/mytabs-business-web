@@ -30,6 +30,9 @@ const useDeleteAccount = () => {
   
     try {
       const sessionData = await loginMobile({ username: email.trim(), password });
+      localStorage.setItem("refToken", sessionData.RefreshToken);
+      localStorage.setItem("idToken", sessionData.IdToken);
+
       if (sessionData) {
         const userIdCognito = await getUserIdCognito(sessionData.IdToken);
         const response = await deleteCognitoUser(userIdCognito);
