@@ -10,7 +10,6 @@ import { State, City } from 'country-state-city';
 import { processImage } from "../../components/MTBDropZone/MTBDropZone";
 import { createMultipleClasses, getBusinessPicture } from "../../utils/common"
 import React, { useEffect, useRef, useState } from "react";
-import qrCode from '../../assets/qr-test.png'
 import { getBusiness, getPresignedUrlForBusiness, updateBusiness } from "../../services/businessService";
 import QRCode from "react-qr-code";
 
