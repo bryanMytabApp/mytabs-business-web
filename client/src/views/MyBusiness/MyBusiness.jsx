@@ -12,6 +12,8 @@ import { createMultipleClasses, getBusinessPicture } from "../../utils/common"
 import React, { useEffect, useRef, useState } from "react";
 import qrCode from '../../assets/qr-test.png'
 import { getBusiness, getPresignedUrlForBusiness, updateBusiness } from "../../services/businessService";
+import QRCode from "react-qr-code";
+
 const countryCode = 'US';
 let userId
 
@@ -60,7 +62,7 @@ const MyBusiness = () => {
 
     return JSON.parse(jsonPayload)["custom:user_id"];
   };
-
+  
   const init = () => {
     getBusiness(userId)
       .then(res => {
@@ -222,6 +224,25 @@ const MyBusiness = () => {
     }
     _updateEvent()
   }
+
+  const downloadQR = () => {
+    const svg = document.getElementById("QRCode");
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      const pngFile = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.download = "QRCode";
+      downloadLink.href = `${pngFile}`;
+      downloadLink.click();
+    };
+    img.src = `data:image/svg+xml;base64,${btoa(svgData)}`;
+  }
   
  return (
     <div className={styles.view}>
@@ -298,19 +319,23 @@ const MyBusiness = () => {
                 </button>
               </div>
               <div className={styles['sub-media-container']}>
-                <img
-                  src={qrCode}
-                  alt={item.name}
-                  style={{ borderRadius: '10px' }}
-                  width="390" height="160"
-                />
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '7px' }}>
+                  <QRCode
+                    size={236}
+                    style={{ height: "auto", maxWidth: "60%", width: "60%" }}
+                    value={'https://d2ys9ezg5r34qx.cloudfront.net/user/' + userId }
+                    id='QRCode'
+                    viewBox={`0 0 256 256`}
+                  />
+
+                </div>
                 <button
                   className={createMultipleClasses([
                     styles.baseButton,
                     styles.buttonAbsolute2,
                     styles['primary-background']
                   ])}
-                  // onClick={uploadFile}
+                  onClick={downloadQR}
                 >
                   Download
                   <span class="material-symbols-outlined" style={{marginLeft: '10px'}}>

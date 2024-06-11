@@ -1,5 +1,5 @@
 {
-  "backendUrl": "http://localhost:3000",
+  "backendUrl": "https://7gwwat7uwc.execute-api.us-east-1.amazonaws.com/dev",
   "bucketUrl": "https://mytabs-core-dev.s3.amazonaws.com/",
   "env": "dev"
 }
