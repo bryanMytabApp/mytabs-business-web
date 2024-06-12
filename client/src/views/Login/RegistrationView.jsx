@@ -192,8 +192,12 @@ export default function RegistrationView() {
   };
 
   const handleInputChange = useCallback((value, name) => {
-    if(name === 'zipCode' && (value.length > 5 || isNaN(value)) ) {
-      return
+    if(name === "username" || name === "email") {
+      const noSpaceValue = value.replace(/\s+/g, '');
+      value = noSpaceValue;
+    }
+    if (name === "zipCode" && (value.length > 5 || isNaN(value))) {
+      return;
     }
     if ( name === "phoneNumber" ) {
       const cleanedValue = value.replace(/[^0-9]/g, "");
