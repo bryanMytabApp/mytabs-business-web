@@ -13,6 +13,10 @@ export const getUserById = (userId) => {
   return http.get(`/user/${userId}`)
 };
 
+export const updateUser = (user) => {
+  return http.post(`/user/update-web`, user)
+};
+
 function enhanceError(error, defaultErrorMessage = "An error occurred during the request.") {
   if (error.response) {
     try {

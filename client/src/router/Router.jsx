@@ -23,14 +23,16 @@ import EventEdit from "../views/Events/EventEdit";
 import PasswordRecovery from "../views/Login/PasswordRecovery";
 import DeleteAccountView from "../views/Login/DeleteAccountView";
 
-const routerHandler = (isIntern) => {
+const routerHandler = (isIntern, allowPass = false) => {
   const _idToken = localStorage.getItem("idToken");
 
   if (!_idToken && isIntern) {
     console.log("Redirecting to /login");
     return redirect("/login");
   } else if (_idToken && !isIntern) {
-    console.log("Redirecting to /subscription");
+    if(allowPass) {
+      return false
+    }
     return redirect("/admin/dashboards");
   }
   return false;
@@ -47,7 +49,7 @@ const router = createBrowserRouter([
       {
         path: "password-recovery",
         element: <PasswordRecovery />,
-        loader: () => routerHandler(false),
+        loader: () => routerHandler(false, true),
       },
       {
         path: "delete-account",
