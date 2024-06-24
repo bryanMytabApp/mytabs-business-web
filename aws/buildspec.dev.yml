@@ -15,7 +15,7 @@ phases:
   build:
     commands:
       # Sustituir endpoint de API Gateway en client
-      - sed -i -e 's|"backendUrl":.*|"backendUrl":\ "'"$API_URL"'",|g' ./client/src/config.json
+      - sed -i -e 's|"backendUrl":.*|"backendUrl":\ "https://7gwwat7uwc.execute-api.us-east-1.amazonaws.com/dev/",|g' ./client/src/config.json
       - sed -i -e 's|"bucketUrl":.*|"bucketUrl":\ "https://mytabs-core-dev.s3.amazonaws.com/",|g' ./client/src/config.json
       - sed -i -e 's|"env":.*|"env":\ "dev"|g' ./client/src/config.json
       # - sed -i -e "s|REACT_APP_ROOT_API\=.*|REACT_APP_ROOT_API\=$API_URL|g" client/.env
