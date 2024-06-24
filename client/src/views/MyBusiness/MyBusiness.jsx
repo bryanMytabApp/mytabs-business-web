@@ -12,6 +12,7 @@ import { createMultipleClasses, getBusinessPicture } from "../../utils/common"
 import React, { useEffect, useRef, useState } from "react";
 import { getBusiness, getPresignedUrlForBusiness, updateBusiness } from "../../services/businessService";
 import QRCode from "react-qr-code";
+import { domain } from "../../config.json"
 
 const countryCode = 'US';
 let userId
@@ -322,11 +323,10 @@ const MyBusiness = () => {
                   <QRCode
                     size={236}
                     style={{ height: "auto", maxWidth: "60%", width: "60%" }}
-                    value={'https://d2ys9ezg5r34qx.cloudfront.net/user/' + userId }
+                    value={`${domain}user/${userId}`}
                     id='QRCode'
                     viewBox={`0 0 256 256`}
                   />
-
                 </div>
                 <button
                   className={createMultipleClasses([

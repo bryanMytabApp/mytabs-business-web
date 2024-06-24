@@ -5,5 +5,6 @@
   "userPoolData": {
     "UserPoolId": "us-east-1_8xFZS3q08",
     "ClientId": "6upnqfoatf4s36uhp0qil3fecp"
-  }
+  },
+  "domain": "https://d2ys9ezg5r34qx.cloudfront.net/"
 }
