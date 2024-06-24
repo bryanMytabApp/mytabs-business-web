@@ -323,7 +323,7 @@ const MyBusiness = () => {
                   <QRCode
                     size={236}
                     style={{ height: "auto", maxWidth: "60%", width: "60%" }}
-                    value={`${config.domain}user/${userId}`}
+                    value={`https://d2ys9ezg5r34qx.cloudfront.net/user/${userId}`}
                     id='QRCode'
                     viewBox={`0 0 256 256`}
                   />
