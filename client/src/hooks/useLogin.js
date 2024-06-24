@@ -51,6 +51,7 @@ const useLogin = () => {
 
       localStorage.setItem("refToken", res.RefreshToken);
       localStorage.setItem("idToken", res.IdToken);
+      localStorage.setItem("username", username.trim());
       toast.success("Welcome!");
 
       let userId = parseJwt(res.IdToken);

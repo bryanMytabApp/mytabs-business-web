@@ -1,5 +1,9 @@
 {
   "backendUrl": "https://7gwwat7uwc.execute-api.us-east-1.amazonaws.com/dev",
   "bucketUrl": "https://mytabs-core-dev.s3.amazonaws.com/",
-  "env": "dev"
+  "env": "dev",
+  "userPoolData": {
+    "UserPoolId": "us-east-1_8xFZS3q08",
+    "ClientId": "6upnqfoatf4s36uhp0qil3fecp"
+  }
 }
