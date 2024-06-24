@@ -12,7 +12,7 @@ import { createMultipleClasses, getBusinessPicture } from "../../utils/common"
 import React, { useEffect, useRef, useState } from "react";
 import { getBusiness, getPresignedUrlForBusiness, updateBusiness } from "../../services/businessService";
 import QRCode from "react-qr-code";
-import { domain } from "../../config.json"
+import config from "../../config.json"
 
 const countryCode = 'US';
 let userId
@@ -323,7 +323,7 @@ const MyBusiness = () => {
                   <QRCode
                     size={236}
                     style={{ height: "auto", maxWidth: "60%", width: "60%" }}
-                    value={`${domain}user/${userId}`}
+                    value={`${config.domain}user/${userId}`}
                     id='QRCode'
                     viewBox={`0 0 256 256`}
                   />
