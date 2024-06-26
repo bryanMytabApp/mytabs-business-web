@@ -16,9 +16,6 @@ custom:
   s3Sync:
     - bucketName: ${self:custom.sitename}
       localDir: build
-    - bucketName: ${self:custom.sitename}
-      bucketPrefix: .well-known/
-      localDir: wellKnown
 
 plugins:
   - serverless-s3-sync
