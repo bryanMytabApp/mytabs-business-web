@@ -45,8 +45,7 @@ const http = axios.create(axiosConfig);
 http.interceptors.request.use( async function ( config ) {
   let token = localStorage.getItem("idToken");
   if ( token ) {
-    let idToken = JSON.parse(token)
-    config.headers.Authorization = `Bearer ${idToken}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 }, function (error) {
