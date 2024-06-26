@@ -11,7 +11,7 @@ phases:
     commands:
       # instalar dependencias del client
       - npm install
-      - npm install --global --unsafe-perm serverless
+      - npm install --global --unsafe-perm serverless@3
   build:
     commands:
       # Sustituir endpoint de API Gateway en client
