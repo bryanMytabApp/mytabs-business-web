@@ -135,22 +135,22 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
   }, [] );
   const handleCreateAd = () => {
     if( currentLevel == 0 ) {
-      toast.warn("You cannot create ads without a subscription")
+      toast.warn("You cannot create ads without a subscription.")
     }
     else if ( currentLevel == 1 && items.length < 3 ) {
       navigation("/admin/my-events/create");
   
     } else if(currentLevel == 1 && items.length >= 3) {
 
-      toast.warn("you can only upload up to 3 items in Basic subscription")
+      toast.warn("You can only upload up to 3 items in basic subscription.")
     }else if (currentLevel == 2 && items.length < 10) {
       navigation("/admin/my-events/create");
     } else if(currentLevel == 2 && items.length >= 10){
-      toast.warn("you can only upload up to 10 items in Plus subscription");
+      toast.warn("You can only upload up to 10 items in plus subscription.");
     } else if(currentLevel == 3 && items.length < 25) {
       navigation("/admin/my-events/create");  
     } else if(currentLevel == 3 && items.length >= 25){
-      toast.warn("you can only upload up to 3 items in Premium subscription");  
+      toast.warn("You can only upload up to 3 items in premium subscription.");  
     }
     };
   const [anchorEl, setAnchorEl] = useState(null);
@@ -294,19 +294,19 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
                     <div className={styles.tableHeader}>Advertisement</div>
                   </TableCell>
                   <TableCell>
-                    <div className={styles.tableHeader}>Event name</div>
+                    <div className={styles.tableHeader}>Event Name</div>
                   </TableCell>
                   <TableCell>
-                    <div className={styles.tableHeader}>Start time</div>
+                    <div className={styles.tableHeader}>Start Time</div>
                   </TableCell>
                   <TableCell>
-                    <div className={styles.tableHeader}>End time</div>
+                    <div className={styles.tableHeader}>End Time</div>
                   </TableCell>
                   <TableCell>
-                    <div className={styles.tableHeader}>Zip code</div>
+                    <div className={styles.tableHeader}>Zip Code</div>
                   </TableCell>
                   <TableCell>
-                    <div className={styles.tableHeader}>Creation date</div>
+                    <div className={styles.tableHeader}>Creation Date</div>
                   </TableCell>
                   <TableCell>
                     <div className={styles.tableHeader}>Actions</div>

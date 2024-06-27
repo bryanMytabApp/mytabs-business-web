@@ -90,10 +90,14 @@ export default function LoginView() {
             }}>
             <span>
               <span class='agree-text'>By continuing, you agree to My Tabs </span>
-              <span class='agree-text-underline'>terms of service</span>
+              <a href="https://www.mytabs.app/terms-comnditions" target="_blank" rel="noopener noreferrer">
+                <span class='agree-text-underline'>terms of service</span>
+              </a>
               <span class='agree-text'> </span>
               <span class='agree-text'>and </span>
-              <span class='agree-text-underline'> privacy notice</span>
+              <a href="https://www.mytabs.app/privacy" target="_blank" rel="noopener noreferrer">
+                <span class='agree-text-underline'> privacy notice</span>
+              </a>
               <span class='agree-text'>.</span>
             </span>
           </div>

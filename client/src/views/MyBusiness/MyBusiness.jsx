@@ -437,7 +437,7 @@ const MyBusiness = () => {
                 </div>
                 <div style={{ width: '48%' }}>
                   <div className={styles.title} style={{ marginBottom: 0 }}>
-                    Phone number
+                    Phone Number
                   </div>
                   <div
                     className={createMultipleClasses([
