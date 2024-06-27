@@ -134,6 +134,11 @@ const EventCreate = () => {
 
   const handleItemChange = (attr, value) => {
     if(attr === 'description' && value.length >= 140) {
+      setItem(prev => ({
+        ...prev,
+        [attr]: value.slice(0, 140),
+        city: '',
+      }))
       return
     }
     if(attr === 'zipCode' && (value.length > 5 || isNaN(value)) ) {

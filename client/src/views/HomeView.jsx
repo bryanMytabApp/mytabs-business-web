@@ -79,7 +79,11 @@ const options = [
     icon: configurationInactiveIcon,
     title: "Configuration",
   },
-  {path: "/logout", icon: logout, title: "Logout"},
+  {
+    path: "/logout",
+    icon: logout,
+    title: "Logout"
+  }, 
 ];
 
 const state = {user: ""};
@@ -155,7 +159,8 @@ export default function HomeView() {
                   padding: "8px",
                   marginTop: "32px",
                   borderRadius: "10px",
-                }}>
+                }}
+              >
                 {options
                   .filter((item) => !["Logout", "Configuration"].includes(item.title))
                   .map((item) => (
@@ -167,7 +172,12 @@ export default function HomeView() {
                       }
                       children={({isActive}) => (
                         <>
-                          <ReactSVG src={isActive ? item.icon.active : item.icon.inactive} />
+                          <div style={{ display: isActive ? 'block' : 'none' }}>
+                            <ReactSVG src={item.icon.active} />
+                          </div>
+                          <div style={{ display: isActive ? 'none' : 'block' }}>
+                            <ReactSVG src={item.icon.inactive} />
+                          </div>
                           {isExpanded && <span style={{marginLeft: "8px"}}>{item.title}</span>}
                         </>
                       )}
@@ -183,7 +193,7 @@ export default function HomeView() {
                   paddingTop: "16px",
                   alignContent: "center",
                 }}
-                className='Menu-option'>
+              >
                 <div
                   style={{
                     flex: 1,
@@ -204,7 +214,8 @@ export default function HomeView() {
                       backgroundColor: !isExpanded ? null : "white",
                       borderRadius: "10px",
                     }}
-                    className={isExpanded ? "Menu-option" : "Menu-option-expanded"}>
+                    className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
+                  >
                     <ReactSVG src={options[options.length - 1].icon} />
                     {isExpanded && (
                       <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
