@@ -255,9 +255,6 @@ const MyBusiness = () => {
         ref={inputref}
       />
         <div className={styles.titleContainer}>
-          <IconButton aria-label="delete" onClick={handleGoBack}>
-            <ArrowBackIcon />
-          </IconButton>
           <h1>
             My Business
           </h1>

@@ -130,9 +130,6 @@ const UpgradesAddonsView = () => {
         <div className={styles.view}>
           <div className={styles.contentContainer}>
             <div className={styles.titleContainer}>
-              <IconButton aria-label='delete' onClick={handleGoBack}>
-                <ArrowBackIcon />
-              </IconButton>
               <h1>Subscription Plans</h1>
             </div>
             <div className={styles.mainContainer}>

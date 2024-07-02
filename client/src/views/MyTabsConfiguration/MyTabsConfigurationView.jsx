@@ -169,9 +169,6 @@ const MyTabsConfigurationView = () => {
     <div className={styles.view}>
       <div className={styles.contentContainer}>
         <div className={styles.titleContainer}>
-          <IconButton aria-label="delete" onClick={handleGoBack}>
-            <ArrowBackIcon />
-          </IconButton>
           <h1>
             Settings
           </h1>
