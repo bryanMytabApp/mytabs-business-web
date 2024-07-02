@@ -133,10 +133,10 @@ const EventCreate = () => {
   }
 
   const handleItemChange = (attr, value) => {
-    if(attr === 'description' && value.length >= 140) {
+    if(attr === 'description' && value.length >= 300) {
       setItem(prev => ({
         ...prev,
-        [attr]: value.slice(0, 140),
+        [attr]: value.slice(0, 300),
         city: '',
       }))
       return
@@ -480,7 +480,7 @@ const EventCreate = () => {
                   style={{ width: '100%', height: '80px', resize: 'none' }}
                   cols="20" rows="1"
                   value={item.description}
-                  placeholder="Description 140 characters"
+                  placeholder="Description 300 characters"
                   onBlur={() => {}}
                   onChange={(e) => handleItemChange('description',e.target.value)}
                 />
