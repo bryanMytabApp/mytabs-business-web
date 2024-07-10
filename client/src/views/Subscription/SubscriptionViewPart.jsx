@@ -76,9 +76,7 @@ const SubscriptionViewPart = ({state}) => {
       // Handle
       console.log(1);
       if (result) {
-        console.error("Stripe Checkout error:", result.error.message);
-
-        localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
+        console.error( "Stripe Checkout error:", result.error.message );
       }
     } catch (error) {
       console.error("Error in redirectToCheckout:", error);
@@ -100,6 +98,10 @@ const SubscriptionViewPart = ({state}) => {
       level: SUBSCRIPTION_PLANS.indexOf(plan) + 1,
       newSubId: subscriptionId,
     };
+    let paymentData = {
+      price: price + selectedRate,
+      plan: plan,
+    };
 
     try {
       const response = await updateCustomerSubscription(sessionData);
@@ -118,6 +120,7 @@ const SubscriptionViewPart = ({state}) => {
         });
         toast.success(`Downgrade to ${plan} scheduled for ${downgradeDate}`);
       } else if (response.data && response.data.sessionId) {
+        localStorage.setItem("checkoutResult", JSON.stringify(paymentData));
         await initiateCheckout(response.data.sessionId);
       } else {
         throw new Error("Unexpected response from server.");
