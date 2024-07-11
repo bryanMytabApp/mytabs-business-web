@@ -86,6 +86,13 @@ const router = createBrowserRouter([
         // },
       },
       {
+        path: "user/:userId",
+        Component: () => {
+          window.location.href = 'https://www.mytabs.app';
+          return null;
+        }
+      },
+      {
         path: "/admin",
         element: <HomeView />,
         loader: () => routerHandler(true),
