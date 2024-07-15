@@ -178,6 +178,11 @@ const EventEdit = () => {
     itemCopy.startDate = moment(itemCopy.startDate).toString()
     itemCopy.endDate = moment(itemCopy.endDate).toString()
     itemCopy.tickets = tickets
+    if(itemCopy.startDate !== item.startDate || itemCopy.endDate !== item.endDate) {
+      itemCopy.timeChanged = true
+    }else{
+      itemCopy.timeChanged = false
+    }
 
     let data
     try {
