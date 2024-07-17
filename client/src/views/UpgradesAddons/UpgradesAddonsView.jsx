@@ -22,7 +22,7 @@ const UpgradesAddonsView = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [activeButtons, setActiveButtons] = useState(SUBSCRIPTION_PLANS);
-  const [currentLevel, setCurrentLevel] = useState(1);
+  const [currentLevel, setCurrentLevel] = useState(0);
   const [currentSublevel, setCurrentSublevel] = useState(1);
   const [selectedPaymentPlan, setSelectedPaymentPlan] = useState("monthly");
   const [levelPayment, setLevelPayment] = useState(1);
