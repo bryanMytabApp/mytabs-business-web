@@ -207,7 +207,7 @@ const MyTabsConfigurationView = () => {
                       onChange={(e) => handleItemChange('firstName',e.target.value)}
                     />
                   </div>
-                  <div style={{ minHeight: 20, color: 'red' }}>
+                  <div style={{ minHeight: 20, color: 'red', fontSize: '.8rem', marginTop: '5px' }}>
                     {errors.firstName}
                   </div>
                 </div>
@@ -236,13 +236,13 @@ const MyTabsConfigurationView = () => {
                       onChange={(e) => handleItemChange('lastName',e.target.value)}
                     />
                   </div>
-                  <div style={{ minHeight: 20, color: 'red' }}>
+                  <div style={{ minHeight: 20, color: 'red', fontSize: '.8rem', marginTop: '5px' }}>
                     {errors.lastName}
                   </div>
                 </div>
               </div>
               <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
-                <div style={{ width: '48%' }}>
+                <div style={{ width: '100%' }}>
                   <div className={styles.title} style={{ marginBottom: 0 }}>
                     Email Address
                   </div>
@@ -267,11 +267,13 @@ const MyTabsConfigurationView = () => {
                       onChange={(e) => handleItemChange('email',e.target.value)}
                     />
                   </div>
-                  <div style={{ minHeight: 20, color: 'red' }}>
+                  <div style={{ minHeight: 20, color: 'red', fontSize: '.8rem', marginTop: '5px' }}>
                     {errors.email}
                   </div>
                 </div>
-                <div style={{ width: '48%' }}>
+              </div>
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ width: '100%' }}>
                   <div className={styles.title} style={{ marginBottom: 0 }}>
                     Username
                   </div>
@@ -296,13 +298,13 @@ const MyTabsConfigurationView = () => {
                       onChange={(e) => handleItemChange('username',e.target.value)}
                     />
                   </div>
-                  <div style={{ minHeight: 20, color: 'red' }}>
+                  <div style={{ minHeight: 20, color: 'red', fontSize: '.8rem', marginTop: '5px' }}>
                     {errors.username}
                   </div>
                 </div>
               </div>
               <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
-                <div style={{ width: '48%' }}>
+                <div style={{ width: '100%' }}>
                   <div className={styles.title} style={{ marginBottom: 0 }}>
                     Phone number
                   </div>
@@ -327,14 +329,13 @@ const MyTabsConfigurationView = () => {
                       onChange={(e) => handleItemChange('phoneNumber',e.target.value)}
                     />
                   </div>
-                  <div style={{ minHeight: 20, color: 'red' }}>
+                  <div style={{ minHeight: 20, color: 'red', fontSize: '.8rem', marginTop: '5px' }}>
                     {errors.phoneNumber}
                   </div>
                 </div>
-                <div style={{ width: '48%' }}>
-                  <div className={styles.title} style={{ marginBottom: 0 }}>
-                    Password
-                  </div>
+              </div>
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
+                <div>
                   <button
                     className={createMultipleClasses([
                       styles.baseButton,
