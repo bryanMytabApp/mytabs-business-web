@@ -40,7 +40,7 @@ const EventEdit = () => {
   const [cities, setCities] = useState([])
   const [editScreen, setEditScreen] = useState(0)
   const [uploadedImage, setUploadedImage] = useState(null)
-  
+  const [hasChanged, setHasChanged] = useState(false)
   const routeProps = useParams()
 
   const navigation = useNavigate();
@@ -133,6 +133,9 @@ const EventEdit = () => {
   }
   
   const handleItemChange = (attr, value) => {
+    if(attr === 'startDate' || attr === 'endDate') {
+      setHasChanged(true)
+    }
     if(attr === 'description' && value.length >= 140) {
       return
     }
@@ -178,11 +181,7 @@ const EventEdit = () => {
     itemCopy.startDate = moment(itemCopy.startDate).toString()
     itemCopy.endDate = moment(itemCopy.endDate).toString()
     itemCopy.tickets = tickets
-    if(itemCopy.startDate !== item.startDate || itemCopy.endDate !== item.endDate) {
-      itemCopy.timeChanged = true
-    }else{
-      itemCopy.timeChanged = false
-    }
+    itemCopy.timeChanged = hasChanged
 
     let data
     try {
