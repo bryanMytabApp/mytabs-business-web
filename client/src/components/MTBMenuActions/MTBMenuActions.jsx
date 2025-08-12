@@ -15,13 +15,10 @@ const MTBMenuActions = ({ row, callback}) => {
   const open = Boolean(anchorEl)
 
   const handleClick = (event, item) => {
-    console.log("🚀 ~ handleClick ~ item:", item)
     setAnchorEl(event.currentTarget);
   };
 
   const handleClose = (e, item, type, index) => {
-    console.log("🚀 ~ handleClose ~ index:", {item, type})
-    console.log("🚀 ~ handleClose ~ item:", item.name)
     if(item === "backdropClick") {
       setAnchorEl(null);
       return

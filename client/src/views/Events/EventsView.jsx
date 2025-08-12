@@ -89,27 +89,60 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
     setSelectedItems([])
   }
  const getCustomerSubscriptionWrapper = async ({userId, subscriptionList}) => {
-    let res = await getCustomerSubscription({userId});
+    try {
+      let res = await getCustomerSubscription({userId});
+      
+      // Check if we got a valid response
+      if (!res || !res.data) {
+        console.error("Invalid response from getCustomerSubscription");
+        toast.error("Unable to retrieve subscription information");
+        setIsLoading(false);
+        // Set default values
+        setActiveLength(3);
+        setCurrentLevel(0);
+        await init(3); // Default to basic level items
+        return null;
+      }
 
-    currentSubscription = res.data;
+      currentSubscription = res.data;
 
-   let subItem = subscriptionList.find( ( el ) => el.priceId == res.data.priceId );
-   let len;
-    if (subItem.level == 3) {
-      len = 25;
-      setActiveLength(25)
+      // Find subscription item and handle possible undefined case
+      let subItem = subscriptionList.find((el) => el.priceId === res.data.priceId);
+      
+      if (!subItem) {
+        console.error("Could not find matching subscription item");
+        toast.error("Subscription information mismatch");
+        setActiveLength(3);
+        setCurrentLevel(0);
+        await init(3); // Default to basic level items
+        return res;
+      }
+      
+      let len;
+      if (subItem.level === 3) {
+        len = 25;
+        setActiveLength(25);
+      }
+      if (subItem.level === 2) {
+        len = 10;
+        setActiveLength(10);
+      }
+      if (subItem.level === 1) {
+        len = 3;
+        setActiveLength(3);
+      }
+      setCurrentLevel(subItem.level);
+      await init(len);
+      return res;
+    } catch (error) {
+      console.error("Error in getCustomerSubscriptionWrapper:", error);
+      toast.error("Failed to load subscription details");
+      setIsLoading(false);
+      setActiveLength(3);
+      setCurrentLevel(0);
+      await init(3); // Default to basic level items
+      return null;
     }
-    if (subItem.level == 2) {
-      len = 10;
-      setActiveLength(10)
-    }
-    if (subItem.level == 1) {
-      len = 3;
-      setActiveLength(3)
-    }
-    setCurrentLevel(subItem.level);
-    await init(len);
-    return res;
   };
   useEffect(() => {
     const token = localStorage.getItem("idToken");
@@ -119,37 +152,58 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
     const fetchSystemSubscriptions = async () => {
       try {
         const response = await getSystemSubscriptions();
-        if (response.data) {
+        if (response?.data) {
           setSystemSubscriptions(response.data);
-          getCustomerSubscriptionWrapper({userId, subscriptionList: response.data});
-          console.log(response.data);
-          setIsLoading(false);
+          try {
+            await getCustomerSubscriptionWrapper({userId, subscriptionList: response.data});
+          } catch (subscriptionError) {
+            console.error("Error in customer subscription wrapper:", subscriptionError);
+            toast.error("Failed to load subscription details");
+            setActiveLength(3);
+            setCurrentLevel(0);
+            await init(3); // Default to basic level items
+          } finally {
+            setIsLoading(false);
+          }
         } else {
-          console.log("No data received from getSystemSubscriptions");
+          console.error("No data received from getSystemSubscriptions");
+          toast.error("Unable to retrieve subscription information");
+          setActiveLength(3);
+          setCurrentLevel(0);
+          await init(3); // Default to basic level items
+          setIsLoading(false);
         }
       } catch (error) {
         console.error("Failed to fetch system subscriptions:", error);
+        toast.error("Failed to load subscription data");
+        setActiveLength(3);
+        setCurrentLevel(0);
+        await init(3); // Default to basic level items
+        setIsLoading(false);
       }
     };
     fetchSystemSubscriptions();
+  // getCustomerSubscriptionWrapper is defined inside the component, 
+  // but it doesn't change between renders, so we can safely ignore it
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [] );
   const handleCreateAd = () => {
-    if( currentLevel == 0 ) {
+    if( currentLevel === 0 ) {
       toast.warn("You cannot create ads without a subscription.")
     }
-    else if ( currentLevel == 1 && items.length < 3 ) {
+    else if ( currentLevel === 1 && items.length < 3 ) {
       navigation("/admin/my-events/create");
   
-    } else if(currentLevel == 1 && items.length >= 3) {
+    } else if(currentLevel === 1 && items.length >= 3) {
 
       toast.warn("You can only upload up to 3 items in basic subscription.")
-    }else if (currentLevel == 2 && items.length < 10) {
+    }else if (currentLevel === 2 && items.length < 10) {
       navigation("/admin/my-events/create");
-    } else if(currentLevel == 2 && items.length >= 10){
+    } else if(currentLevel === 2 && items.length >= 10){
       toast.warn("You can only upload up to 10 items in plus subscription.");
-    } else if(currentLevel == 3 && items.length < 25) {
+    } else if(currentLevel === 3 && items.length < 25) {
       navigation("/admin/my-events/create");  
-    } else if(currentLevel == 3 && items.length >= 25){
+    } else if(currentLevel === 3 && items.length >= 25){
       toast.warn("You can only upload up to 3 items in premium subscription.");  
     }
     };
@@ -157,12 +211,9 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
   const open = Boolean(anchorEl)
 
   const handleClick = (event, item) => {
-    console.log("🚀 ~ handleClick ~ item:", item)
     setAnchorEl(event.currentTarget);
   };
   const handleClose = (e, item, type, index) => {
-    console.log("🚀 ~ handleClose ~ index:", index)
-    console.log("🚀 ~ handleClose ~ item:", item.name)
     if(item === "backdropClick") {
       setAnchorEl(null);
       return
@@ -375,4 +426,3 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
 };
 
 export default EventsView;
-

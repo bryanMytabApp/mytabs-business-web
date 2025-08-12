@@ -1,7 +1,7 @@
 import axios from "axios";
 import configJSON from "../../config.json"
 import { CognitoUser, CognitoRefreshToken, CognitoUserPool } from 'amazon-cognito-identity-js';
-
+import { redirect} from "react-router-dom";
 const config = configJSON;
 
 const CUP = new CognitoUserPool(config.userPoolData)
@@ -63,7 +63,11 @@ http.interceptors.response.use(
 			const access_token = await refreshAccessToken();
 			axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
 			return http(originalRequest);
-		}
+		} else if (error.response?.status === 401) {
+      localStorage.removeItem("idToken");
+      localStorage.removeItem("refToken");
+		  return redirect("/login");
+    }
 		return Promise.reject(error);
 	});
 

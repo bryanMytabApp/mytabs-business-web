@@ -1,9 +1,9 @@
 {
-  "backendUrl": "https://7gwwat7uwc.execute-api.us-east-1.amazonaws.com/dev",
-  "bucketUrl": "https://mytabs-core-dev.s3.amazonaws.com/",
-  "env": "dev",
+  "backendUrl": "https://16psjhr9ni.execute-api.us-east-1.amazonaws.com/prod",
+  "bucketUrl": "http://mytabs-client-web-prod.s3-website-us-east-1.amazonaws.com/",
+  "env": "prod",
   "userPoolData": {
-    "UserPoolId": "us-east-1_8xFZS3q08",
-    "ClientId": "6upnqfoatf4s36uhp0qil3fecp"
+    "UserPoolId": "us-east-1_MAXS6xo4n",
+    "ClientId": "6e2i01snasqfdamrne144ua0df"
   }
 }

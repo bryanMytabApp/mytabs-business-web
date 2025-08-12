@@ -67,14 +67,11 @@ const SubscriptionViewPart = ({state}) => {
 
   useEffect(() => {
     if (scheduledDowngrade.isActive && new Date() >= new Date(scheduledDowngrade.downgradeDate)) {
-      console.log("Downgrade now effective.");
     }
   }, [scheduledDowngrade]);
   const initiateCheckout = async (sessionID, paymentData) => {
     try {
       const result = await stripe.redirectToCheckout({sessionId: sessionID});
-      // Handle
-      console.log(1);
       if (result) {
         console.error( "Stripe Checkout error:", result.error.message );
       }
@@ -149,17 +146,15 @@ const SubscriptionViewPart = ({state}) => {
       }
       if (userId && subscriptionId) {
         const response = await createCheckoutSession(sessionData);
-        console.log("🚀 ~ handleSubmit ~ response:", response);
         if (!response.client_secret) {
           throw new Error("No client secret returned from server");
         }
         const clientSecret = response.client_secret;
-        console.log("🚀 ~ handleSubmit ~ clientSecret:", clientSecret);
 
         const checkout = await stripe.initEmbeddedCheckout({
           clientSecret,
         });
-        console.log("🚀 ~ handleSubmit ~ checkout:", checkout);
+
         let paymentData = {
           price: price + selectedRate,
           plan: plan,
