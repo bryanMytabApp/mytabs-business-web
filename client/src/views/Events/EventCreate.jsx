@@ -171,7 +171,6 @@ const EventCreate = () => {
     userId = parseJwt(token);
     let availableStates = State.getStatesOfCountry(countryCode);
     setStates(availableStates)
-    console.log("🚀 ~ useEffect ~ availableStates:", availableStates)
   }, []);
 
   useEffect(() => {

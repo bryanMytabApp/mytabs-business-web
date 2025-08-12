@@ -27,7 +27,6 @@ const routerHandler = (isIntern, allowPass = false) => {
   const _idToken = localStorage.getItem("idToken");
 
   if (!_idToken && isIntern) {
-    console.log("Redirecting to /login");
     return redirect("/login");
   } else if (_idToken && !isIntern) {
     if(allowPass) {
@@ -41,6 +40,17 @@ const router = createBrowserRouter([
   {
     errorElement: <ErrorPage />,
     children: [
+       {
+        path: "/",
+        loader: () => {
+          const _idToken = localStorage.getItem("idToken");
+          if (_idToken) {
+            return redirect("/admin/home");
+          } else {
+            return redirect("/login");
+          }
+        },
+      },
       {
         path: "login",
         element: <LoginView />,

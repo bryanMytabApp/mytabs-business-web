@@ -65,7 +65,7 @@ const useLogin = () => {
       }
 
       if (customerSub) {
-        if (+customerSub.data.currentPeriodEnd > new Date().getTime() / 1000) {
+        if (+customerSub?.data?.currentPeriodEnd > new Date().getTime() / 1000) {
           navigate("/admin/dashboards");
         } else {
           navigate("/subscription");

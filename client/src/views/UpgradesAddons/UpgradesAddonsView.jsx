@@ -34,28 +34,56 @@ const UpgradesAddonsView = () => {
   const handleGoBack = () => navigation("/admin/home");
 
   const getCustomerSubscriptionWrapper = async ({userId, subscriptionList}) => {
-    let res = await getCustomerSubscription({userId});
+    try {
+      let res = await getCustomerSubscription({userId});
 
-    currentSubscription = res.data;
-    console.log(currentSubscription,"currentSub")
-    let endOfSubscriptionDate = moment(currentSubscription.currentPeriodEnd * 1000).format(
-      "MM-DD-YYYY"
-    );
-    setEndOfSubscription(endOfSubscriptionDate);
-    let subItem = subscriptionList.find((el) => el.priceId == res.data.priceId);
-    if (subItem.level == 3) {
-      setActiveButtons(["Premium"]);
+      // Check if we got a valid response
+      if (!res || !res.data) {
+        console.log("Invalid response from getCustomerSubscription");
+        toast.error("Unable to retrieve subscription information");
+        setIsLoading(false);
+        return null;
+      }
+
+      currentSubscription = res?.data;      
+      let endOfSubscriptionDate = currentSubscription?.currentPeriodEnd ? 
+        moment(currentSubscription.currentPeriodEnd * 1000).format("MM-DD-YYYY") : 
+        "";
+      
+      setEndOfSubscription(endOfSubscriptionDate);
+      
+      // Find subscription item and handle possible undefined case
+      let subItem = subscriptionList.find((el) => el.priceId === res?.data?.priceId);
+      
+      if (!subItem) {
+        console.error("Could not find matching subscription item");
+        toast.error("Subscription information mismatch");
+        setActiveButtons(SUBSCRIPTION_PLANS); // Default to all buttons
+        setCurrentLevel(0);
+        setCurrentSublevel(1);
+        return res;
+      }
+
+      if (subItem.level === 3) {
+        setActiveButtons(["Premium"]);
+      }
+      if (subItem.level === 2) {
+        setActiveButtons(["Plus", "Premium"]);
+      }
+      if (subItem.level === 1) {
+        setActiveButtons(SUBSCRIPTION_PLANS);
+      }
+      currentLevelString = SUBSCRIPTION_PLANS[subItem?.level - 1];
+      setCurrentLevel(subItem?.level);
+      setCurrentSublevel(subItem?.sublevel);
+      return res;
+    } catch (error) {
+      console.error("Error in getCustomerSubscriptionWrapper:", error);
+      toast.error("Failed to load subscription details");
+      setIsLoading(false);
+      setActiveButtons(SUBSCRIPTION_PLANS); // Default to all buttons
+      return null;
     }
-    if (subItem.level == 2) {
-      setActiveButtons(["Plus", "Premium"]);
-    }
-    if (subItem.level == 1) {
-      setActiveButtons(SUBSCRIPTION_PLANS);
-    }
-    currentLevelString = SUBSCRIPTION_PLANS[subItem.level - 1];
-    setCurrentLevel(subItem.level);
-    setCurrentSublevel(subItem.sublevel);
-    return res;
   };
 
   useEffect(() => {
@@ -65,15 +93,19 @@ const UpgradesAddonsView = () => {
     const fetchSystemSubscriptions = async () => {
       try {
         const response = await getSystemSubscriptions();
-        if (response.data) {
-          setSystemSubscriptions(response.data);
-          getCustomerSubscriptionWrapper({userId, subscriptionList: response.data});
-          setIsLoading(false)
+        if (response?.data) {
+          setSystemSubscriptions(response?.data);
+          await getCustomerSubscriptionWrapper({userId, subscriptionList: response?.data});
+          setIsLoading(false);
         } else {
           console.log("No data received from getSystemSubscriptions");
+          toast.error("Could not retrieve subscription information");
+          setIsLoading(false);
         }
       } catch (error) {
         console.error("Failed to fetch system subscriptions:", error);
+        toast.error("Failed to load subscription data");
+        setIsLoading(false);
       }
     };
     fetchSystemSubscriptions();
@@ -82,7 +114,7 @@ const UpgradesAddonsView = () => {
   const handleSelectPlan = (plan, price) => {
     setLevelPayment(plan);
     const planMap = {Basic: 1, Plus: 2, Premium: 3};
-    const subsFiltered = systemSubscriptions.filter((sub) => sub.level === planMap[plan]);
+    const subsFiltered = systemSubscriptions.filter((sub) => sub?.level === planMap[plan]);
     setPaymentArray(subsFiltered);
     setSelectedPaymentPlan(plan);
     setSelectedPrice(price);
@@ -99,7 +131,7 @@ const UpgradesAddonsView = () => {
       if (res.status === "success") {
         toast.success(res.message);
       }
-      if (res.status == "error") {
+      if (res.status === "error") {
         toast.error(res.message);
       }
       setIsLoading(false);

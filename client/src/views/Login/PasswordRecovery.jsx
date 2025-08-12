@@ -165,7 +165,6 @@ export default function PasswordRecovery() {
   const handleConfirmPassword = async () => {
     try {
       let res = await confirmResetPassword(formData);
-      console.log( "res", res );
       await handleNextPart();
     } catch (error) {
       setErrors((prevErrors) => ({

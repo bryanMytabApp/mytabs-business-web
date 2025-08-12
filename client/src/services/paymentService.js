@@ -8,11 +8,10 @@ export const createCheckoutSession = async (sessionData) => {
       },
     });
 
-    console.log( "Checkout Session Created:", data );
-    console.log( "Response:", res );
     return data
   } catch (error) {
     console.error("Error creating checkout session:", error.response || error);
+    throw error;
   }
 };
 
@@ -22,35 +21,36 @@ export const getSystemSubscriptions = async () => {
     return response;
   } catch ( error ) {
     console.error("Error getting system subscriptions", error.response || error)
+    throw error;
   }
 };
 
 export const updateCustomerSubscription = async (subscriptionData) => {
   try {
     const response = await http.put( "payments/subscription/update", subscriptionData );
-    console.log( "update response:", response );
     return response;
   } catch ( error ) {
     console.error("Error updating customer subscription", error.response || error)
+    throw error;
   }
 };
 
 export const getCustomerSubscription = async (userIdObj) => {
   try {
     const response = await http.post( "payments/subscription/customer", userIdObj );
-    console.log( "get response:", response );
     return response;
   } catch ( error ) {
     console.error("Error getting customer subscription", error.response || error)
+    throw error;
   }
 };
 
 export const cancelCustomerSubscription = async (userId) => {
   try {
     const response = await http.post( "payments/subscription/cancel", {userId} );
-    console.log( "cancel response:", response );
     return response.data;
   } catch ( error ) {
     console.error("Error canceling customer subscription", error.response || error)
+    throw error;
   }
 }

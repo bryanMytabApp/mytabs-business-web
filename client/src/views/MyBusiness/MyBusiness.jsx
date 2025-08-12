@@ -68,7 +68,6 @@ const MyBusiness = () => {
       .then(res => {
         let item = res.data
         setItem(res.data)
-        console.log("🚀 ~ init ~ item:", item)
       })
       .catch(err => console.error(err))
     getUserById(userId)
