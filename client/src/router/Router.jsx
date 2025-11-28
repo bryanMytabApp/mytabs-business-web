@@ -22,6 +22,7 @@ import EventCreate from "../views/Events/EventCreate";
 import EventEdit from "../views/Events/EventEdit";
 import PasswordRecovery from "../views/Login/PasswordRecovery";
 import DeleteAccountView from "../views/Login/DeleteAccountView";
+import AdminPortal from "../views/Admin/AdminPortal";
 
 const routerHandler = (isIntern, allowPass = false) => {
   const _idToken = localStorage.getItem("idToken");
@@ -103,6 +104,10 @@ const router = createBrowserRouter([
         }
       },
       {
+        path: "admin-portal",
+        element: <AdminPortal />,
+      },
+      {
         path: "/admin",
         element: <HomeView />,
         loader: () => routerHandler(true),
@@ -165,6 +170,11 @@ const router = createBrowserRouter([
           {
             path: "configuration",
             element: <MyTabsConfigurationView />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "admin-portal",
+            element: <AdminPortal />,
             loader: () => routerHandler(true),
           },
         ],

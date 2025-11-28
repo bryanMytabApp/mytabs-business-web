@@ -108,6 +108,24 @@ export default function LoginView() {
             Log In
           </MTBButton>
         </div>
+        <div style={{
+          textAlign: 'center', 
+          marginTop: '30px', 
+          paddingBottom: '20px',
+          borderTop: '1px solid #eee',
+          paddingTop: '20px'
+        }}>
+          <a 
+            href="/admin-portal" 
+            style={{
+              color: '#00AAD6', 
+              fontSize: '14px', 
+              textDecoration: 'underline',
+              fontWeight: '500'
+            }}>
+            🔧 Admin Portal
+          </a>
+        </div>
       </div>
       <div class='welcome-back'>Welcome back!</div>
       <div class='log-in-to-your-account'>Log in to your account</div>

@@ -80,6 +80,14 @@ const options = [
     title: "Configuration",
   },
   {
+    path: "/admin/admin-portal",
+    icon: {
+      active: upgradesAddonsActiveIcon,
+      inactive: upgradesAddonsInactiveIcon,
+    },
+    title: "Admin Portal",
+  },
+  {
     path: "/logout",
     icon: logout,
     title: "Logout"
@@ -162,7 +170,7 @@ export default function HomeView() {
                 }}
               >
                 {options
-                  .filter((item) => !["Logout", "Configuration"].includes(item.title))
+                  .filter((item) => !["Logout", "Configuration", "Admin Portal"].includes(item.title))
                   .map((item) => (
                     <NavLink
                       key={item.path}
@@ -225,6 +233,22 @@ export default function HomeView() {
                   </div>
 
                   <NavLink
+                    key={options[options.length - 3].path}
+                    style={{
+                      backgroundColor: !isExpanded ? null : "white",
+                      fontFamily: "Poppins",
+                      fontWeight: 500,
+                    }}
+                    className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
+                    to={options[options.length - 3].path}>
+                    <ReactSVG src={options[options.length - 3].icon} />
+                    {isExpanded && (
+                      <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
+                        {options[options.length - 3].title}
+                      </span>
+                    )}
+                  </NavLink>
+                  <NavLink
                     key={options[options.length - 2].path}
                     style={{
                       backgroundColor: !isExpanded ? null : "white",
@@ -232,14 +256,23 @@ export default function HomeView() {
                       fontWeight: 500,
                     }}
                     className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
-                    to={options[options.length - 2].path}>
-                    <ReactSVG src={options[options.length - 2].icon} />
-                    {isExpanded && (
-                      <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
-                        {options[options.length - 2].title}
-                      </span>
+                    to={options[options.length - 2].path}
+                    children={({isActive}) => (
+                      <>
+                        <div style={{ display: isActive ? 'block' : 'none' }}>
+                          <ReactSVG src={options[options.length - 2].icon.active} />
+                        </div>
+                        <div style={{ display: isActive ? 'none' : 'block' }}>
+                          <ReactSVG src={options[options.length - 2].icon.inactive} />
+                        </div>
+                        {isExpanded && (
+                          <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
+                            {options[options.length - 2].title}
+                          </span>
+                        )}
+                      </>
                     )}
-                  </NavLink>
+                  />
                   <div
                     style={{
                       height: "1px",
