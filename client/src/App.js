@@ -10,7 +10,7 @@ import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 
 const stripePromise = loadStripe(
-  "pk_test_51OkXAwDRk98sgoxdVkMbwDr2h9dgDOQYNM590wGjUOYvcro5IzrapMfETTaN2qlWaRlY15HloJauifSzzG2hvaCU002Ksz9f2l"
+  "pk_live_51OkXAwDRk98sgoxdA1hzV5fHJTAUsWKFrcHMYpNFJ1CZeup3B70VYHTaakP9Av6dU9qXB8i9dddkQ0dw0F9bTpXG00yT6Yn81B"
 );
 
 function App() {

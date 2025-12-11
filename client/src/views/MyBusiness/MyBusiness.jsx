@@ -10,7 +10,7 @@ import { State, City } from 'country-state-city';
 import { processImage } from "../../components/MTBDropZone/MTBDropZone";
 import { createMultipleClasses, getBusinessPicture } from "../../utils/common"
 import React, { useEffect, useRef, useState } from "react";
-import { getBusiness, getPresignedUrlForBusiness, updateBusiness } from "../../services/businessService";
+import { getBusiness, getPresignedUrlForBusiness, getPresignedUrlForGalleryPhoto, getPresignedUrlForMenu, updateBusiness } from "../../services/businessService";
 import QRCode from "react-qr-code";
 import config from "../../config.json"
 
@@ -43,31 +43,91 @@ const MyBusiness = () => {
   const [editScreen, setEditScreen] = useState(0)
   const [uploadedImage, setUploadedImage] = useState(null)
   const [editEnabled, setEditEnabled] = useState(false)
+  const [photoGallery, setPhotoGallery] = useState({
+    gallery1: [],
+    gallery2: [],
+    gallery3: [],
+    gallery4: []
+  })
+  const [menuFiles, setMenuFiles] = useState({
+    menu1: null,
+    menu2: null,
+    menu3: null,
+    menu4: null
+  })
 
   const navigation = useNavigate();
 
   const handleGoBack = () => navigation("/admin/home")
 
   const parseJwt = (token) => {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map(function (c) {
-          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-        })
-        .join("")
-    );
+    try {
+      if (!token) {
+        console.error('No token provided');
+        return null;
+      }
+      const base64Url = token.split(".")[1];
+      if (!base64Url) {
+        console.error('Invalid token format');
+        return null;
+      }
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map(function (c) {
+            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join("")
+      );
 
-    return JSON.parse(jsonPayload)["custom:user_id"];
+      return JSON.parse(jsonPayload)["custom:user_id"];
+    } catch (error) {
+      console.error('Error parsing JWT:', error);
+      return null;
+    }
   };
   
   const init = () => {
     getBusiness(userId)
       .then(res => {
         let item = res.data
+        console.log('MENU DEBUG - Loading business data:', {
+          menuUrl1: item.menuUrl1,
+          menuUrl2: item.menuUrl2,
+          menuUrl3: item.menuUrl3,
+          menuUrl4: item.menuUrl4,
+          menuLabel1: item.menuLabel1,
+          menuLabel2: item.menuLabel2,
+          menuLabel3: item.menuLabel3,
+          menuLabel4: item.menuLabel4
+        })
         setItem(res.data)
+        
+        // Load gallery photos from S3
+        if (item.photoGallery) {
+          const loadedGallery = {}
+          Object.keys(item.photoGallery).forEach(galleryId => {
+            const photoCount = item.photoGallery[galleryId]
+            if (photoCount > 0) {
+              loadedGallery[galleryId] = []
+              for (let i = 0; i < photoCount; i++) {
+                const photoUrl = `${config.bucketUrl}business/${userId}/gallery/${galleryId}/${i}`
+                loadedGallery[galleryId].push({
+                  preview: photoUrl,
+                  category: galleryId
+                })
+              }
+            }
+          })
+          setPhotoGallery(prev => ({
+            ...prev,
+            ...loadedGallery
+          }))
+        }
+        
+        // Menu URLs are already in the item state from the database
+        // They will be displayed via item.menuUrl1, item.menuUrl2, etc.
       })
       .catch(err => console.error(err))
     getUserById(userId)
@@ -87,7 +147,17 @@ const MyBusiness = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("idToken");
+    if (!token) {
+      console.error('No authentication token found. Please log in.');
+      navigation("/login");
+      return;
+    }
     userId = parseJwt(token);
+    if (!userId) {
+      console.error('Failed to parse user ID from token. Please log in again.');
+      navigation("/login");
+      return;
+    }
     init()
     let availableStates = State.getStatesOfCountry(countryCode);
     setStates(availableStates)
@@ -101,6 +171,67 @@ const MyBusiness = () => {
     let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
     setCities(availableCities)
   }, [item.state])
+
+  // Initialize Google Places Autocomplete for address input
+  useEffect(() => {
+    if (!addressInputRef.current || !window.google || !editEnabled) return;
+
+    autocompleteRef.current = new window.google.maps.places.Autocomplete(
+      addressInputRef.current,
+      {
+        types: ['address'],
+        componentRestrictions: { country: 'us' }
+      }
+    );
+
+    autocompleteRef.current.addListener('place_changed', () => {
+      const place = autocompleteRef.current.getPlace();
+      
+      if (!place.address_components) return;
+
+      let streetNumber = '';
+      let route = '';
+      let city = '';
+      let state = '';
+      let zipCode = '';
+
+      place.address_components.forEach(component => {
+        const types = component.types;
+        
+        if (types.includes('street_number')) {
+          streetNumber = component.long_name;
+        }
+        if (types.includes('route')) {
+          route = component.long_name;
+        }
+        if (types.includes('locality')) {
+          city = component.long_name;
+        }
+        if (types.includes('administrative_area_level_1')) {
+          state = component.long_name;
+        }
+        if (types.includes('postal_code')) {
+          zipCode = component.long_name;
+        }
+      });
+
+      const fullAddress = `${streetNumber} ${route}`.trim();
+
+      setItem(prev => ({
+        ...prev,
+        address1: fullAddress,
+        city: city,
+        state: state,
+        zipCode: zipCode
+      }));
+    });
+
+    return () => {
+      if (autocompleteRef.current) {
+        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      }
+    };
+  }, [editEnabled]);
 
   const changeEditScreen = (next) => {
     if(next === 0 && !ticketsValidated()) {
@@ -162,6 +293,14 @@ const MyBusiness = () => {
   }
 
   const inputref = useRef(null);
+  const addressInputRef = useRef(null);
+  const autocompleteRef = useRef(null);
+  const menuInputRefs = useRef({
+    menu1: null,
+    menu2: null,
+    menu3: null,
+    menu4: null
+  });
 
   const uploadFile = () => {
     if (inputref.current) {
@@ -177,13 +316,94 @@ const MyBusiness = () => {
     setUploadedImage(processedImageUrl);
   }
 
+  const handlePhotoUpload = async (e, category) => {
+    const files = Array.from(e.target.files)
+    const processedImages = []
+    
+    for (let file of files) {
+      const processedImageUrl = await processImage(URL.createObjectURL(file), 30)
+      processedImages.push({
+        file,
+        preview: processedImageUrl,
+        category
+      })
+    }
+    
+    setPhotoGallery(prev => ({
+      ...prev,
+      [category]: [...prev[category], ...processedImages]
+    }))
+  }
+
+  const removePhoto = (category, index) => {
+    setPhotoGallery(prev => ({
+      ...prev,
+      [category]: prev[category].filter((_, i) => i !== index)
+    }))
+  }
+
+  const handleMenuUpload = async (e, menuNum) => {
+    window.MENU_UPLOAD_CALLED = true;
+    window.MENU_UPLOAD_DATA = { menuNum, hasFiles: !!e.target.files[0] };
+    
+    const file = e.target.files[0]
+    if (!file) {
+      window.MENU_UPLOAD_DATA.error = 'No file';
+      return
+    }
+    
+    window.MENU_UPLOAD_DATA.fileName = file.name;
+    
+    // Store the file for upload
+    setMenuFiles(prev => ({
+      ...prev,
+      [`menu${menuNum}`]: file
+    }))
+    
+    // Create a preview URL and update the item
+    const fileUrl = URL.createObjectURL(file)
+    handleItemChange(`menuUrl${menuNum}`, fileUrl)
+    
+    toast.info(`Menu ${menuNum} ready to upload. Click "Save Changes" to upload.`)
+    window.MENU_UPLOAD_DATA.success = true;
+  }
+
   const _updateEvent = async () => {
     let itemCopy = Object.assign({}, item)
     itemCopy.categories = subcategories
     itemCopy.userId = userId
 
+    // Prepare gallery photo metadata
+    const galleryPhotos = {}
+    Object.keys(photoGallery).forEach(galleryId => {
+      if (photoGallery[galleryId] && photoGallery[galleryId].length > 0) {
+        galleryPhotos[galleryId] = photoGallery[galleryId].length
+      }
+    })
+    itemCopy.photoGallery = galleryPhotos
+    
+    // Prepare menu URLs - set them to S3 paths if files are pending upload
+    for (let menuNum = 1; menuNum <= 4; menuNum++) {
+      if (menuFiles[`menu${menuNum}`]) {
+        itemCopy[`menuUrl${menuNum}`] = `${config.bucketUrl}business/${userId}/menu${menuNum}`
+      }
+    }
+    
+    console.log('MENU DEBUG - Saving business with data:', {
+      menuUrl1: itemCopy.menuUrl1,
+      menuUrl2: itemCopy.menuUrl2,
+      menuUrl3: itemCopy.menuUrl3,
+      menuUrl4: itemCopy.menuUrl4,
+      menuLabel1: itemCopy.menuLabel1,
+      menuLabel2: itemCopy.menuLabel2,
+      menuLabel3: itemCopy.menuLabel3,
+      menuLabel4: itemCopy.menuLabel4,
+      menuFiles: Object.keys(menuFiles).filter(k => menuFiles[k])
+    })
+
     try {
       let res = await updateBusiness(itemCopy)
+      console.log('MENU DEBUG - Update response:', res.data)
       if(res.data?._id) {
         setItem(res.data)
       }
@@ -191,9 +411,11 @@ const MyBusiness = () => {
       toast.success("Business updated successfully");
     } catch (error) {
       toast.error("Cannot save changes");
-      console.error(error);
+      console.error('MENU DEBUG - Update error:', error);
       return
     }
+
+    // Upload business logo
     if(uploadedImage) {
       let presignedUrl
       try {
@@ -209,9 +431,65 @@ const MyBusiness = () => {
       const blob = await base64Response.blob();
       try {
         await axios.put(presignedUrl, blob)
-        toast.success("Image was successfully uploaded");
+        toast.success("Logo uploaded successfully");
       } catch (error) {
-        toast.error("Cannot upload image");
+        toast.error("Cannot upload logo");
+      }
+    }
+
+    // Upload gallery photos
+    for (const galleryId of Object.keys(photoGallery)) {
+      const photos = photoGallery[galleryId]
+      if (photos && photos.length > 0) {
+        for (let i = 0; i < photos.length; i++) {
+          const photo = photos[i]
+          if (photo.file) {
+            try {
+              const res = await getPresignedUrlForGalleryPhoto(userId, galleryId, i)
+              const presignedUrl = res.data
+              
+              const base64Response = await fetch(photo.preview)
+              const blob = await base64Response.blob()
+              
+              await axios.put(presignedUrl, blob)
+            } catch (error) {
+              console.error(`Failed to upload photo ${i} in ${galleryId}:`, error)
+              toast.error(`Failed to upload some gallery photos`)
+            }
+          }
+        }
+      }
+    }
+    
+    if (Object.keys(photoGallery).some(key => photoGallery[key]?.length > 0)) {
+      toast.success("Gallery photos uploaded successfully");
+    }
+
+    // Upload menu files
+    for (let menuNum = 1; menuNum <= 4; menuNum++) {
+      const menuFile = menuFiles[`menu${menuNum}`]
+      if (menuFile) {
+        try {
+          const res = await getPresignedUrlForMenu(userId, menuNum)
+          const presignedUrl = res.data
+          
+          await axios.put(presignedUrl, menuFile, {
+            headers: {
+              'Content-Type': menuFile.type
+            }
+          })
+          
+          toast.success(`Menu ${menuNum} uploaded successfully`)
+          
+          // Clear the file from state after successful upload
+          setMenuFiles(prev => ({
+            ...prev,
+            [`menu${menuNum}`]: null
+          }))
+        } catch (error) {
+          console.error(`Failed to upload menu ${menuNum}:`, error)
+          toast.error(`Failed to upload menu ${menuNum}`)
+        }
       }
     }
   }
@@ -457,6 +735,64 @@ const MyBusiness = () => {
                   </div>
                 </div>
               </div>
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ width: '48%' }}>
+                  <div className={styles.title} style={{ marginBottom: 0 }}>
+                    Website
+                  </div>
+                  <div
+                    className={createMultipleClasses([
+                      styles.inputContainer,
+                      editEnabled ? '' : styles.disabled
+                    ])}
+                    style={{ width: '100%' }}
+                  >
+                    <input
+                      className={createMultipleClasses([
+                        styles.input,
+                        editEnabled ? '' : styles.disabled
+                      ])}
+                      type="url"
+                      value={item.website || ''}
+                      placeholder="https://example.com"
+                      onBlur={() => {}}
+                      disabled={!editEnabled}
+                      onChange={(e) => handleItemChange('website',e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div style={{ width: '48%' }}>
+                  <div className={styles.title} style={{ marginBottom: 0 }}>
+                    Show Location Info
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', height: '50px', paddingLeft: '10px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', marginRight: '20px', cursor: editEnabled ? 'pointer' : 'not-allowed' }}>
+                      <input
+                        type="radio"
+                        name="showLocation"
+                        value="yes"
+                        checked={item.showLocation !== false}
+                        disabled={!editEnabled}
+                        onChange={() => handleItemChange('showLocation', true)}
+                        style={{ marginRight: '5px' }}
+                      />
+                      <span style={{ color: editEnabled ? '#333' : '#999' }}>Yes</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: editEnabled ? 'pointer' : 'not-allowed' }}>
+                      <input
+                        type="radio"
+                        name="showLocation"
+                        value="no"
+                        checked={item.showLocation === false}
+                        disabled={!editEnabled}
+                        onChange={() => handleItemChange('showLocation', false)}
+                        style={{ marginRight: '5px' }}
+                      />
+                      <span style={{ color: editEnabled ? '#333' : '#999' }}>No</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
               <div style={{ width: '100%' }}>
                 <div style={{ width: '100%' }}>
                   <div className={styles.title} style={{ marginBottom: 0 }}>
@@ -576,13 +912,14 @@ const MyBusiness = () => {
                     style={{ width: '48%' }}
                   >
                     <input
+                      ref={addressInputRef}
                       className={createMultipleClasses([
                         styles.input,
                         editEnabled ? '' : styles.disabled
                       ])}
                       type="text"
                       value={item.address1}
-                      placeholder="Street"
+                      placeholder="Start typing address..."
                       onBlur={() => {}}
                       disabled={!editEnabled}
                       onChange={(e) => handleItemChange('address1',e.target.value)}
@@ -590,45 +927,271 @@ const MyBusiness = () => {
                   </div>
                 </div>
               </div>
-              {item._id && (
-                <div style={{ width: '100%' }}>
+              <div style={{ width: '100%', marginTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <div className={styles.title} style={{ marginBottom: 0 }}>
                     Categories
                   </div>
-                  <div style={{ width: '100%', display: 'flex' }}>
-                    {subcategories.map(sub => (
-                      <div
-                        className={createMultipleClasses([
-                          styles['subcategory-container'],
-                          editEnabled ? '' : styles.disabled
-                        ])}
-                      >
-                        {sub}
-                      </div>
-                    ))}
+                  <div style={{ fontSize: '14px', color: subcategories.length >= 3 ? '#FF6B6B' : '#666' }}>
+                    {subcategories.length}/3 selected
                   </div>
                 </div>
-              )}
+                <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                  {['Music', 'Food', 'Nightlife', 'Sports', 'Arts', 'Entertainment', 'Health', 'Fitness', 'Social', 'Church', 'LGBTQ', 'Family', 'Tech', 'Black Owned'].map(category => {
+                    const isSelected = subcategories.includes(category);
+                    const isDisabled = !editEnabled || (!isSelected && subcategories.length >= 3);
+                    return (
+                      <button
+                        key={category}
+                        onClick={() => {
+                          if (!editEnabled) return;
+                          if (isSelected) {
+                            setSubcategories(subcategories.filter(c => c !== category));
+                          } else if (subcategories.length < 3) {
+                            setSubcategories([...subcategories, category]);
+                          }
+                        }}
+                        disabled={isDisabled}
+                        style={{
+                          padding: '10px 20px',
+                          borderRadius: '20px',
+                          border: isSelected ? '2px solid #00BCD4' : '2px solid #DDD',
+                          background: isSelected ? '#00BCD4' : '#FFF',
+                          color: isSelected ? '#FFF' : '#333',
+                          cursor: isDisabled ? 'not-allowed' : 'pointer',
+                          opacity: isDisabled && !isSelected ? 0.4 : 1,
+                          fontWeight: isSelected ? 'bold' : 'normal',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {category}
+                      </button>
+                    );
+                  })}
+                </div>
+                {subcategories.length > 0 && (
+                  <div style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                    Selected: {subcategories.join(', ')}
+                  </div>
+                )}
+                {subcategories.length >= 3 && (
+                  <div style={{ marginTop: '5px', fontSize: '13px', color: '#FF6B6B', fontStyle: 'italic' }}>
+                    Maximum 3 categories reached. Deselect one to choose another.
+                  </div>
+                )}
+              </div>
+              
+              {/* Photo Gallery Section */}
+              <div style={{ width: '100%', marginTop: '20px', marginBottom: '20px' }}>
+                <div className={styles.title} style={{ marginBottom: '15px' }}>
+                  Photo Gallery
+                </div>
+                
+                {['gallery1', 'gallery2', 'gallery3', 'gallery4'].map((galleryId, idx) => (
+                  <div key={galleryId} style={{ marginBottom: '20px', padding: '15px', background: 'rgba(255,255,255,0.5)', borderRadius: '10px' }}>
+                    <div style={{ 
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '10px',
+                      gap: '10px'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <input
+                          className={createMultipleClasses([
+                            styles.input,
+                            editEnabled ? '' : styles.disabled
+                          ])}
+                          type="text"
+                          value={item[`photoGalleryLabel${idx + 1}`] || ''}
+                          placeholder={`Gallery ${idx + 1} Label (e.g., "Team Photos", "Products")`}
+                          disabled={!editEnabled}
+                          onChange={(e) => handleItemChange(`photoGalleryLabel${idx + 1}`, e.target.value)}
+                          style={{ fontSize: '14px', padding: '8px 12px' }}
+                        />
+                      </div>
+                      {editEnabled && (
+                        <label style={{ 
+                          padding: '6px 14px',
+                          background: '#F09925',
+                          color: 'white',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          + Add Photos
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            style={{ display: 'none' }}
+                            onChange={(e) => handlePhotoUpload(e, galleryId)}
+                          />
+                        </label>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', minHeight: photoGallery[galleryId]?.length === 0 ? '50px' : 'auto' }}>
+                      {(!photoGallery[galleryId] || photoGallery[galleryId].length === 0) ? (
+                        <div style={{ color: '#999', fontSize: '14px', fontStyle: 'italic' }}>
+                          No photos uploaded yet
+                        </div>
+                      ) : (
+                        photoGallery[galleryId].map((photo, index) => (
+                          <div key={index} style={{ position: 'relative', width: '120px', height: '120px' }}>
+                            <img 
+                              src={photo.preview} 
+                              alt={`Gallery ${idx + 1} ${index + 1}`}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', border: '2px solid #ddd' }}
+                            />
+                            {editEnabled && (
+                              <button
+                                onClick={() => removePhoto(galleryId, index)}
+                                style={{
+                                  position: 'absolute',
+                                  top: '-8px',
+                                  right: '-8px',
+                                  background: '#ff4444',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '50%',
+                                  width: '24px',
+                                  height: '24px',
+                                  cursor: 'pointer',
+                                  fontSize: '16px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 'bold',
+                                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                }}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Menu Upload Section - DUPLICATED FROM PHOTOS */}
+              <div style={{ width: '100%', marginTop: '20px', marginBottom: '80px' }}>
+                <div className={styles.title} style={{ marginBottom: '15px' }}>
+                  Menus
+                </div>
+                
+                {[1, 2, 3, 4].map((menuNum) => (
+                  <div key={menuNum} style={{ marginBottom: '20px', padding: '15px', background: 'rgba(255,255,255,0.5)', borderRadius: '10px' }}>
+                    <div style={{ 
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '10px',
+                      gap: '10px'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <input
+                          className={createMultipleClasses([
+                            styles.input,
+                            editEnabled ? '' : styles.disabled
+                          ])}
+                          type="text"
+                          value={item[`menuLabel${menuNum}`] || ''}
+                          placeholder={`Menu ${menuNum} Label (e.g., "Lunch Menu", "Drinks")`}
+                          disabled={!editEnabled}
+                          onChange={(e) => handleItemChange(`menuLabel${menuNum}`, e.target.value)}
+                          style={{ fontSize: '14px', padding: '8px 12px' }}
+                        />
+                      </div>
+                      {editEnabled && (
+                        <label style={{ 
+                          padding: '6px 14px',
+                          background: '#F09925',
+                          color: 'white',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          + Upload Menu
+                          <input
+                            type="file"
+                            accept=".pdf,image/*"
+                            style={{ display: 'none' }}
+                            onChange={(e) => handleMenuUpload(e, menuNum)}
+                          />
+                        </label>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', minHeight: !item[`menuUrl${menuNum}`] ? '50px' : 'auto' }}>
+                      {!item[`menuUrl${menuNum}`] ? (
+                        <div style={{ color: '#999', fontSize: '14px', fontStyle: 'italic' }}>
+                          No menu uploaded yet
+                        </div>
+                      ) : (
+                        <div style={{ position: 'relative', width: '120px', height: '120px' }}>
+                          <img 
+                            src={item[`menuUrl${menuNum}`]} 
+                            alt={`Menu ${menuNum}`}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', border: '2px solid #ddd' }}
+                          />
+                          {editEnabled && (
+                            <button
+                              onClick={() => handleItemChange(`menuUrl${menuNum}`, null)}
+                              style={{
+                                position: 'absolute',
+                                top: '-8px',
+                                right: '-8px',
+                                background: '#ff4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '24px',
+                                height: '24px',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 'bold',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                              }}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      </div>
+                  </div>
+                ))}
+              </div>
+              
+              <button
+                className={createMultipleClasses([
+                  styles.baseButton,
+                  styles.buttonAbsolute,
+                  styles['primary-background']
+                ])}
+                style={{ marginTop: '0px' }}
+                onClick={handleClickEdit}
+              >
+                {editEnabled ? 'Save' : 'Edit'}
+                <span class="material-symbols-outlined" style={{ fontSize: '17px', marginLeft: '5px' }}>
+                  {editEnabled ? 'save' : 'edit'}
+                </span>
+              </button>
             </div>
-          </div> 
-          <button
-            className={createMultipleClasses([
-              styles.baseButton,
-              styles.buttonAbsolute,
-              styles['primary-background']
-            ])}
-            style={{ marginTop: '0px' }}
-            onClick={handleClickEdit}
-          >
-            {editEnabled ? 'Save' : 'Edit'}
-            <span class="material-symbols-outlined" style={{ fontSize: '17px', marginLeft: '5px' }}>
-              {editEnabled ? 'save' : 'edit'}
-            </span>
-          </button>
+          </div>
         </div>
       </div>
     </div>
- )
+  );
 };
 
 export default MyBusiness;

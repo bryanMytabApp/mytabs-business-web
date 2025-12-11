@@ -23,6 +23,9 @@ import EventEdit from "../views/Events/EventEdit";
 import PasswordRecovery from "../views/Login/PasswordRecovery";
 import DeleteAccountView from "../views/Login/DeleteAccountView";
 import AdminPortal from "../views/Admin/AdminPortal";
+import TicketPurchase from "../views/Tickets/TicketPurchase";
+import TicketSuccess from "../views/Tickets/TicketSuccess";
+import TicketCancel from "../views/Tickets/TicketCancel";
 
 const routerHandler = (isIntern, allowPass = false) => {
   const _idToken = localStorage.getItem("idToken");
@@ -33,7 +36,7 @@ const routerHandler = (isIntern, allowPass = false) => {
     if(allowPass) {
       return false
     }
-    return redirect("/admin/dashboards");
+    return redirect("/admin/home");
   }
   return false;
 };
@@ -106,6 +109,18 @@ const router = createBrowserRouter([
       {
         path: "admin-portal",
         element: <AdminPortal />,
+      },
+      {
+        path: "tickets/:eventId",
+        element: <TicketPurchase />,
+      },
+      {
+        path: "tickets/success",
+        element: <TicketSuccess />,
+      },
+      {
+        path: "tickets/cancel",
+        element: <TicketCancel />,
       },
       {
         path: "/admin",

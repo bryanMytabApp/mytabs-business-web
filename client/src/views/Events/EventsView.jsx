@@ -94,26 +94,33 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
       
       // Check if we got a valid response
       if (!res || !res.data) {
-        console.error("Invalid response from getCustomerSubscription");
-        toast.error("Unable to retrieve subscription information");
+        console.warn("Invalid response from getCustomerSubscription - using default Basic plan");
         setIsLoading(false);
         // Set default values
         setActiveLength(3);
-        setCurrentLevel(0);
+        setCurrentLevel(1);
         await init(3); // Default to basic level items
         return null;
       }
 
       currentSubscription = res.data;
 
+      // Check if user has no subscription - use default Basic plan
+      if (!res.data.hasSubscription || !res.data.priceId) {
+        console.log("User has no subscription - using default Basic plan (3 ad spaces)");
+        setActiveLength(3);
+        setCurrentLevel(1); // Set to level 1 (Basic) instead of 0
+        await init(3); // Default to basic level items
+        return res;
+      }
+
       // Find subscription item and handle possible undefined case
       let subItem = subscriptionList.find((el) => el.priceId === res.data.priceId);
       
       if (!subItem) {
-        console.error("Could not find matching subscription item");
-        toast.error("Subscription information mismatch");
+        console.warn("Could not find matching subscription item - using default Basic plan");
         setActiveLength(3);
-        setCurrentLevel(0);
+        setCurrentLevel(1); // Set to level 1 (Basic) instead of 0
         await init(3); // Default to basic level items
         return res;
       }
@@ -135,11 +142,10 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
       await init(len);
       return res;
     } catch (error) {
-      console.error("Error in getCustomerSubscriptionWrapper:", error);
-      toast.error("Failed to load subscription details");
+      console.warn("Error loading subscription - using default Basic plan:", error);
       setIsLoading(false);
       setActiveLength(3);
-      setCurrentLevel(0);
+      setCurrentLevel(1);
       await init(3); // Default to basic level items
       return null;
     }
@@ -188,23 +194,19 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [] );
   const handleCreateAd = () => {
-    if( currentLevel === 0 ) {
-      toast.warn("You cannot create ads without a subscription.")
-    }
-    else if ( currentLevel === 1 && items.length < 3 ) {
+    if ( currentLevel === 1 && items.length < 3 ) {
       navigation("/admin/my-events/create");
   
     } else if(currentLevel === 1 && items.length >= 3) {
-
-      toast.warn("You can only upload up to 3 items in basic subscription.")
+      toast.warn("You can only upload up to 3 ads in Basic subscription. Upgrade to create more!");
     }else if (currentLevel === 2 && items.length < 10) {
       navigation("/admin/my-events/create");
     } else if(currentLevel === 2 && items.length >= 10){
-      toast.warn("You can only upload up to 10 items in plus subscription.");
+      toast.warn("You can only upload up to 10 ads in Plus subscription. Upgrade to Premium for more!");
     } else if(currentLevel === 3 && items.length < 25) {
       navigation("/admin/my-events/create");  
     } else if(currentLevel === 3 && items.length >= 25){
-      toast.warn("You can only upload up to 3 items in premium subscription.");  
+      toast.warn("You have reached the maximum of 25 ads in Premium subscription.");  
     }
     };
   const [anchorEl, setAnchorEl] = useState(null);
@@ -392,12 +394,12 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
                     </TableCell>
                     <TableCell >
                       <span className={styles.outfitFamily}>
-                        {moment(row.startDate).format('MM/DD/yyyy hh:mma').toString()}
+                        {moment(row.startDate, moment.ISO_8601).format('MM/DD/YYYY hh:mma')}
                       </span>
                     </TableCell>
                     <TableCell>
                       <span className={styles.outfitFamily}>
-                        {moment(row.endDate).format('MM/DD/yyyy hh:mma').toString()}
+                        {moment(row.endDate, moment.ISO_8601).format('MM/DD/YYYY hh:mma')}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -407,7 +409,7 @@ const [systemSubscriptions, setSystemSubscriptions] = useState([]);
                     </TableCell>
                     <TableCell>
                       <span className={styles.outfitFamily}>
-                        {moment(row.createdAt).format('MM/DD/yyyy').toString()}
+                        {moment(row.createdAt, moment.ISO_8601).format('MM/DD/YYYY')}
                       </span>
                     </TableCell>
                     <TableCell>

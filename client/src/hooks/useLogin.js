@@ -56,23 +56,10 @@ const useLogin = () => {
 
       let userId = parseJwt(res.IdToken);
 
-      let customerSub;
-      try {
-        customerSub = await getCustomerSubscription({ userId });
-      } catch (error) {
-        console.warn("Failed to fetch customer subscription:", error);
-        customerSub = null; // Handle missing subscription
-      }
-
-      if (customerSub) {
-        if (+customerSub?.data?.currentPeriodEnd > new Date().getTime() / 1000) {
-          navigate("/admin/dashboards");
-        } else {
-          navigate("/subscription");
-        }
-      } else {
-        navigate("/subscription");
-      }
+      // Skip subscription check for now - allow all users to access
+      // TODO: Re-enable subscription enforcement when ready
+      console.log("Subscription check disabled - allowing access");
+      navigate("/admin/home");
     } catch (error) {
       toast.error("Invalid user and/or password");
       console.error("Login failed:", error);

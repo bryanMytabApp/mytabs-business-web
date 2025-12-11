@@ -12,32 +12,49 @@ const axiosConfig = {
 };
 
 const refreshAccessToken = async () => {
-  let ref = localStorage.getItem("refToken");
-  var refreshToken = JSON.parse(ref)
-  var email = localStorage.getItem("username")
-  var cognitoRefreshToken = new CognitoRefreshToken({ RefreshToken: refreshToken });
+  try {
+    let ref = localStorage.getItem("refToken");
+    if (!ref) {
+      console.error('No refresh token found');
+      return "";
+    }
+    
+    var refreshToken = JSON.parse(ref);
+    var email = localStorage.getItem("username");
+    
+    if (!email) {
+      console.error('No username found');
+      return "";
+    }
+    
+    var cognitoRefreshToken = new CognitoRefreshToken({ RefreshToken: refreshToken });
 
-  const user = new CognitoUser({
-    Username: email,
-    Pool: CUP,
-  });
-
-  const newToken = await new Promise((resolve) => {
-    user.refreshSession(cognitoRefreshToken, async (error, session) => {
-      if (error) {
-        resolve("");
-      } else {
-        const newRefreshToken = session.getRefreshToken().getToken();
-        localStorage.setItem("refToken", newRefreshToken);
-
-        const updatedToken = session.getIdToken().getJwtToken();
-        localStorage.setItem("idToken", updatedToken);
-        resolve(updatedToken);
-      }
+    const user = new CognitoUser({
+      Username: email,
+      Pool: CUP,
     });
-  });
 
-  return newToken;
+    const newToken = await new Promise((resolve) => {
+      user.refreshSession(cognitoRefreshToken, async (error, session) => {
+        if (error) {
+          console.error('Error refreshing session:', error);
+          resolve("");
+        } else {
+          const newRefreshToken = session.getRefreshToken().getToken();
+          localStorage.setItem("refToken", JSON.stringify(newRefreshToken));
+
+          const updatedToken = session.getIdToken().getJwtToken();
+          localStorage.setItem("idToken", updatedToken);
+          resolve(updatedToken);
+        }
+      });
+    });
+
+    return newToken;
+  } catch (error) {
+    console.error('Error in refreshAccessToken:', error);
+    return "";
+  }
 };
 
 const http = axios.create(axiosConfig);
@@ -61,13 +78,27 @@ http.interceptors.response.use(
 		if (error.response?.status === 401 && !originalRequest._retry) {
 			originalRequest._retry = true;
 			const access_token = await refreshAccessToken();
+			
+			if (!access_token) {
+				// Token refresh failed, clear storage and redirect
+				localStorage.removeItem("idToken");
+				localStorage.removeItem("refToken");
+				localStorage.removeItem("username");
+				window.location.href = "/login";
+				return Promise.reject(error);
+			}
+			
 			axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+			originalRequest.headers.Authorization = `Bearer ${access_token}`;
 			return http(originalRequest);
 		} else if (error.response?.status === 401) {
-      localStorage.removeItem("idToken");
-      localStorage.removeItem("refToken");
-		  return redirect("/login");
-    }
+			// Second 401 after retry, clear storage and redirect
+			localStorage.removeItem("idToken");
+			localStorage.removeItem("refToken");
+			localStorage.removeItem("username");
+			window.location.href = "/login";
+			return Promise.reject(error);
+		}
 		return Promise.reject(error);
 	});
 

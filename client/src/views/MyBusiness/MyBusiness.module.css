@@ -204,6 +204,11 @@ textarea:focus {
 .left-container {
   justify-content: center;
 }
+.right-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-items: flex-start !important;
+}
 .subcategory-container {
   box-sizing: border-box;
   background: #F4F4F4;

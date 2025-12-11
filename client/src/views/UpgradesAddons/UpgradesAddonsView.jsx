@@ -52,12 +52,20 @@ const UpgradesAddonsView = () => {
       
       setEndOfSubscription(endOfSubscriptionDate);
       
+      // Check if user has no subscription - use default Basic plan
+      if (!res.data.hasSubscription || !res.data.priceId) {
+        console.log("User has no subscription - showing all upgrade options");
+        setActiveButtons(SUBSCRIPTION_PLANS); // All upgrade options available
+        setCurrentLevel(0);
+        setCurrentSublevel(1);
+        return res;
+      }
+      
       // Find subscription item and handle possible undefined case
       let subItem = subscriptionList.find((el) => el.priceId === res?.data?.priceId);
       
       if (!subItem) {
-        console.error("Could not find matching subscription item");
-        toast.error("Subscription information mismatch");
+        console.warn("Could not find matching subscription item - showing all upgrade options");
         setActiveButtons(SUBSCRIPTION_PLANS); // Default to all buttons
         setCurrentLevel(0);
         setCurrentSublevel(1);

@@ -75,6 +75,9 @@ export default function RegistrationView() {
   const [part, setPart] = useState(0);
   const [states, setStates] = useState([])
   const [cities, setCities] = useState([])
+  
+  const addressInputRef = useRef(null);
+  const autocompleteRef = useRef(null);
 
   const filterSubCategorySetter = () => {
     subCategoryList = categoriesJS;
@@ -113,6 +116,67 @@ export default function RegistrationView() {
     let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
     setCities(availableCities)
   }, [formData.state])
+
+  // Initialize Google Places Autocomplete for address input
+  useEffect(() => {
+    if (!addressInputRef.current || !window.google || part !== 1) return;
+
+    autocompleteRef.current = new window.google.maps.places.Autocomplete(
+      addressInputRef.current,
+      {
+        types: ['address'],
+        componentRestrictions: { country: 'us' }
+      }
+    );
+
+    autocompleteRef.current.addListener('place_changed', () => {
+      const place = autocompleteRef.current.getPlace();
+      
+      if (!place.address_components) return;
+
+      let streetNumber = '';
+      let route = '';
+      let city = '';
+      let state = '';
+      let zipCode = '';
+
+      place.address_components.forEach(component => {
+        const types = component.types;
+        
+        if (types.includes('street_number')) {
+          streetNumber = component.long_name;
+        }
+        if (types.includes('route')) {
+          route = component.long_name;
+        }
+        if (types.includes('locality')) {
+          city = component.long_name;
+        }
+        if (types.includes('administrative_area_level_1')) {
+          state = component.long_name;
+        }
+        if (types.includes('postal_code')) {
+          zipCode = component.long_name;
+        }
+      });
+
+      const fullAddress = `${streetNumber} ${route}`.trim();
+
+      setFormData(prev => ({
+        ...prev,
+        address1: fullAddress,
+        city: city,
+        state: state,
+        zipCode: zipCode
+      }));
+    });
+
+    return () => {
+      if (autocompleteRef.current) {
+        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      }
+    };
+  }, [part]);
 
   useEffect(() => {
     if (myRef.current) {
@@ -717,12 +781,13 @@ export default function RegistrationView() {
                     style={{ width: '48%' }}
                   >
                     <input
+                      ref={addressInputRef}
                       className={createMultipleClasses([
                         styles.input,
                       ])}
                       type="text"
                       value={formData.address1}
-                      placeholder="Street"
+                      placeholder="Start typing address..."
                       onBlur={() => {}}
                       onChange={(e) => handleInputChange(e.target.value, 'address1')}
                     />

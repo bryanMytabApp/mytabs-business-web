@@ -6,13 +6,13 @@ provider:
   stage: ${self:custom.currentStage}
   deploymentPrefix: client
   deploymentBucket:
-    name: bp-${self:custom.projectName}-deploymentbucket-${self:custom.currentStage}
+    name: mytabs-web-client-deploy-${self:custom.currentStage}
     blockPublicAccess: true
 
 custom:
-  currentStage: dev
+  currentStage: prod
   projectName: mytabs-web
-  sitename: bp-${self:service}-${self:custom.currentStage}
+  sitename: mytabs-admin-portal-${self:custom.currentStage}
   s3Sync:
     - bucketName: ${self:custom.sitename}
       localDir: build
