@@ -75,7 +75,7 @@ const EventEdit = () => {
         item.startDate = moment(item.startDate)
         item.endDate = moment(item.endDate)
         setItem(item)
-        setTickets(item.tickets)
+        setTickets(item.tickets || [])
       })
       .catch(err => console.error(err))
   }

@@ -25,7 +25,7 @@ const baseTicket = {
   error: false
 }
 
-const MTBTicketsEditor = ({ tickets, setTickets, handleContinue, showNext }) => {
+const MTBTicketsEditor = ({ tickets = [], setTickets, handleContinue, showNext }) => {
   const [ticketSelectedIndex, setTicketSelectedIndex] = useState(0)
   
   const createMultipleClasses = (classes = []) => classes.filter(cl => cl).join(' ');
@@ -33,6 +33,7 @@ const MTBTicketsEditor = ({ tickets, setTickets, handleContinue, showNext }) => 
 
 
   const changeTicketSelectedAttr = (attr, value) => {
+    if (!tickets || tickets.length === 0) return;
     let selectedTicketCopy = tickets[ticketSelectedIndex]
     selectedTicketCopy = {
       ...selectedTicketCopy,
@@ -106,6 +107,19 @@ const MTBTicketsEditor = ({ tickets, setTickets, handleContinue, showNext }) => 
         height: '90%',
       }}
     >
+      {!tickets || tickets.length === 0 ? (
+        <div style={{ textAlign: 'center' }}>
+          <p>No tickets yet. Add one to get started.</p>
+          <button
+            className={createMultipleClasses([styles['add-another-ticket-container'], styles['primary-color']])}
+            onClick={addNewTicket}
+            style={{ marginTop: '20px' }}
+          >
+            <span className={styles['add-another-ticket-text']}>Add Ticket</span>
+            <span className="material-symbols-outlined">add</span>
+          </button>
+        </div>
+      ) : (
       <div style={{ display: 'flex', justifyContent: 'space-around', width: '100%', marginBottom: '30px', height: '100%', alignContent: 'space-between' }}>
         <span className={styles['tickets-viewer-container']}>
           <div className={styles['ticket-list-container']}>
@@ -290,6 +304,7 @@ const MTBTicketsEditor = ({ tickets, setTickets, handleContinue, showNext }) => 
         >
           Next
         </button>
+      )}
       )}
     </div>
  )
