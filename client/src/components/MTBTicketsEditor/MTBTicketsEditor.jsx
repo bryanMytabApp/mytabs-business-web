@@ -120,7 +120,7 @@ const MTBTicketsEditor = ({ tickets = [], setTickets, handleContinue, showNext }
           </button>
         </div>
       ) : (
-      <div style={{ display: 'flex', justifyContent: 'space-around', width: '100%', marginBottom: '30px', height: '100%', alignContent: 'space-between' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-around', width: '100%', marginBottom: '30px', height: '100%', alignContent: 'space-between' }}>
         <span className={styles['tickets-viewer-container']}>
           <div className={styles['ticket-list-container']}>
             {tickets.map((ticket, index) => (
@@ -295,7 +295,8 @@ const MTBTicketsEditor = ({ tickets = [], setTickets, handleContinue, showNext }
             )}
           </span>
         </div>
-      </div>
+        </div>
+      )}
       {showNext && (
         <button
           className={createMultipleClasses([styles.baseButton, styles.createEventButton])}
@@ -304,7 +305,6 @@ const MTBTicketsEditor = ({ tickets = [], setTickets, handleContinue, showNext }
         >
           Next
         </button>
-      )}
       )}
     </div>
  )
