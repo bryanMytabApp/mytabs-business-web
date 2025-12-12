@@ -420,8 +420,8 @@ const EventEdit = () => {
                         itemName={"name"}
                         itemValue={"name"}
                         options={states}
-                        onChange={(selected, fieldName) => {
-                          handleItemChange('state', selected);
+                        onChange={(selected) => {
+                          handleItemChange('state', selected.name);
                         }}
                         styles={{
                           display: 'flex',
@@ -444,8 +444,8 @@ const EventEdit = () => {
                         itemName={"name"}
                         itemValue={"name"}
                         options={cities}
-                        onChange={(selected, fieldName) => {
-                          handleItemChange('city', selected);
+                        onChange={(selected) => {
+                          handleItemChange('city', selected.name);
                         }}
                         appearDisabled={!item.state}
                         styles={{
