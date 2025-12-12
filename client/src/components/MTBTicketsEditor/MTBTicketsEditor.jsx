@@ -208,8 +208,8 @@ const MTBTicketsEditor = ({ tickets = [], setTickets, handleContinue, showNext }
               itemName={"name"}
               itemValue={"name"}
               options={ticketingOptions}
-              onChange={(selected, fieldName) => {
-                changeTicketSelectedAttr('option', selected);
+              onChange={(selected) => {
+                changeTicketSelectedAttr('option', selected.name);
               }}
               styles={{
                 display: 'flex',

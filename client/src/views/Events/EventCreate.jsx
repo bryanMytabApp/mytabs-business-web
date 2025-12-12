@@ -910,7 +910,7 @@ const EventCreate = () => {
                     itemValue={"name"}
                     options={ticketingOptions}
                     onChange={(selected, fieldName) => {
-                      changeTicketSelectedAttr('option', selected);
+                      changeTicketSelectedAttr('option', selected.name);
                     }}
                     styles={{
                       display: 'flex',
