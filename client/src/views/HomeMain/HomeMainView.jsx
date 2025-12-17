@@ -47,20 +47,22 @@ const HomeMainView = () => {
       
       setUpcomingEvents(upcoming);
 
-      // Fetch analytics
+      // Fetch analytics for followers count and total PTA
       let followersCount = 0;
+      let totalPTA = 0;
       try {
         const analyticsRes = await getBusinessAnalytics(userId);
         followersCount = analyticsRes.data?.followersCount || 0;
+        totalPTA = analyticsRes.data?.totalPTA || 0;
       } catch (err) {
-        console.warn("Could not fetch followers:", err);
+        console.warn("Could not fetch analytics:", err);
       }
 
       setMetrics({
         totalEvents: events.length,
         activeEvents: upcoming.length,
         followers: followersCount,
-        totalPTA: 0, // Would need to fetch PTA counts
+        totalPTA: totalPTA,
       });
 
       setLoading(false);

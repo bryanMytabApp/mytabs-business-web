@@ -26,21 +26,21 @@ const eventTypes = [
 ]
 
 const ticketingOptions = [
-  { 
-    value: 0, 
-    name: "External link",
+  {
+    value: 0,
+    name: "Tickets with Tabs",
   },
   { 
     value: 1, 
-    name: "Free",
+    name: "External link",
   },
   { 
     value: 2, 
-    name: "RSVP",
+    name: "Free",
   },
-  {
-    value: 3,
-    name: "Tickets with Tabs",
+  { 
+    value: 3, 
+    name: "RSVP",
   },
 ];
 
@@ -690,7 +690,7 @@ const EventCreate = () => {
                           itemValue={"name"}
                           options={cities}
                           onChange={(selected) => {
-                            handleItemChange('city', selected.name);
+                            handleItemChange('city', selected);
                           }}
                           appearDisabled={!item.state}
                           styles={{
@@ -715,7 +715,7 @@ const EventCreate = () => {
                           itemValue={"name"}
                           options={states}
                           onChange={(selected) => {
-                            handleItemChange('state', selected.name);
+                            handleItemChange('state', selected);
                           }}
                           styles={{
                             display: 'flex',
@@ -909,8 +909,8 @@ const EventCreate = () => {
                     itemName={"name"}
                     itemValue={"name"}
                     options={ticketingOptions}
-                    onChange={(selected, fieldName) => {
-                      changeTicketSelectedAttr('option', selected.name);
+                    onChange={(selected) => {
+                      changeTicketSelectedAttr('option', selected);
                     }}
                     styles={{
                       display: 'flex',

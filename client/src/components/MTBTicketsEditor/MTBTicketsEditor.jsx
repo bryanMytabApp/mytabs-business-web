@@ -5,16 +5,20 @@ import selectIconActive from "../../assets/atoms/selectIconActive.svg";
 import { MTBSelector } from "../../components";
 
 const ticketingOptions = [
-  { 
-    value: 0, 
-    name: "External link",
+  {
+    value: 0,
+    name: "Tickets with Tabs",
   },
   { 
     value: 1, 
-    name: "Free",
+    name: "External link",
   },
   { 
     value: 2, 
+    name: "Free",
+  },
+  { 
+    value: 3, 
     name: "RSVP",
   },
 ];
@@ -67,6 +71,18 @@ const MTBTicketsEditor = ({ tickets = [], setTickets, handleContinue, showNext }
     let error = false
     if(ticket.option === 'External link') {
       if((!ticket.link1 && !ticket.link2 && !ticket.link3) || !ticket.type) {
+        error = true
+      }
+    } else if(ticket.option === 'Tickets with Tabs') {
+      if(!ticket.type || !ticket.price || !ticket.quantity) {
+        error = true
+      }
+      // Validate price is a positive number
+      if(ticket.price && (isNaN(ticket.price) || parseFloat(ticket.price) <= 0)) {
+        error = true
+      }
+      // Validate quantity is a positive integer
+      if(ticket.quantity && (isNaN(ticket.quantity) || parseInt(ticket.quantity) <= 0)) {
         error = true
       }
     } else {
@@ -209,7 +225,7 @@ const MTBTicketsEditor = ({ tickets = [], setTickets, handleContinue, showNext }
               itemValue={"name"}
               options={ticketingOptions}
               onChange={(selected) => {
-                changeTicketSelectedAttr('option', selected.name);
+                changeTicketSelectedAttr('option', selected);
               }}
               styles={{
                 display: 'flex',
@@ -291,6 +307,53 @@ const MTBTicketsEditor = ({ tickets = [], setTickets, handleContinue, showNext }
                     />
                   </div>
                 </span>
+              </div>
+            )}
+            {tickets[ticketSelectedIndex]?.option === 'Tickets with Tabs' && (
+              <div>
+                <div className={styles.title} style={{ fontWeight: 700, marginBottom: 0, marginTop: '15px' }}>
+                  Ticket Price
+                </div>
+                <div className={styles.inputContainer} style={{ width: '100%', marginBottom: '10px', padding: '5px 10px' }}>
+                  <input
+                    className={styles.input}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={tickets[ticketSelectedIndex].price || ''}
+                    placeholder="Price (e.g., 25.00)"
+                    onBlur={() => {}}
+                    onChange={(e) => changeTicketSelectedAttr('price', e.target.value)}
+                  />
+                </div>
+                <div className={styles.title} style={{ fontWeight: 700, marginBottom: 0, marginTop: '15px' }}>
+                  Quantity Available
+                </div>
+                <div className={styles.inputContainer} style={{ width: '100%', marginBottom: '10px', padding: '5px 10px' }}>
+                  <input
+                    className={styles.input}
+                    type="number"
+                    min="1"
+                    value={tickets[ticketSelectedIndex].quantity || ''}
+                    placeholder="Total quantity available"
+                    onBlur={() => {}}
+                    onChange={(e) => changeTicketSelectedAttr('quantity', e.target.value)}
+                  />
+                </div>
+                <div className={styles.title} style={{ fontWeight: 700, marginBottom: 0, marginTop: '15px' }}>
+                  Max Per Purchase
+                </div>
+                <div className={styles.inputContainer} style={{ width: '100%', marginBottom: '10px', padding: '5px 10px' }}>
+                  <input
+                    className={styles.input}
+                    type="number"
+                    min="1"
+                    value={tickets[ticketSelectedIndex].maxPerPurchase || 10}
+                    placeholder="Max tickets per purchase"
+                    onBlur={() => {}}
+                    onChange={(e) => changeTicketSelectedAttr('maxPerPurchase', e.target.value)}
+                  />
+                </div>
               </div>
             )}
           </span>

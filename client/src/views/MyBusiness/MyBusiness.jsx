@@ -597,7 +597,7 @@ const MyBusiness = () => {
                   <QRCode
                     size={236}
                     style={{ height: "auto", maxWidth: "60%", width: "60%" }}
-                    value={`https://d2ys9ezg5r34qx.cloudfront.net/user/${userId}`}
+                    value={`https://keeptabs.app/business/${item._id}`}
                     id='QRCode'
                     viewBox={`0 0 256 256`}
                   />

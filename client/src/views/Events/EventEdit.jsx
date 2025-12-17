@@ -28,6 +28,8 @@ import { DemoContainer } from "@mui/x-date-pickers/internals/demo";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { processImage } from "../../components/MTBDropZone/MTBDropZone";
 import axios from "axios";
+import RSVPFormEditor from "./RSVPFormEditor";
+import RSVPSubmissionsView from "./RSVPSubmissionsView";
 
 const countryCode = 'US';
 let userId
@@ -35,12 +37,23 @@ let userId
 const EventEdit = () => {
   const [selectedItems, setSelectedItems] = useState([])
   const [states, setStates] = useState([])
-  const [item, setItem] = useState({})
+  const [item, setItem] = useState({
+    name: '',
+    description: '',
+    startDate: null,
+    endDate: null,
+    state: '',
+    city: '',
+    zipCode: '',
+    address1: '',
+    address2: ''
+  })
   const [tickets, setTickets] = useState([])
   const [cities, setCities] = useState([])
   const [editScreen, setEditScreen] = useState(0)
   const [uploadedImage, setUploadedImage] = useState(null)
   const [hasChanged, setHasChanged] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const routeProps = useParams()
 
   const navigation = useNavigate();
@@ -64,38 +77,57 @@ const EventEdit = () => {
     return JSON.parse(jsonPayload)["custom:user_id"];
   };
 
-  const init = () => {
-    let { eventId } = routeProps
-    if(!eventId || !userId) {
-      return
-    }
-    getEvent(userId, eventId)
-      .then(res => {
-        let item = res.data
-        item.startDate = moment(item.startDate)
-        item.endDate = moment(item.endDate)
-        setItem(item)
-        setTickets(item.tickets || [])
-      })
-      .catch(err => console.error(err))
-  }
+
 
   useEffect(() => {
     const token = localStorage.getItem("idToken");
     userId = parseJwt(token);
-    init()
     let availableStates = State.getStatesOfCountry(countryCode);
     setStates(availableStates)
-  }, []);
+    
+    // Fetch event data immediately after getting userId
+    if (userId && routeProps.eventId) {
+      setIsLoading(true)
+      console.log('Fetching event:', { userId, eventId: routeProps.eventId })
+      getEvent(userId, routeProps.eventId)
+        .then(res => {
+          console.log('Event data received:', res.data)
+          let eventItem = res.data
+          eventItem.startDate = moment(eventItem.startDate)
+          eventItem.endDate = moment(eventItem.endDate)
+          console.log('Setting item:', eventItem)
+          setItem(eventItem)
+          setTickets(eventItem.tickets || [])
+          
+          // Load cities for the event's state
+          if (eventItem.state && availableStates.length > 0) {
+            let selectedState = availableStates.find(state => state.name === eventItem.state)
+            if (selectedState) {
+              let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
+              setCities(availableCities)
+            }
+          }
+          setIsLoading(false)
+        })
+        .catch(err => {
+          console.error('Error fetching event:', err)
+          setIsLoading(false)
+        })
+    } else {
+      console.log('Missing userId or eventId:', { userId, eventId: routeProps.eventId })
+    }
+  }, [routeProps.eventId]);
 
   useEffect(() => {
-    if(!item.state) {
+    if(!item.state || states.length === 0) {
       return
     }
     let selectedState = states.find(state => state.name === item.state)
-    let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
-    setCities(availableCities)
-  }, [item.state])
+    if (selectedState) {
+      let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
+      setCities(availableCities)
+    }
+  }, [item.state, states])
 
   const changeEditScreen = (next) => {
     if(next === 0 && !ticketsValidated()) {
@@ -109,6 +141,18 @@ const EventEdit = () => {
     let error = false
     if(ticket.option === 'External link') {
       if((!ticket.link1 && !ticket.link2 && !ticket.link3) || !ticket.type) {
+        error = true
+      }
+    } else if(ticket.option === 'Tickets with Tabs') {
+      if(!ticket.type || !ticket.price || !ticket.quantity) {
+        error = true
+      }
+      // Validate price is a positive number
+      if(ticket.price && (isNaN(ticket.price) || parseFloat(ticket.price) <= 0)) {
+        error = true
+      }
+      // Validate quantity is a positive integer
+      if(ticket.quantity && (isNaN(ticket.quantity) || parseInt(ticket.quantity) <= 0)) {
         error = true
       }
     } else {
@@ -239,6 +283,11 @@ const EventEdit = () => {
             My Ads
           </h1>
         </div>
+        {isLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+            <p>Loading event details...</p>
+          </div>
+        ) : (
         <div className={styles.tableContainer}>
           <div className={styles.buttonsContainer}>
             <button
@@ -265,11 +314,43 @@ const EventEdit = () => {
             >
               Tickets
             </button>
+            <button
+              className={
+                createMultipleClasses([
+                  styles.contentSelector,
+                  styles['outfit-font'],
+                  editScreen == 2 ? styles['primary-background'] : styles['white-background'],
+                  editScreen == 2 ? styles['white-color'] : styles['secundary-color'],
+                ])}
+              onClick={() => changeEditScreen(2)}
+            >
+              RSVP Form
+            </button>
+            <button
+              className={
+                createMultipleClasses([
+                  styles.contentSelector,
+                  styles['outfit-font'],
+                  editScreen == 3 ? styles['primary-background'] : styles['white-background'],
+                  editScreen == 3 ? styles['white-color'] : styles['secundary-color'],
+                ])}
+              onClick={() => changeEditScreen(3)}
+            >
+              RSVP Submissions
+            </button>
           </div>
           {editScreen === 1 ?
             <MTBTicketsEditor
               tickets={tickets}
               setTickets={setTickets}
+            /> : editScreen === 2 ?
+            <RSVPFormEditor
+              eventId={item._id}
+              businessId={userId}
+            /> : editScreen === 3 ?
+            <RSVPSubmissionsView
+              eventId={item._id}
+              businessId={userId}
             /> :
             <div style={{
                 display: 'flex',
@@ -421,7 +502,7 @@ const EventEdit = () => {
                         itemValue={"name"}
                         options={states}
                         onChange={(selected) => {
-                          handleItemChange('state', selected.name);
+                          handleItemChange('state', selected);
                         }}
                         styles={{
                           display: 'flex',
@@ -445,7 +526,7 @@ const EventEdit = () => {
                         itemValue={"name"}
                         options={cities}
                         onChange={(selected) => {
-                          handleItemChange('city', selected.name);
+                          handleItemChange('city', selected);
                         }}
                         appearDisabled={!item.state}
                         styles={{
@@ -492,6 +573,7 @@ const EventEdit = () => {
             Save Ad
           </button>
         </div>
+        )}
       </div>
     </div>
  )

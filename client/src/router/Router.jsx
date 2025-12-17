@@ -26,6 +26,7 @@ import AdminPortal from "../views/Admin/AdminPortal";
 import TicketPurchase from "../views/Tickets/TicketPurchase";
 import TicketSuccess from "../views/Tickets/TicketSuccess";
 import TicketCancel from "../views/Tickets/TicketCancel";
+import BusinessRedirect from "../views/BusinessRedirect";
 
 const routerHandler = (isIntern, allowPass = false) => {
   const _idToken = localStorage.getItem("idToken");
@@ -104,6 +105,13 @@ const router = createBrowserRouter([
         Component: () => {
           window.location.href = 'https://www.mytabs.app';
           return null;
+        }
+      },
+      {
+        path: "business/:businessId",
+        element: <BusinessRedirect />,
+        loader: ({ params }) => {
+          return params.businessId;
         }
       },
       {
