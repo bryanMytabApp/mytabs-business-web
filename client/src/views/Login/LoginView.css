@@ -1,0 +1,317 @@
+.Login-view {
+  display: flex;
+  flex: 1;
+  justify-content: right;
+  align-items: center;
+  padding: 10px;
+  position: relative;
+  overflow: hidden;
+  min-height: 900px;
+  background-size: cover;
+  background: url("../../assets/Rectangle.png") 0px -538px / 100% 160% no-repeat, linear-gradient(0deg,
+      rgba(191, 244, 255, 1) 0%,
+      rgba(255, 255, 255, 1) 100%), lightgray
+}
+
+.rectangle {
+  width: 1440px;
+  height: 1442.22px;
+  position: absolute;
+  left: 0px;
+  top: -542px;
+  transform-origin: 0 0;
+  transform: rotate(0deg) scale(1, 1);
+}
+
+
+.Login-view::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.5;
+}
+
+.Login-view .Container-box {
+  display: flex;
+  bottom: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  right: 0;
+  background: rgba(250, 248, 246, 0.47);
+  border-radius: 63px 0px 0px 0px;
+  padding: 32px;
+  position: absolute;
+  left: 491px;
+  top: 0px;
+  box-shadow: -9px 0px 16px 0px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  backdrop-filter: blur(30px);
+}
+
+.Login-view .MainContent {
+  display: flex;
+  bottom: 0;
+  flex-direction: column;
+  right: 0;
+  background: rgba(250, 248, 246, 0.47);
+  border-radius: 63px 0px 0px 0px;
+  padding: 32px;
+  position: absolute;
+  left: 491px;
+  top: 0px;
+  box-shadow: -9px 0px 16px 0px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  backdrop-filter: blur(30px);
+}
+
+.Login-view .Headers {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 10px;
+  gap: 40px;
+}
+
+.Login-view .Headers img {
+  height: 40px;
+}
+
+.Login-view .Headers span {
+  color: #403F3F;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: normal;
+}
+
+.Login-view .Body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 16%;
+  justify-content: center;
+}
+
+.Login-view .Body-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  justify-content: center;
+
+}
+
+.Login-view .Actions {
+  display: flex;
+}
+
+.Login-view .Footer {
+  display: flex;
+  justify-content: space-between;
+  background: #ffffffff;
+  width: 97.5%;
+  bottom: 0;
+  position: absolute;
+  padding: 32px 16px 48px 16px;
+  z-index: 0;
+  right: 0;
+  box-shadow: 0px 4px 32px 0px rgba(0, 0, 0, 0.15);
+  font-family: "Outfit-Regular";
+}
+
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-container input {
+  width: 100%;
+  padding-right: 30px;
+}
+
+.view-icon {
+  position: absolute;
+  right: 10px;
+  cursor: pointer;
+}
+
+.welcome-back {
+  color: var(--base-light, #fff);
+  text-align: left;
+  font-family: Outfit, sans-serif;
+  font-size: 30px;
+  line-height: 48px;
+  font-weight: 700;
+  position: absolute;
+  left: 5%;
+  top: 20%;
+  white-space: nowrap;
+}
+
+.log-in-to-your-account {
+  color: var(--base-light, #fff);
+  text-align: left;
+  font-family: Outfit, sans-serif;
+  font-size: 35.251129150390625px;
+  line-height: 41.78px;
+  font-weight: 400;
+  position: absolute;
+  left: 5%;
+  top: 25%;
+  width: 344px;
+}
+
+.Sign-up-account-test {
+  color: var(--Base-Dark, #2C2C2C);
+  font-family: Outfit;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 45.921px;
+}
+
+.Sign-up-underline {
+  font-weight: 700;
+  text-decoration-line: underline;
+  cursor: pointer;
+}
+
+.Account-details {
+  color: var(--Base-Dark, #2C2C2C);
+  font-family: Outfit;
+  font-size: 20.091px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 45.921px;
+}
+
+.or {
+  color: var(--Base-Dark, #2C2C2C);
+  font-family: Outfit;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+  align-self: center;
+}
+
+.progress-bar {
+  position: absolute;
+  bottom: 128px;
+  height: 8px;
+  background-color: orange;
+  margin-left: -33px;
+  transition: width 0.3s ease;
+}
+
+.Forgot-password {
+  color: var(--Base-Dark, #2C2C2C);
+  font-family: Outfit;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 45.921px;
+  text-decoration-line: underline;
+  cursor: pointer;
+}
+
+.agree-text {
+  color: var(--base-dark, #2c2c2c);
+  font-family: Outfit, sans-serif;
+  font-size: 16px;
+  line-height: 45.92px;
+  font-weight: 400;
+}
+
+.agree-text-underline {
+  color: var(--base-dark, #2c2c2c);
+  font-family: Outfit, sans-serif;
+  font-size: 16px;
+  line-height: 45.92px;
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.already-have-an-account-log-in {
+  color: var(--base-dark, #2c2c2c);
+  text-align: right;
+  font-family: "-", sans-serif;
+  font-size: 16px;
+  line-height: 45.92px;
+  font-weight: 400;
+  position: absolute;
+  right: 20px;
+}
+
+.back-reg {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 400;
+  font-family: Outfit;
+}
+
+.registration-back {
+  color: var(--base-dark, #2c2c2c);
+  text-align: right;
+  font-family: Outfit, sans-serif;
+  font-size: 22px;
+  line-height: 45.92px;
+  font-weight: 400;
+  position: absolute;
+  left: 20px;
+  transform: rotate(90deg);
+}
+
+.already-have-an-account-log-in-span {
+  color: var(--base-dark, #2c2c2c);
+  font-family: Outfit, sans-serif;
+  font-size: 16px;
+  line-height: 45.92px;
+  font-weight: 400;
+
+}
+
+.already-have-an-account-log-in-span2 {
+  color: var(--base-dark, #2c2c2c);
+  font-family: Outfit, sans-serif;
+  font-size: 16px;
+  line-height: 45.92px;
+  font-weight: 700;
+  text-decoration: underline;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+.log-in-to-your-account-subtext {
+  color: #ffffff;
+  text-align: left;
+  font-family: Outfit, sans-serif;
+  font-size: 16px;
+  line-height: 49px;
+  font-weight: 600;
+  position: absolute;
+  left: 5%;
+  top: 35%;
+  width: 30%
+}
+
+.myTabsLogo {
+  border-radius: 20px;
+  top: 10%;
+  left: 5%;
+  position: absolute;
+}
+
+.formContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 110px 16%;
+  justify-content: center;
+}

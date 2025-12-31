@@ -1,0 +1,441 @@
+{
+  "service": {
+    "service": "mytabs-client-web",
+    "serviceObject": {
+      "name": "mytabs-client-web"
+    },
+    "provider": {
+      "name": "aws",
+      "runtime": "nodejs18.x",
+      "stage": "prod",
+      "deploymentPrefix": "client",
+      "deploymentBucket": "mytabs-web-client-deploy-prod",
+      "region": "us-east-1",
+      "versionFunctions": true,
+      "deploymentBucketObject": {
+        "name": "mytabs-web-client-deploy-prod",
+        "blockPublicAccess": true
+      },
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "CloudfrontOAI": {
+            "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+            "Properties": {
+              "CloudFrontOriginAccessIdentityConfig": {
+                "Comment": "mytabs-admin-portal-prod"
+              }
+            }
+          },
+          "StaticSite": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "PublicAccessBlockConfiguration": {
+                "BlockPublicAcls": false
+              },
+              "BucketName": "mytabs-admin-portal-prod",
+              "WebsiteConfiguration": {
+                "IndexDocument": "index.html",
+                "ErrorDocument": "index.html"
+              }
+            }
+          },
+          "StaticSiteS3BucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+              "Bucket": {
+                "Ref": "StaticSite"
+              },
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Sid": "PublicReadForGetBucketObjectsOAI",
+                    "Effect": "Allow",
+                    "Principal": {
+                      "AWS": {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ",
+                            {
+                              "Ref": "CloudfrontOAI"
+                            }
+                          ]
+                        ]
+                      }
+                    },
+                    "Action": [
+                      "s3:get*"
+                    ],
+                    "Resource": [
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:aws:s3:::",
+                            {
+                              "Ref": "StaticSite"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:aws:s3:::",
+                            {
+                              "Ref": "StaticSite"
+                            },
+                            "/*"
+                          ]
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "Sid": "PublicReadForGetBucketObjects",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": [
+                      "s3:GetObject"
+                    ],
+                    "Resource": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:aws:s3:::",
+                          {
+                            "Ref": "StaticSite"
+                          },
+                          "/*"
+                        ]
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "cloudfront": {
+            "Type": "AWS::CloudFront::Distribution",
+            "DependsOn": [
+              "StaticSite"
+            ],
+            "Properties": {
+              "DistributionConfig": {
+                "Origins": [
+                  {
+                    "DomainName": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Ref": "StaticSite"
+                          },
+                          ".s3.amazonaws.com"
+                        ]
+                      ]
+                    },
+                    "Id": {
+                      "Ref": "StaticSite"
+                    },
+                    "S3OriginConfig": {
+                      "OriginAccessIdentity": {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "origin-access-identity/cloudfront/",
+                            {
+                              "Ref": "CloudfrontOAI"
+                            }
+                          ]
+                        ]
+                      }
+                    }
+                  }
+                ],
+                "Comment": {
+                  "Ref": "StaticSite"
+                },
+                "Enabled": true,
+                "DefaultRootObject": "index.html",
+                "DefaultCacheBehavior": {
+                  "AllowedMethods": [
+                    "GET",
+                    "HEAD"
+                  ],
+                  "TargetOriginId": {
+                    "Ref": "StaticSite"
+                  },
+                  "ViewerProtocolPolicy": "redirect-to-https",
+                  "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+                },
+                "PriceClass": "PriceClass_100",
+                "HttpVersion": "http2",
+                "IPV6Enabled": true,
+                "ViewerCertificate": {
+                  "CloudFrontDefaultCertificate": true
+                },
+                "CustomErrorResponses": [
+                  {
+                    "ErrorCachingMinTTL": 5,
+                    "ErrorCode": 403,
+                    "ResponseCode": 200,
+                    "ResponsePagePath": "/index.html"
+                  },
+                  {
+                    "ErrorCachingMinTTL": 5,
+                    "ErrorCode": 404,
+                    "ResponseCode": 200,
+                    "ResponsePagePath": "/index.html"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": "mytabs-web-client-deploy-prod",
+            "Export": {
+              "Name": "sls-mytabs-client-web-prod-ServerlessDeploymentBucketName"
+            }
+          },
+          "AdminBucket": {
+            "Value": {
+              "Ref": "StaticSite"
+            }
+          }
+        }
+      }
+    },
+    "custom": {
+      "currentStage": "prod",
+      "projectName": "mytabs-web",
+      "sitename": "mytabs-admin-portal-prod",
+      "s3Sync": [
+        {
+          "bucketName": "mytabs-admin-portal-prod",
+          "localDir": "build"
+        }
+      ]
+    },
+    "plugins": [
+      "serverless-s3-sync",
+      "serverless-deployment-bucket"
+    ],
+    "pluginsData": {},
+    "functions": {},
+    "resources": {
+      "Resources": {
+        "CloudfrontOAI": {
+          "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+          "Properties": {
+            "CloudFrontOriginAccessIdentityConfig": {
+              "Comment": "mytabs-admin-portal-prod"
+            }
+          }
+        },
+        "StaticSite": {
+          "Type": "AWS::S3::Bucket",
+          "Properties": {
+            "PublicAccessBlockConfiguration": {
+              "BlockPublicAcls": false
+            },
+            "BucketName": "mytabs-admin-portal-prod",
+            "WebsiteConfiguration": {
+              "IndexDocument": "index.html",
+              "ErrorDocument": "index.html"
+            }
+          }
+        },
+        "StaticSiteS3BucketPolicy": {
+          "Type": "AWS::S3::BucketPolicy",
+          "Properties": {
+            "Bucket": {
+              "Ref": "StaticSite"
+            },
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Sid": "PublicReadForGetBucketObjectsOAI",
+                  "Effect": "Allow",
+                  "Principal": {
+                    "AWS": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ",
+                          {
+                            "Ref": "CloudfrontOAI"
+                          }
+                        ]
+                      ]
+                    }
+                  },
+                  "Action": [
+                    "s3:get*"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:aws:s3:::",
+                          {
+                            "Ref": "StaticSite"
+                          }
+                        ]
+                      ]
+                    },
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:aws:s3:::",
+                          {
+                            "Ref": "StaticSite"
+                          },
+                          "/*"
+                        ]
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "Sid": "PublicReadForGetBucketObjects",
+                  "Effect": "Allow",
+                  "Principal": "*",
+                  "Action": [
+                    "s3:GetObject"
+                  ],
+                  "Resource": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:s3:::",
+                        {
+                          "Ref": "StaticSite"
+                        },
+                        "/*"
+                      ]
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "cloudfront": {
+          "Type": "AWS::CloudFront::Distribution",
+          "DependsOn": [
+            "StaticSite"
+          ],
+          "Properties": {
+            "DistributionConfig": {
+              "Origins": [
+                {
+                  "DomainName": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        {
+                          "Ref": "StaticSite"
+                        },
+                        ".s3.amazonaws.com"
+                      ]
+                    ]
+                  },
+                  "Id": {
+                    "Ref": "StaticSite"
+                  },
+                  "S3OriginConfig": {
+                    "OriginAccessIdentity": {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "origin-access-identity/cloudfront/",
+                          {
+                            "Ref": "CloudfrontOAI"
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                }
+              ],
+              "Comment": {
+                "Ref": "StaticSite"
+              },
+              "Enabled": true,
+              "DefaultRootObject": "index.html",
+              "DefaultCacheBehavior": {
+                "AllowedMethods": [
+                  "GET",
+                  "HEAD"
+                ],
+                "TargetOriginId": {
+                  "Ref": "StaticSite"
+                },
+                "ViewerProtocolPolicy": "redirect-to-https",
+                "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+              },
+              "PriceClass": "PriceClass_100",
+              "HttpVersion": "http2",
+              "IPV6Enabled": true,
+              "ViewerCertificate": {
+                "CloudFrontDefaultCertificate": true
+              },
+              "CustomErrorResponses": [
+                {
+                  "ErrorCachingMinTTL": 5,
+                  "ErrorCode": 403,
+                  "ResponseCode": 200,
+                  "ResponsePagePath": "/index.html"
+                },
+                {
+                  "ErrorCachingMinTTL": 5,
+                  "ErrorCode": 404,
+                  "ResponseCode": 200,
+                  "ResponsePagePath": "/index.html"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "Outputs": {
+        "AdminBucket": {
+          "Value": {
+            "Ref": "StaticSite"
+          }
+        }
+      }
+    },
+    "configValidationMode": "warn",
+    "serviceFilename": "serverless.yml",
+    "initialServerlessConfig": {
+      "service": "mytabs-client-web",
+      "provider": {
+        "$ref": "$[\"service\"][\"provider\"]"
+      },
+      "custom": {
+        "$ref": "$[\"service\"][\"custom\"]"
+      },
+      "plugins": {
+        "$ref": "$[\"service\"][\"plugins\"]"
+      },
+      "resources": {
+        "$ref": "$[\"service\"][\"resources\"]"
+      }
+    },
+    "layers": {},
+    "isDashboardMonitoringPreconfigured": false
+  },
+  "package": {
+    "artifactDirectoryName": "client/mytabs-client-web/prod/1765991654514-2025-12-17T17:14:14.514Z",
+    "artifact": ""
+  }
+}

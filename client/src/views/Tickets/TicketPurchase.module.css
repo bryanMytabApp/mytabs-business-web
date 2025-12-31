@@ -1,0 +1,285 @@
+.container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #00AAD6 0%, #0088B3 100%);
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.logo {
+  margin-bottom: 30px;
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.logo img {
+  height: 80px;
+  width: auto;
+}
+
+.card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 100%;
+  padding: 40px;
+  margin-top: 20px;
+}
+
+.loading,
+.error {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  font-size: 18px;
+  color: #666;
+}
+
+.error {
+  color: #e74c3c;
+}
+
+.header {
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 20px;
+  margin-bottom: 30px;
+}
+
+.header h1 {
+  font-size: 28px;
+  color: #2c3e50;
+  margin: 0 0 10px 0;
+  font-weight: 700;
+}
+
+.date {
+  font-size: 16px;
+  color: #7f8c8d;
+  margin: 5px 0;
+}
+
+.location {
+  font-size: 14px;
+  color: #95a5a6;
+  margin: 5px 0;
+}
+
+.section {
+  margin-bottom: 30px;
+}
+
+.section h2 {
+  font-size: 20px;
+  color: #2c3e50;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.ticketList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ticketOption {
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.ticketOption:hover:not(.soldOut) {
+  border-color: #00AAD6;
+  box-shadow: 0 4px 12px rgba(0, 170, 214, 0.2);
+  transform: translateY(-2px);
+}
+
+.ticketOption.selected {
+  border-color: #00AAD6;
+  background: linear-gradient(135deg, rgba(0, 170, 214, 0.1) 0%, rgba(0, 136, 179, 0.1) 100%);
+}
+
+.ticketOption.soldOut {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f5f5f5;
+}
+
+.ticketInfo h3 {
+  font-size: 18px;
+  color: #2c3e50;
+  margin: 0 0 5px 0;
+  font-weight: 600;
+}
+
+.ticketInfo p {
+  font-size: 14px;
+  color: #7f8c8d;
+  margin: 5px 0;
+}
+
+.availability {
+  font-size: 12px;
+  color: #D4A574;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.ticketPrice {
+  font-size: 24px;
+  color: #00AAD6;
+  font-weight: 700;
+}
+
+.quantitySelector {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 10px;
+}
+
+.quantitySelector button {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #00AAD6;
+  background: white;
+  color: #00AAD6;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.quantitySelector button:hover:not(:disabled) {
+  background: #00AAD6;
+  color: white;
+}
+
+.quantitySelector button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.quantitySelector span {
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
+  min-width: 40px;
+  text-align: center;
+}
+
+.maxNote {
+  font-size: 12px;
+  color: #95a5a6;
+  margin: 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.input {
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+  font-family: inherit;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #00AAD6;
+}
+
+.summary {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+.summaryRow.total {
+  border-top: 2px solid #e0e0e0;
+  margin-top: 10px;
+  padding-top: 15px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #00AAD6;
+}
+
+.summaryRow .small {
+  font-size: 14px;
+  color: #7f8c8d;
+}
+
+.purchaseButton {
+  width: 100%;
+  padding: 18px;
+  background: linear-gradient(135deg, #00AAD6 0%, #0088B3 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 20px;
+}
+
+.purchaseButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 170, 214, 0.4);
+}
+
+.purchaseButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.secureNote {
+  text-align: center;
+  font-size: 14px;
+  color: #95a5a6;
+  margin-top: 15px;
+}
+
+@media (max-width: 768px) {
+  .card {
+    padding: 30px 20px;
+  }
+
+  .header h1 {
+    font-size: 24px;
+  }
+
+  .ticketOption {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .ticketPrice {
+    font-size: 20px;
+  }
+}

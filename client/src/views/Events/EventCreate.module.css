@@ -1,0 +1,165 @@
+.view {
+  background: url("../../assets/Rectangle.png") repeat center center fixed;
+  background-size: cover;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+h1 {
+  color:#F09925;
+  font-size: 22px;
+}
+.titleContainer {
+  position: absolute;
+  left: 80px;
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+}
+.tableContainer {
+  border-radius: 10px;
+  padding: 15px;
+  /* box-sizing: border-box; */
+  width: 97%;
+  height: 97%;
+  background: rgba(253, 253, 253, 0.3);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+.contentContainer {
+  width: 80%;
+  height: 80%;
+  box-sizing: border-box;
+}
+.eventsContainer {
+  display: flex;
+}
+.contentContainer {
+  width: 80%;
+  height: 80%;
+  box-sizing: border-box;
+}
+.eventTypeContainer {
+  width: 170px;
+  height: 170px;
+  border-radius: 17px;
+  background-color: white;
+  /* margin-right: 10px; */
+}
+.baseButton {
+  display: flex;
+  cursor: pointer;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 25px;
+  font-weight: bold;
+  font-size: 17px;
+  margin: 40px 0 0 0;
+  height: 60px;
+}
+.createEventButton {
+  background: #F09925;
+  color: white;
+  border: none;
+  border-radius: 16px;
+}
+.title {
+  font-family: Outfit;
+  font-size: 20.09px;
+  font-weight: 400;
+  line-height: 45.92px;
+  align-self: flex-start;
+  margin-bottom: 20px;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed
+}
+.input {
+  border: none;
+  width: 100%;
+}
+.inputContainer span {
+  color: #8F8F8F;
+}
+.inputContainer {
+  display: flex;
+  background: #FCFCFC;
+  padding: 10px 10px;
+  border-radius: 10px;
+  box-shadow: 0px 4.679279327392578px 9.358558654785156px 0px #32324702;
+  box-shadow: 0px 4.679279327392578px 4.679279327392578px 0px #00000014;
+  min-width: 250px;
+  min-height: 28px;
+}
+
+input:focus{
+  outline: none;
+}
+textarea:focus {
+  outline: none;
+}
+
+.add-another-ticket-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  height: 10%;
+}
+
+.add-another-ticket-text {
+  font-family: Outfit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 18px;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.primary-color {
+  color: #00AAD6;
+}
+
+.secondary-color {
+  color: #514F4F;
+}
+
+.tickets-viewer-container {
+  width: 30%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-top: 10px;
+}
+
+.outfit-font {
+  font-family: Outfit;
+  font-weight: 400;
+  line-height: 18px;
+  font-size: 16px;
+  color: #514F4F;
+}
+
+.individual-ticket-container {
+  display: flex;
+  align-items: center;
+  padding-right: 25px;
+  margin-bottom: 15px;
+}
+
+.ticket-list-container {
+  overflow-y: scroll;
+  max-height: 310px;
+}
+
+.delete-icon {
+  cursor: pointer;
+} 
+.delete-icon:hover {
+  color: red;
+} 

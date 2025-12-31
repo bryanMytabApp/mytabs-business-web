@@ -1,0 +1,233 @@
+.view {
+  background: url("../../assets/Rectangle.png") repeat center center fixed;
+  background-size: cover;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+h1 {
+  color:#F09925;
+  font-size: 22px;
+}
+.titleContainer {
+  position: absolute;
+  left: 150px;
+  top: 10px;
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+}
+.tableContainer {
+  margin-top: 10px;
+  border-radius: 10px;
+  padding: 15px;
+  /* box-sizing: border-box; */
+  width: 97%;
+  height: 97%;
+  background: rgba(253, 253, 253, 0.3);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+.contentContainer {
+  width: 88%;
+  height: 88%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+.eventsContainer {
+  display: flex;
+}
+.eventTypeContainer {
+  width: 170px;
+  height: 170px;
+  border-radius: 17px;
+  background-color: white;
+  /* margin-right: 10px; */
+}
+.baseButton {
+  display: flex;
+  cursor: pointer;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 25px;
+  font-weight: bold;
+  font-size: 17px;
+  margin: 40px 0 0 0;
+  height: 60px;
+}
+.createEventButton {
+  background: #F09925;
+  color: white;
+  border: none;
+  border-radius: 16px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+.title {
+  font-family: Outfit;
+  font-size: 18.09px;
+  font-weight: 400;
+  line-height: 40.92px;
+  align-self: flex-start;
+  margin-bottom: 20px;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed
+}
+.input {
+  border: none;
+  width: 100%;
+  height: 100%;
+}
+.inputContainer span {
+  color: #8F8F8F;
+}
+.inputContainer {
+  display: flex;
+  background: #FCFCFC;
+  padding: 10px 10px;
+  border-radius: 10px;
+  box-shadow: 0px 4.679279327392578px 9.358558654785156px 0px #32324702;
+  box-shadow: 0px 4.679279327392578px 4.679279327392578px 0px #00000014;
+  /* min-width: 250px; */
+  min-height: 28px;
+}
+
+input:focus{
+  outline: none;
+}
+textarea:focus {
+  outline: none;
+}
+
+.add-another-ticket-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  height: 10%;
+}
+
+.add-another-ticket-text {
+  font-family: Outfit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 18px;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.primary-color {
+  color: #00AAD6;
+}
+
+.secundary-color {
+  color: #A1A1AA;
+}
+
+.primary-background {
+  background: #00AAD6;
+}
+
+.white-background {
+  background: white;
+}
+
+.white-color {
+  color: white;
+}
+
+.tickets-viewer-container {
+  width: 30%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-top: 10px;
+}
+
+.outfit-font {
+  font-family: Outfit;
+  font-weight: 400;
+  line-height: 18px;
+  font-size: 16px;
+  /* color: #514F4F; */
+}
+
+.individual-ticket-container {
+  display: flex;
+  align-items: center;
+  padding-right: 25px;
+  margin-bottom: 15px;
+}
+
+.ticket-list-container {
+  overflow-y: scroll;
+  max-height: 310px;
+}
+
+.delete-icon {
+  cursor: pointer;
+} 
+.delete-icon:hover {
+  color: red;
+} 
+
+.contentDivider {
+  width: 50%;
+  height: 100%;
+}
+
+.buttonsContainer {
+  background-color: white;
+  padding: 6px 8px;
+  border-radius: 100px;
+  box-sizing: border-box;
+  margin-left: 95px;
+}
+.contentSelector:first-child {
+  margin-right: 10px;
+}
+.contentSelector {
+  border: none;
+  padding: 7px 10px;
+  border-radius: 100px;
+}
+.leftMainContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.gridContainer {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  grid-column-gap: 10px;
+  grid-row-gap: 10px;
+}
+.buttonAbsolute {
+  position: absolute;
+  top: calc(50% - 50px);
+  left: calc(50% - 63px);
+  margin: 0;
+  border: 2px solid transparent;
+  color: white;
+  border-radius: 30px;
+  width: 125px;
+  height: 50px;
+}
+.buttonAbsolute:hover {
+  background-color: white;
+  color: #00AAD6;
+  border: 2px solid #00AAD6;
+  
+}

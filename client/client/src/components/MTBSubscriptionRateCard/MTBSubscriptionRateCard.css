@@ -1,0 +1,79 @@
+.MTBSubscriptionRateCard-main {
+  border-radius: 25px;
+  height: 112px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px;
+  margin-top: 12px;
+  margin-right: 10px;;
+}
+
+.MTBSubscriptionRateCard-main.selected {
+  background-color: #FFFFFF3D;
+  border: 2px solid #008A25;
+}
+
+.MTBSubscriptionRateCard-main.unselected {
+  background-color: #FDFDFD4D;
+}
+
+.ratePeriod,
+.rateValue,
+.billingInfo {
+  display: flex;
+  font-family: "Outfit";
+  color: #7C7B7B;
+}
+
+.rateValue{
+  align-items: center;
+}
+.ratePeriod {
+  color: #7C7B7B;
+  font-weight: 500;
+  font-size: 16px;
+  flex: 1;
+}
+
+.ratePeriod.selected,
+.rateValue.selected {
+  color: black;
+}
+
+.rateValue {
+  font-weight: 700;
+  font-size: 28px;
+}
+
+.billingInfo.selected{
+  color:#008A25;
+  justify-self: flex-end;
+  align-self: flex-end;
+}
+.billingInfo {
+  font-weight: 500;
+  font-size: 16px;
+  color: #7C7B7B
+}
+
+.rateSuffix {
+  font-family: Outfit;
+  font-weight: 700;
+  font-size: 20px;
+  color: #676565;
+}
+
+.selectionIcon {
+  display: flex;
+  justify-self: flex-end;
+}
+
+.ratePeriodAndSelection {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+  width: 100%;
+}
