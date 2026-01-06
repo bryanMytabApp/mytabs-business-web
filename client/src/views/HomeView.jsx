@@ -13,6 +13,8 @@ import myEventsInactiveIcon from "../assets/menu/myEventsInactive.svg";
 import myEventsActiveIcon from "../assets/menu/myEventsActive.svg";
 import analyticsActiveIcon from "../assets/menu/analyticsActive.svg";
 import analyticsInactiveIcon from "../assets/menu/analyticsInactive.svg";
+import myTicketsActiveIcon from "../assets/menu/analyticsActive.svg"; // Placeholder - will be replaced with ticket icon
+import myTicketsInactiveIcon from "../assets/menu/analyticsInactive.svg"; // Placeholder - will be replaced with ticket icon
 import upgradesAddonsActiveIcon from "../assets/menu/upgradesAddonsActive.svg";
 import upgradesAddonsInactiveIcon from "../assets/menu/upgradesAddonsInactive.svg";
 import shopActiveIcon from "../assets/menu/shopActive.svg";
@@ -57,6 +59,14 @@ const options = [
       inactive: analyticsInactiveIcon,
     },
     title: "Analytics",
+  },
+  {
+    path: "/admin/my-tickets",
+    icon: {
+      active: myTicketsActiveIcon,
+      inactive: myTicketsInactiveIcon,
+    },
+    title: "My Tickets",
   },
   {
     path: "/admin/upgrades-and-add-ons",

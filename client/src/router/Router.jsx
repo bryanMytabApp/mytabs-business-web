@@ -14,6 +14,7 @@ import UserCatalogView from "../views/UserCatalog/UserCatalogView";
 import SubscriptionSuccess from "../views/Subscription/SubscriptionSuccess";
 import MyBusiness from "../views/MyBusiness/MyBusiness";
 import AnalyticsView from "../views/Analytics/AnalyticsView";
+import MyTicketsView from "../views/MyTickets/MyTicketsView";
 import UpgradesAddonsView from "../views/UpgradesAddons/UpgradesAddonsView";
 import ShopView from "../views/Shop/ShopView";
 import MyTabsConfigurationView from "../views/MyTabsConfiguration/MyTabsConfigurationView";
@@ -178,6 +179,11 @@ const router = createBrowserRouter([
           {
             path: "analytics",
             element: <AnalyticsView />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-tickets",
+            element: <MyTicketsView />,
             loader: () => routerHandler(true),
           },
           {
