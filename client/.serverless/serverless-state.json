@@ -24,7 +24,7 @@
             "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
             "Properties": {
               "CloudFrontOriginAccessIdentityConfig": {
-                "Comment": "mytabs-admin-portal-prod"
+                "Comment": "mytabs-business-web-prod"
               }
             }
           },
@@ -34,7 +34,7 @@
               "PublicAccessBlockConfiguration": {
                 "BlockPublicAcls": false
               },
-              "BucketName": "mytabs-admin-portal-prod",
+              "BucketName": "mytabs-business-web-prod",
               "WebsiteConfiguration": {
                 "IndexDocument": "index.html",
                 "ErrorDocument": "index.html"
@@ -214,10 +214,10 @@
     "custom": {
       "currentStage": "prod",
       "projectName": "mytabs-web",
-      "sitename": "mytabs-admin-portal-prod",
+      "sitename": "mytabs-business-web-prod",
       "s3Sync": [
         {
-          "bucketName": "mytabs-admin-portal-prod",
+          "bucketName": "mytabs-business-web-prod",
           "localDir": "build"
         }
       ]
@@ -234,7 +234,7 @@
           "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
           "Properties": {
             "CloudFrontOriginAccessIdentityConfig": {
-              "Comment": "mytabs-admin-portal-prod"
+              "Comment": "mytabs-business-web-prod"
             }
           }
         },
@@ -244,7 +244,7 @@
             "PublicAccessBlockConfiguration": {
               "BlockPublicAcls": false
             },
-            "BucketName": "mytabs-admin-portal-prod",
+            "BucketName": "mytabs-business-web-prod",
             "WebsiteConfiguration": {
               "IndexDocument": "index.html",
               "ErrorDocument": "index.html"
@@ -435,7 +435,7 @@
     "isDashboardMonitoringPreconfigured": false
   },
   "package": {
-    "artifactDirectoryName": "client/mytabs-client-web/prod/1765991654514-2025-12-17T17:14:14.514Z",
+    "artifactDirectoryName": "client/mytabs-client-web/prod/1767653051581-2026-01-05T22:44:11.581Z",
     "artifact": ""
   }
 }

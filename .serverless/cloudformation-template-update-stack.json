@@ -158,8 +158,14 @@
           "HttpVersion": "http2",
           "IPV6Enabled": true,
           "ViewerCertificate": {
-            "CloudFrontDefaultCertificate": true
+            "AcmCertificateArn": "arn:aws:acm:us-east-1:992382405895:certificate/e4230952-fb9b-4759-b013-81faeef6518c",
+            "SslSupportMethod": "sni-only",
+            "MinimumProtocolVersion": "TLSv1.2_2021"
           },
+          "Aliases": [
+            "keeptabs.app",
+            "www.keeptabs.app"
+          ],
           "CustomErrorResponses": [
             {
               "ErrorCachingMinTTL": 5,

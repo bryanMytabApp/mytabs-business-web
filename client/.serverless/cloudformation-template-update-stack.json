@@ -6,7 +6,7 @@
       "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
       "Properties": {
         "CloudFrontOriginAccessIdentityConfig": {
-          "Comment": "mytabs-admin-portal-prod"
+          "Comment": "mytabs-business-web-prod"
         }
       }
     },
@@ -16,7 +16,7 @@
         "PublicAccessBlockConfiguration": {
           "BlockPublicAcls": false
         },
-        "BucketName": "mytabs-admin-portal-prod",
+        "BucketName": "mytabs-business-web-prod",
         "WebsiteConfiguration": {
           "IndexDocument": "index.html",
           "ErrorDocument": "index.html"
