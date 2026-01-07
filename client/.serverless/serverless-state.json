@@ -24,7 +24,7 @@
             "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
             "Properties": {
               "CloudFrontOriginAccessIdentityConfig": {
-                "Comment": "mytabs-admin-portal-prod"
+                "Comment": "mytabs-app-website-prod"
               }
             }
           },
@@ -34,7 +34,7 @@
               "PublicAccessBlockConfiguration": {
                 "BlockPublicAcls": false
               },
-              "BucketName": "mytabs-admin-portal-prod",
+              "BucketName": "mytabs-app-website-prod",
               "WebsiteConfiguration": {
                 "IndexDocument": "index.html",
                 "ErrorDocument": "index.html"
@@ -176,8 +176,14 @@
                 "HttpVersion": "http2",
                 "IPV6Enabled": true,
                 "ViewerCertificate": {
-                  "CloudFrontDefaultCertificate": true
+                  "AcmCertificateArn": "arn:aws:acm:us-east-1:992382405895:certificate/b521cffe-460a-47a3-9026-4086e32abff5",
+                  "SslSupportMethod": "sni-only",
+                  "MinimumProtocolVersion": "TLSv1.2_2021"
                 },
+                "Aliases": [
+                  "mytabs.app",
+                  "www.mytabs.app"
+                ],
                 "CustomErrorResponses": [
                   {
                     "ErrorCachingMinTTL": 5,
@@ -214,10 +220,10 @@
     "custom": {
       "currentStage": "prod",
       "projectName": "mytabs-web",
-      "sitename": "mytabs-admin-portal-prod",
+      "sitename": "mytabs-app-website-prod",
       "s3Sync": [
         {
-          "bucketName": "mytabs-admin-portal-prod",
+          "bucketName": "mytabs-app-website-prod",
           "localDir": "build"
         }
       ]
@@ -234,7 +240,7 @@
           "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
           "Properties": {
             "CloudFrontOriginAccessIdentityConfig": {
-              "Comment": "mytabs-admin-portal-prod"
+              "Comment": "mytabs-app-website-prod"
             }
           }
         },
@@ -244,7 +250,7 @@
             "PublicAccessBlockConfiguration": {
               "BlockPublicAcls": false
             },
-            "BucketName": "mytabs-admin-portal-prod",
+            "BucketName": "mytabs-app-website-prod",
             "WebsiteConfiguration": {
               "IndexDocument": "index.html",
               "ErrorDocument": "index.html"
@@ -386,8 +392,14 @@
               "HttpVersion": "http2",
               "IPV6Enabled": true,
               "ViewerCertificate": {
-                "CloudFrontDefaultCertificate": true
+                "AcmCertificateArn": "arn:aws:acm:us-east-1:992382405895:certificate/b521cffe-460a-47a3-9026-4086e32abff5",
+                "SslSupportMethod": "sni-only",
+                "MinimumProtocolVersion": "TLSv1.2_2021"
               },
+              "Aliases": [
+                "mytabs.app",
+                "www.mytabs.app"
+              ],
               "CustomErrorResponses": [
                 {
                   "ErrorCachingMinTTL": 5,
@@ -435,7 +447,7 @@
     "isDashboardMonitoringPreconfigured": false
   },
   "package": {
-    "artifactDirectoryName": "client/mytabs-client-web/prod/1765991654514-2025-12-17T17:14:14.514Z",
+    "artifactDirectoryName": "client/mytabs-client-web/prod/1767646875223-2026-01-05T21:01:15.223Z",
     "artifact": ""
   }
 }
