@@ -2,7 +2,9 @@ import React, { useEffect, useState, useRef } from "react";
 import styles from './EventCreate.module.css'
 import {
   IconButton,
-  Divider
+  Divider,
+  Modal,
+  Box
 } from '@mui/material/'
 import {toast} from "react-toastify";
 import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
@@ -13,6 +15,7 @@ import moment from 'moment'
 import { useNavigate } from "react-router-dom";
 import selectIcon from "../../assets/atoms/selectIcon.svg";
 import selectIconActive from "../../assets/atoms/selectIconActive.svg";
+import tabsTicketsHeader from "../../assets/Tabs-tickets-header-hoz.png";
 import { MTBDropZone, MTBSelector, TicketPreview } from "../../components";
 import { State, City } from 'country-state-city';
 import { createEvent, getPresignedUrlForEvent } from "../../services/eventService";
@@ -69,7 +72,7 @@ const getTicketTypeOptions = (ticketOption) => {
       ];
     case 'External link':
       return [
-        'Eventbrite',
+        'External Links',
         'Ticketmaster',
         'StubHub',
         'Facebook Events',
@@ -111,6 +114,9 @@ const EventCreate = () => {
   const [tickets, setTickets] = useState([baseTicket])
   const [ticketSelectedIndex, setTicketSelectedIndex] = useState(0)
   const [draggedTicketIndex, setDraggedTicketIndex] = useState(null)
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [showTestModal, setShowTestModal] = useState(false)
+  const [testPurchaseUrl, setTestPurchaseUrl] = useState('')
 
   const [item, setItem] = useState({
     name: '',
@@ -364,6 +370,18 @@ const EventCreate = () => {
   };
 
   const changeTicketSelectedAttr = (attr, value) => {
+    // Clear field error when user starts typing
+    clearFieldError(attr);
+    
+    // Add validation for description word limit (25 words max)
+    if (attr === 'description') {
+      const wordCount = value.trim().split(/\s+/).filter(word => word.length > 0).length;
+      if (wordCount > 25) {
+        toast.error("Ticket description cannot exceed 25 words");
+        return;
+      }
+    }
+    
     // Add validation for ticket option limits
     if (attr === 'option') {
       // Count existing tickets with specific options
@@ -414,14 +432,88 @@ const EventCreate = () => {
     return currentTicketOption === 'Free' || noTicketingCount < 1;
   };
 
+  const getFieldErrorStyle = (fieldName) => {
+    const hasError = fieldErrors[ticketSelectedIndex] && fieldErrors[ticketSelectedIndex][fieldName];
+    return hasError ? { border: '2px solid #DC3545', borderRadius: '4px' } : {};
+  };
+
+  const getContainerErrorStyle = (fieldName) => {
+    const hasError = fieldErrors[ticketSelectedIndex] && fieldErrors[ticketSelectedIndex][fieldName];
+    return hasError ? { border: '2px solid #DC3545' } : {};
+  };
+
+  const clearFieldError = (fieldName) => {
+    if (fieldErrors[ticketSelectedIndex] && fieldErrors[ticketSelectedIndex][fieldName]) {
+      const newFieldErrors = { ...fieldErrors };
+      delete newFieldErrors[ticketSelectedIndex][fieldName];
+      if (Object.keys(newFieldErrors[ticketSelectedIndex]).length === 0) {
+        delete newFieldErrors[ticketSelectedIndex];
+      }
+      setFieldErrors(newFieldErrors);
+    }
+  };
+
+  const handleCloseTestModal = () => {
+    setShowTestModal(false);
+    setTestPurchaseUrl(''); // Clear the URL to stop iframe loading
+  };
+
+  const canAddMoreTickets = () => {
+    if (tickets.length >= 10) return false;
+    
+    const firstTicketOption = tickets[0]?.option || 'Tabs Tickets';
+    
+    if (firstTicketOption === 'Free' && tickets.length >= 1) return false;
+    if (firstTicketOption === 'External link' && tickets.length >= 5) return false;
+    
+    return true;
+  };
+
+  const getAddTicketMessage = () => {
+    if (tickets.length >= 10) return 'Maximum 10 tickets reached';
+    
+    const firstTicketOption = tickets[0]?.option || 'Tabs Tickets';
+    
+    if (firstTicketOption === 'Free' && tickets.length >= 1) return 'Only 1 No Ticket option allowed';
+    if (firstTicketOption === 'External link' && tickets.length >= 5) return 'Maximum 5 External Link tickets reached';
+    
+    return 'Add another ticketing option?';
+  };
+
   const addNewTicket = () => {
     if (tickets.length >= 10) {
       toast.warning("Maximum of 10 tickets allowed per event");
       return;
     }
     
+    // Use the same ticket type as the first ticket (set in Step 4)
+    const firstTicketOption = tickets[0]?.option || 'Tabs Tickets';
+    
+    // Check specific limits for each ticket type
+    if (firstTicketOption === 'Free' && tickets.length >= 1) {
+      toast.warning("Only 1 No Ticket option allowed per event");
+      return;
+    }
+    
+    if (firstTicketOption === 'External link' && tickets.length >= 5) {
+      toast.warning("Maximum of 5 External Link tickets allowed per event");
+      return;
+    }
+    
+    let newTicket;
+    
+    if (firstTicketOption === 'Tabs Tickets') {
+      newTicket = Object.assign({}, baseTabsTicket);
+    } else if (firstTicketOption === 'External link') {
+      newTicket = Object.assign({}, baseTicket, { option: 'External link', type: 'External Links' });
+    } else if (firstTicketOption === 'Free') {
+      newTicket = Object.assign({}, baseTicket, { option: 'Free', type: 'Free Entry', subOption: 'No Cover Charge' });
+    } else {
+      newTicket = Object.assign({}, baseTicket, { option: firstTicketOption });
+    }
+    
     let ticketsCopy = JSON.parse(JSON.stringify(tickets))
-    ticketsCopy.push(Object.assign({}, baseTicket))
+    ticketsCopy.push(newTicket)
     
     setTickets(ticketsCopy)
     const newTicketIndex = ticketsCopy.length - 1;
@@ -449,6 +541,51 @@ const EventCreate = () => {
     setTickets(ticketsCopy)
     setTicketSelectedIndex(0)
   } 
+
+  const validateTicketWithFieldErrors = (ticket = {}, ticketIndex) => {
+    let error = false;
+    let errors = {};
+    
+    if(ticket.option === 'External link') {
+      if(!ticket.type) {
+        errors.type = true;
+        error = true;
+      }
+      if(!ticket.link1 && !ticket.link2 && !ticket.link3) {
+        errors.link1 = true;
+        error = true;
+      }
+    } else if(ticket.option === 'Tabs Tickets' || ticket.option === 'Tickets with Tabs') {
+      if(!ticket.type) {
+        errors.type = true;
+        error = true;
+      }
+      if(!ticket.price) {
+        errors.price = true;
+        error = true;
+      } else if(isNaN(ticket.price) || parseFloat(ticket.price) <= 0) {
+        errors.price = true;
+        error = true;
+      }
+      if(!ticket.quantity) {
+        errors.quantity = true;
+        error = true;
+      } else if(isNaN(ticket.quantity) || parseInt(ticket.quantity) <= 0) {
+        errors.quantity = true;
+        error = true;
+      }
+    } else if(ticket.option === 'Free') {
+      if(!ticket.type) {
+        errors.type = true;
+        error = true;
+      }
+    }
+    
+    return {
+      ticket: { ...ticket, error },
+      errors
+    };
+  };
 
   const validateTicket = (ticket = {}, index) => {
     let error = false
@@ -480,19 +617,100 @@ const EventCreate = () => {
   }
 
   const ticketsValidated = () => {
-    let ticketsCopy = JSON.parse(JSON.stringify(tickets))
-    ticketsCopy = ticketsCopy.map(ticket => validateTicket(ticket))
-    setTickets(ticketsCopy)
-    if(ticketsCopy.some(t => t.error)) {
-      return false
+    let ticketsCopy = JSON.parse(JSON.stringify(tickets));
+    let allFieldErrors = {};
+    let hasErrors = false;
+    
+    ticketsCopy = ticketsCopy.map((ticket, index) => {
+      const validation = validateTicketWithFieldErrors(ticket, index);
+      if (Object.keys(validation.errors).length > 0) {
+        allFieldErrors[index] = validation.errors;
+        hasErrors = true;
+      }
+      return validation.ticket;
+    });
+    
+    setTickets(ticketsCopy);
+    setFieldErrors(allFieldErrors);
+    
+    if(hasErrors) {
+      return false;
     }
-    return true
+    return true;
   }
 
   const handleTestPurchase = async (taxAmount = 0, taxBreakdown = []) => {
     console.log('🧪 handleTestPurchase called with tax:', { taxAmount, taxBreakdown });
     console.log('🧪 Current item:', item);
     console.log('🧪 Current tickets:', tickets);
+    
+    // If modal is already open, just update the data via postMessage without reloading
+    if (showTestModal && testPurchaseUrl) {
+      console.log('🧪 Modal already open, updating data via postMessage only');
+      
+      // Prepare updated event data
+      const eventLocation = addressOption === 0 
+        ? (businessData && businessData.address1 && businessData.city && businessData.state && businessData.zipCode
+          ? {
+              line1: businessData.address1,
+              line2: businessData.address2 || undefined,
+              city: businessData.city,
+              state: businessData.state,
+              postal_code: businessData.zipCode,
+              country: 'US'
+            }
+          : undefined)
+        : (item.address1 && item.city && item.state && item.zipCode
+          ? {
+              line1: item.address1,
+              line2: item.address2 || undefined,
+              city: item.city,
+              state: item.state,
+              postal_code: item.zipCode,
+              country: 'US'
+            }
+          : undefined);
+
+      const eventData = {
+        id: 'test-preview', // Use consistent ID to avoid reload
+        name: item.name,
+        description: item.description || '',
+        startDate: moment(item.startDate).toISOString(),
+        endDate: moment(item.endDate).toISOString(),
+        address1: item.address1 || '',
+        address2: item.address2 || '',
+        city: item.city || '',
+        state: item.state || '',
+        zipCode: item.zipCode || '',
+        tickets: tickets,
+        hasTickets: tickets && tickets.length > 0,
+        ticketType: tickets.some(t => t.option === 'Tabs Tickets' || t.option === 'Tickets with Tabs') ? 'tabs' : 'other',
+        imagePreview: uploadedImage || null,
+        eventLocation: eventLocation,
+        taxAmount: taxAmount,
+        taxBreakdown: taxBreakdown,
+        // ADD: Test mode flags for auto-fill functionality
+        testMode: true,
+        adminTest: true
+      };
+
+      // Send updated data to existing iframe
+      const sendDataToIframe = () => {
+        const iframe = document.getElementById('test-purchase-iframe');
+        if (iframe && iframe.contentWindow) {
+          console.log('🧪 Updating existing iframe with new data');
+          iframe.contentWindow.postMessage({
+            type: 'MYTABS_PREVIEW_DATA',
+            eventData: eventData
+          }, '*');
+        }
+      };
+
+      // Send data immediately and with a small delay
+      sendDataToIframe();
+      setTimeout(sendDataToIframe, 100);
+      return;
+    }
     
     // Validate required fields before testing
     if (!item.name || !item.startDate || !item.endDate) {
@@ -511,10 +729,8 @@ const EventCreate = () => {
       // Prepare event location for tax calculation
       let eventLocation = null;
       
-      // For now, businessData is not available in this scope, so we'll use the event address
-      // TODO: Fetch business data if needed for business address option
       if (addressOption === 0) {
-        // Use business address - now we have businessData available
+        // Use business address
         if (businessData) {
           eventLocation = {
             line1: businessData.address1 || '123 Main St',
@@ -549,7 +765,7 @@ const EventCreate = () => {
       
       // Prepare event data for postMessage
       const eventData = {
-        id: 'test-' + Date.now(), // Generate a temporary test ID
+        id: 'test-preview', // Use consistent ID to avoid reload
         name: item.name,
         description: item.description || '',
         startDate: moment(item.startDate).toISOString(),
@@ -562,12 +778,13 @@ const EventCreate = () => {
         tickets: tickets,
         hasTickets: tickets && tickets.length > 0,
         ticketType: tickets.some(t => t.option === 'Tabs Tickets' || t.option === 'Tickets with Tabs') ? 'tabs' : 'other',
-        // Add image as base64 if available for preview
         imagePreview: uploadedImage || null,
-        // Include tax information
         eventLocation: eventLocation,
         taxAmount: taxAmount,
-        taxBreakdown: taxBreakdown
+        taxBreakdown: taxBreakdown,
+        // ADD: Test mode flags for auto-fill functionality
+        testMode: true,
+        adminTest: true
       };
 
       console.log('🧪 Event data prepared:', eventData);
@@ -579,38 +796,50 @@ const EventCreate = () => {
         theme: 'light',
         lang: 'english',
         preview: 'true',
-        waitForData: 'true' // Tell the page to wait for postMessage data
+        waitForData: 'true',
+        // Add event data directly to URL as backup
+        eventId: 'test-preview', // Use consistent ID
+        eventName: encodeURIComponent(item.name || 'Test Event'),
+        previewMode: 'true'
       });
 
       // Add user token if available
+      // 🚨 CRITICAL: Token passing logic - see ../PAYMENT_TOKEN_README.md before modifying
+      // Get authentication token and add to URL for ticketing website
       const token = localStorage.getItem("idToken");
       if (token) {
         urlParams.set('userToken', token);
         console.log('🧪 Added user token');
       }
 
-      // Use a special preview route that handles postMessage data with HTTPS
-      const ticketUrl = `https://d2e9zl9yq9uxpl.cloudfront.net/?${urlParams.toString()}#/preview`;
+      // Use the ticketing URL for iframe
+      const ticketUrl = `https://ticket.keeptabs.app/?${urlParams.toString()}#/preview`;
       
-      console.log('🧪 Final URL:', ticketUrl);
+      console.log('🧪 Final URL for iframe:', ticketUrl);
       
-      toast.success("Opening ticketing preview with current data...");
+      // Set the URL for iframe and show modal
+      setTestPurchaseUrl(ticketUrl);
+      setShowTestModal(true);
       
-      // Open in new window/tab
-      const newWindow = window.open(ticketUrl, '_blank');
+      toast.success("Opening ticketing preview...");
       
-      // Wait a moment for the window to load, then send the data
-      setTimeout(() => {
-        if (newWindow && !newWindow.closed) {
-          console.log('🧪 Sending data via postMessage');
-          newWindow.postMessage({
+      // Send data to iframe multiple times to ensure it's received
+      const sendDataToIframe = () => {
+        const iframe = document.getElementById('test-purchase-iframe');
+        if (iframe && iframe.contentWindow) {
+          console.log('🧪 Sending data via postMessage to iframe');
+          iframe.contentWindow.postMessage({
             type: 'MYTABS_PREVIEW_DATA',
             eventData: eventData
-          }, 'https://d2e9zl9yq9uxpl.cloudfront.net');
-        } else {
-          console.warn('⚠️ New window was closed or blocked');
+          }, 'https://ticket.keeptabs.app');
         }
-      }, 2000); // Wait 2 seconds for the page to load
+      };
+      
+      // Send data multiple times with different delays
+      setTimeout(sendDataToIframe, 1000);  // 1 second
+      setTimeout(sendDataToIframe, 2000);  // 2 seconds  
+      setTimeout(sendDataToIframe, 3000);  // 3 seconds
+      setTimeout(sendDataToIframe, 5000);  // 5 seconds
       
     } catch (error) {
       console.error('❌ Error preparing test data:', error);
@@ -726,7 +955,7 @@ const EventCreate = () => {
             </div>
           </div>
         )}
-        {step === 4 && (
+        {step === 5 && (
           <div
             style={{
               position: 'absolute',
@@ -740,7 +969,7 @@ const EventCreate = () => {
               padding: '5px 10px',
               borderRadius: '8px'
             }}
-            onClick={() => handleContinue(4, true)}
+            onClick={() => handleContinue(5, true)}
           >
             <div style={{
               fontFamily: 'Outfit',
@@ -1154,7 +1383,323 @@ const EventCreate = () => {
             </button>
           </div>
         )}
-        {step === 4 && tickets && tickets.length > 0 && tickets[ticketSelectedIndex] && (
+        {step === 4 && (
+          <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexDirection: 'column',
+              width: '100%',
+              height: 'auto',
+              minHeight: '600px',
+              padding: '40px 0',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              width: '100%',
+              maxWidth: '1000px',
+            }}>
+              <div className={styles.title} style={{ 
+                marginBottom: '40px',
+                textAlign: 'center',
+                fontSize: '28px',
+                fontWeight: '600',
+                color: '#333'
+              }}>
+                What type of ticketing would you like to create?
+              </div>
+              
+              <div style={{
+                display: 'flex',
+                flexDirection: 'row',
+                gap: '20px',
+                width: '100%',
+                maxWidth: '900px',
+                marginBottom: '30px',
+                justifyContent: 'center'
+              }}>
+                {/* Tickets with Tabs with Logo Option */}
+                <div
+                  onClick={() => {
+                    setTickets([{...baseTabsTicket, option: 'Tabs Tickets'}]);
+                    setTicketSelectedIndex(0);
+                  }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '20px',
+                    border: tickets[0]?.option === 'Tabs Tickets' ? '3px solid #00AAD6' : '2px solid #E0E0E0',
+                    borderRadius: '16px',
+                    backgroundColor: tickets[0]?.option === 'Tabs Tickets' ? '#F0F9FF' : '#FFFFFF',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: tickets[0]?.option === 'Tabs Tickets' ? '0 4px 12px rgba(0, 170, 214, 0.15)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                    transform: tickets[0]?.option === 'Tabs Tickets' ? 'translateY(-2px)' : 'none',
+                    width: '280px',
+                    minHeight: '200px'
+                  }}
+                >
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    border: '2px solid #00AAD6',
+                    backgroundColor: tickets[0]?.option === 'Tabs Tickets' ? '#00AAD6' : 'transparent',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {tickets[0]?.option === 'Tabs Tickets' && (
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: 'white'
+                      }} />
+                    )}
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    flex: 1
+                  }}>
+                    <div style={{
+                      width: '120px',
+                      height: '80px',
+                      backgroundColor: '#F0F9FF',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '16px',
+                      backgroundImage: `url(${tabsTicketsHeader})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat'
+                    }}>
+                    </div>
+                    <div>
+                      <div style={{
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        color: '#333',
+                        marginBottom: '8px'
+                      }}>
+                        Tickets with Tabs
+                      </div>
+                      <div style={{
+                        fontSize: '14px',
+                        color: '#666',
+                        lineHeight: '1.4'
+                      }}>
+                        Sell tickets through MyTabs platform with your branding
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* External Links Option */}
+                <div
+                  onClick={() => {
+                    setTickets([{...baseTicket, option: 'External link', type: 'External Links'}]);
+                    setTicketSelectedIndex(0);
+                  }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '20px',
+                    border: tickets[0]?.option === 'External link' ? '3px solid #00AAD6' : '2px solid #E0E0E0',
+                    borderRadius: '16px',
+                    backgroundColor: tickets[0]?.option === 'External link' ? '#F0F9FF' : '#FFFFFF',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: tickets[0]?.option === 'External link' ? '0 4px 12px rgba(0, 170, 214, 0.15)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                    transform: tickets[0]?.option === 'External link' ? 'translateY(-2px)' : 'none',
+                    width: '280px',
+                    minHeight: '200px'
+                  }}
+                >
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    border: '2px solid #00AAD6',
+                    backgroundColor: tickets[0]?.option === 'External link' ? '#00AAD6' : 'transparent',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {tickets[0]?.option === 'External link' && (
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: 'white'
+                      }} />
+                    )}
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    flex: 1
+                  }}>
+                    <div style={{
+                      width: '120px',
+                      height: '80px',
+                      backgroundColor: '#F0F9FF',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #00AAD6',
+                      marginBottom: '16px'
+                    }}>
+                      <span className="material-symbols-outlined" style={{ 
+                        fontSize: '48px', 
+                        color: '#00AAD6' 
+                      }}>
+                        open_in_new
+                      </span>
+                    </div>
+                    <div>
+                      <div style={{
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        color: '#333',
+                        marginBottom: '8px'
+                      }}>
+                        External Links
+                      </div>
+                      <div style={{
+                        fontSize: '14px',
+                        color: '#666',
+                        lineHeight: '1.4'
+                      }}>
+                        Link to external ticketing platforms
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* No Tickets Option */}
+                <div
+                  onClick={() => {
+                    setTickets([{...baseTicket, option: 'Free', type: 'Free Entry', subOption: 'No Cover Charge'}]);
+                    setTicketSelectedIndex(0);
+                  }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '20px',
+                    border: tickets[0]?.option === 'Free' ? '3px solid #00AAD6' : '2px solid #E0E0E0',
+                    borderRadius: '16px',
+                    backgroundColor: tickets[0]?.option === 'Free' ? '#F0F9FF' : '#FFFFFF',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: tickets[0]?.option === 'Free' ? '0 4px 12px rgba(0, 170, 214, 0.15)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                    transform: tickets[0]?.option === 'Free' ? 'translateY(-2px)' : 'none',
+                    width: '280px',
+                    minHeight: '200px'
+                  }}
+                >
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    border: '2px solid #00AAD6',
+                    backgroundColor: tickets[0]?.option === 'Free' ? '#00AAD6' : 'transparent',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {tickets[0]?.option === 'Free' && (
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: 'white'
+                      }} />
+                    )}
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    flex: 1
+                  }}>
+                    <div style={{
+                      width: '120px',
+                      height: '80px',
+                      backgroundColor: '#F0F9FF',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #00AAD6',
+                      marginBottom: '16px'
+                    }}>
+                      <span className="material-symbols-outlined" style={{ 
+                        fontSize: '48px', 
+                        color: '#00AAD6' 
+                      }}>
+                        no_accounts
+                      </span>
+                    </div>
+                    <div>
+                      <div style={{
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        color: '#333',
+                        marginBottom: '8px'
+                      }}>
+                        No Tickets
+                      </div>
+                      <div style={{
+                        fontSize: '14px',
+                        color: '#666',
+                        lineHeight: '1.4'
+                      }}>
+                        Entry to event with no ticketing required
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                disabled={!tickets[0]?.option}
+                className={createMultipleClasses([styles.baseButton, styles.createEventButton, !tickets[0]?.option ? styles.disabled : ''])}
+                onClick={() => handleContinue(5, false)}
+                style={{
+                  width: '200px',
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  fontWeight: '600'
+                }}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+        {step === 5 && tickets && tickets.length > 0 && tickets[ticketSelectedIndex] && (
           <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -1261,124 +1806,24 @@ const EventCreate = () => {
                 <div
                   className={createMultipleClasses([
                     styles['add-another-ticket-container'], 
-                    tickets.length >= 10 ? styles['disabled'] : styles['primary-color']
+                    !canAddMoreTickets() ? styles['disabled'] : styles['primary-color']
                   ])}
-                  onClick={tickets.length >= 10 ? undefined : addNewTicket}
+                  onClick={canAddMoreTickets() ? addNewTicket : undefined}
                   style={{
-                    cursor: tickets.length >= 10 ? 'not-allowed' : 'pointer',
-                    opacity: tickets.length >= 10 ? 0.5 : 1
+                    cursor: canAddMoreTickets() ? 'pointer' : 'not-allowed',
+                    opacity: canAddMoreTickets() ? 1 : 0.5
                   }}
                 >
                   <span className={styles['add-another-ticket-text']}>
-                    {tickets.length >= 10 ? 'Maximum 10 tickets reached' : 'Add another ticketing option?'}
+                    {getAddTicketMessage()}
                   </span>
                   <span className="material-symbols-outlined">
-                    {tickets.length >= 10 ? 'block' : 'add'}
+                    {canAddMoreTickets() ? 'add' : 'block'}
                   </span>
                 </div>
               </span>
               {tickets && tickets[ticketSelectedIndex] && (
               <span className={styles['middle-configuration-panel']}>
-                <span>
-                  <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', flexWrap: 'wrap' }}>
-                    {/* Tickets with Tabs Button - First */}
-                    <button
-                      onClick={() => changeTicketSelectedAttr('option', 'Tabs Tickets')}
-                      style={{
-                        width: '120px',
-                        height: '80px',
-                        borderRadius: '10px',
-                        border: tickets[ticketSelectedIndex]?.option === 'Tabs Tickets' ? '2px solid #00AAD6' : '2px solid #E0E0E0',
-                        background: tickets[ticketSelectedIndex]?.option === 'Tabs Tickets' ? '#F0F9FF' : '#FCFCFC',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontFamily: 'Outfit',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        color: tickets[ticketSelectedIndex]?.option === 'Tabs Tickets' ? '#00AAD6' : '#514F4F',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: '24px', marginBottom: '5px' }}>
-                        confirmation_number
-                      </span>
-                      Tabs Tickets
-                    </button>
-
-                    {/* External Links Button - Second */}
-                    <button
-                      onClick={canAddExternalLink() ? () => changeTicketSelectedAttr('option', 'External link') : undefined}
-                      disabled={!canAddExternalLink()}
-                      style={{
-                        width: '120px',
-                        height: '80px',
-                        borderRadius: '10px',
-                        border: tickets[ticketSelectedIndex]?.option === 'External link' ? '2px solid #00AAD6' : '2px solid #E0E0E0',
-                        background: !canAddExternalLink() ? '#F5F5F5' : (tickets[ticketSelectedIndex]?.option === 'External link' ? '#F0F9FF' : '#FCFCFC'),
-                        cursor: canAddExternalLink() ? 'pointer' : 'not-allowed',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontFamily: 'Outfit',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        color: !canAddExternalLink() ? '#999' : (tickets[ticketSelectedIndex]?.option === 'External link' ? '#00AAD6' : '#514F4F'),
-                        transition: 'all 0.2s ease',
-                        opacity: !canAddExternalLink() ? 0.5 : 1
-                      }}
-                      title={!canAddExternalLink() ? 'Maximum 3 External link tickets allowed' : ''}
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: '24px', marginBottom: '5px' }}>
-                        open_in_new
-                      </span>
-                      External Links
-                      {!canAddExternalLink() && (
-                        <div style={{ fontSize: '10px', color: '#999', marginTop: '2px' }}>
-                          (Max 3)
-                        </div>
-                      )}
-                    </button>
-
-                    {/* No Ticketing Button - Third */}
-                    <button
-                      onClick={canAddNoTicketing() ? () => changeTicketSelectedAttr('option', 'Free') : undefined}
-                      disabled={!canAddNoTicketing()}
-                      style={{
-                        width: '120px',
-                        height: '80px',
-                        borderRadius: '10px',
-                        border: tickets[ticketSelectedIndex]?.option === 'Free' ? '2px solid #00AAD6' : '2px solid #E0E0E0',
-                        background: !canAddNoTicketing() ? '#F5F5F5' : (tickets[ticketSelectedIndex]?.option === 'Free' ? '#F0F9FF' : '#FCFCFC'),
-                        cursor: canAddNoTicketing() ? 'pointer' : 'not-allowed',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontFamily: 'Outfit',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        color: !canAddNoTicketing() ? '#999' : (tickets[ticketSelectedIndex]?.option === 'Free' ? '#00AAD6' : '#514F4F'),
-                        transition: 'all 0.2s ease',
-                        opacity: !canAddNoTicketing() ? 0.5 : 1
-                      }}
-                      title={!canAddNoTicketing() ? 'Only 1 No Ticketing option allowed per event' : ''}
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: '24px', marginBottom: '5px' }}>
-                        no_accounts
-                      </span>
-                      No Ticketing
-                      {!canAddNoTicketing() && (
-                        <div style={{ fontSize: '10px', color: '#999', marginTop: '2px' }}>
-                          (Max 1)
-                        </div>
-                      )}
-                    </button>
-                  </div>
-                </span>
                 <span>
                   {(tickets[ticketSelectedIndex]?.option === 'Free' || tickets[ticketSelectedIndex]?.option === 'External link' || tickets[ticketSelectedIndex]?.option === 'RSVP') && (
                     <div style={{ marginBottom: '10px', marginTop: '10px' }}>
@@ -1388,7 +1833,7 @@ const EventCreate = () => {
                     </div>
                   )}
                   {(tickets[ticketSelectedIndex]?.option === 'Free' || tickets[ticketSelectedIndex]?.option === 'External link' || tickets[ticketSelectedIndex]?.option === 'RSVP') && (
-                  <div className={styles.inputContainer}>
+                  <div className={styles.inputContainer} style={getContainerErrorStyle('type')}>
                     <input
                       className={styles.input}
                       type="text"
@@ -1404,7 +1849,7 @@ const EventCreate = () => {
                       <div className={styles['field-label']} style={{ marginBottom: '10px', marginTop: '10px' }}>
                         External link url
                       </div>
-                      <div className={styles.inputContainer} style={{ marginBottom: '20px' }}>
+                      <div className={styles.inputContainer} style={{ marginBottom: '20px', ...getContainerErrorStyle('link1') }}>
                         <input
                           className={styles.input}
                           type="url"
@@ -1442,7 +1887,7 @@ const EventCreate = () => {
                       <div className={styles['field-label']} style={{ marginBottom: '10px', marginTop: '10px' }}>
                         Description Details
                       </div>
-                      <div className={styles.inputContainer} style={{ marginBottom: '10px' }}>
+                      <div className={styles.inputContainer} style={{ marginBottom: '10px', ...getContainerErrorStyle('description') }}>
                         <textarea
                           className={styles.input}
                           style={{ height: '80px', resize: 'none' }}
@@ -1464,7 +1909,7 @@ const EventCreate = () => {
                           <div className={styles['field-label']}>
                             Ticket Title
                           </div>
-                          <div className={styles.inputContainer}>
+                          <div className={styles.inputContainer} style={getContainerErrorStyle('type')}>
                             <select
                               className={styles.input}
                               value={tickets[ticketSelectedIndex]?.type || ''}
@@ -1504,7 +1949,7 @@ const EventCreate = () => {
                           <div className={styles['field-label']}>
                             Price per ticket (USD)
                           </div>
-                          <div className={styles.inputContainer}>
+                          <div className={styles.inputContainer} style={getContainerErrorStyle('price')}>
                             <input
                               className={styles.input}
                               type="number"
@@ -1523,7 +1968,7 @@ const EventCreate = () => {
                           <div className={styles['field-label']}>
                             Quantity available
                           </div>
-                          <div className={styles.inputContainer}>
+                          <div className={styles.inputContainer} style={getContainerErrorStyle('quantity')}>
                             <input
                               className={styles.input}
                               type="number"
@@ -1558,15 +2003,15 @@ const EventCreate = () => {
                       {/* Description - Full Width Below Grid */}
                       <div className={styles['description-field']}>
                         <div className={styles['field-label']}>
-                          Ticket description (optional)
+                          Ticket description (optional) - Max 25 words
                         </div>
-                        <div className={styles.inputContainer}>
+                        <div className={styles.inputContainer} style={getContainerErrorStyle('description')}>
                           <textarea
                             className={styles.input}
                             style={{ height: '70px', resize: 'none', lineHeight: '1.5' }}
                             cols="20" rows="3"
                             value={tickets[ticketSelectedIndex].description || ''}
-                            placeholder="e.g., Includes entry and one drink"
+                            placeholder="e.g., Includes entry and one drink (max 25 words)"
                             onBlur={() => {}}
                             onChange={(e) => changeTicketSelectedAttr('description', e.target.value)}
                           />
@@ -1577,21 +2022,151 @@ const EventCreate = () => {
                 </span>
               </span>
               )}
-              {/* Customer Preview Panel */}
-              <TicketPreview 
-                ticket={tickets[ticketSelectedIndex]}
-                eventInfo={item}
-                addressOption={addressOption}
-                businessData={businessData}
-                onTestPurchase={(taxAmount = 0, taxBreakdown = []) => handleTestPurchase(taxAmount, taxBreakdown)}
-                showTestButton={true}
-                title="Customer Preview"
-              />
+              {/* Customer Preview Panel - Only show for Tabs Tickets */}
+              {tickets[ticketSelectedIndex]?.option === 'Tabs Tickets' && (
+                <TicketPreview 
+                  ticket={tickets[ticketSelectedIndex]}
+                  eventInfo={item}
+                  addressOption={addressOption}
+                  businessData={businessData}
+                  onTestPurchase={(taxAmount = 0, taxBreakdown = []) => handleTestPurchase(taxAmount, taxBreakdown)}
+                  showTestButton={true}
+                  title="Customer Preview"
+                />
+              )}
             </div>
           </div>
         )}
       </div>
     </div>
+
+    {/* Test Purchase Modal */}
+    <Modal
+      open={showTestModal}
+      onClose={handleCloseTestModal}
+      aria-labelledby="test-purchase-modal"
+      aria-describedby="test-purchase-preview"
+    >
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '420px', // iPhone-like width
+          height: '750px', // iPhone-like height
+          bgcolor: '#1a1a1a', // Dark phone frame
+          borderRadius: '25px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+          p: '12px', // Phone frame padding
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        {/* Phone Frame Header (notch area) */}
+        <div style={{
+          height: '30px',
+          backgroundColor: '#1a1a1a',
+          borderRadius: '15px 15px 0 0',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          position: 'relative'
+        }}>
+          {/* Notch */}
+          <div style={{
+            width: '120px',
+            height: '20px',
+            backgroundColor: '#000',
+            borderRadius: '10px',
+            position: 'absolute'
+          }} />
+          
+          {/* Close button */}
+          <IconButton 
+            onClick={handleCloseTestModal}
+            style={{ 
+              position: 'absolute',
+              right: '5px',
+              top: '2px',
+              padding: '4px',
+              color: '#fff',
+              fontSize: '16px'
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>close</span>
+          </IconButton>
+        </div>
+
+        {/* Phone Screen */}
+        <div style={{
+          flex: 1,
+          backgroundColor: '#fff',
+          borderRadius: '15px',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative'
+        }}>
+          {/* Iframe Content */}
+          <div style={{
+            flex: 1,
+            overflow: 'hidden'
+          }}>
+            {testPurchaseUrl && (
+              <iframe
+                id="test-purchase-iframe"
+                src={testPurchaseUrl}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                  transform: 'scale(1)', // Mobile scale
+                  transformOrigin: 'top left'
+                }}
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
+                onLoad={() => {
+                  // Send data immediately when iframe loads
+                  setTimeout(() => {
+                    const iframe = document.getElementById('test-purchase-iframe');
+                    if (iframe && iframe.contentWindow) {
+                      console.log('🧪 Iframe loaded, sending data via postMessage');
+                      iframe.contentWindow.postMessage({
+                        type: 'MYTABS_PREVIEW_DATA',
+                        eventData: {
+                          id: 'test-' + Date.now(),
+                          name: item.name,
+                          description: item.description || '',
+                          startDate: moment(item.startDate).toISOString(),
+                          endDate: moment(item.endDate).toISOString(),
+                          address1: item.address1 || '',
+                          address2: item.address2 || '',
+                          city: item.city || '',
+                          state: item.state || '',
+                          zipCode: item.zipCode || '',
+                          tickets: tickets,
+                          hasTickets: tickets && tickets.length > 0,
+                          ticketType: tickets.some(t => t.option === 'Tabs Tickets' || t.option === 'Tickets with Tabs') ? 'tabs' : 'other',
+                          imagePreview: uploadedImage || null
+                        }
+                      }, 'https://ticket.keeptabs.app');
+                    }
+                  }, 500);
+                }}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Phone Frame Bottom */}
+        <div style={{
+          height: '20px',
+          backgroundColor: '#1a1a1a',
+          borderRadius: '0 0 15px 15px'
+        }} />
+      </Box>
+    </Modal>
   </div>
  )
 };

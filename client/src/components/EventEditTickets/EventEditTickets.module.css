@@ -1,0 +1,446 @@
+/* Main container - strict viewport constraints */
+.view {
+  background: url("../../assets/Rectangle.png") repeat center center fixed;
+  background-size: cover;
+  width: 100vw;
+  max-width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+h1 {
+  color:#F09925;
+  font-size: 22px;
+}
+
+.titleContainer {
+  position: absolute;
+  left: 80px;
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+}
+
+.tableContainer {
+  border-radius: 10px;
+  padding: 8px;
+  width: 100%;
+  max-width: calc(100vw - 16px);
+  min-height: calc(100vh - 16px);
+  background: rgba(253, 253, 253, 0.3);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.contentContainer {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  overflow-x: hidden;
+}
+
+/* Remove all gaps and ensure perfect fit */
+.eventsContainer {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: visible;
+  min-height: 500px;
+}
+
+.eventTypeContainer {
+  width: 170px;
+  height: 170px;
+  border-radius: 17px;
+  background-color: white;
+}
+
+.baseButton {
+  display: flex;
+  cursor: pointer;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 25px;
+  font-weight: bold;
+  font-size: 17px;
+  margin: 40px 0 0 0;
+  height: 60px;
+}
+
+.createEventButton {
+  background: #F09925;
+  color: white;
+  border: none;
+  border-radius: 16px;
+}
+
+.title {
+  font-family: Outfit;
+  font-size: 20.09px;
+  font-weight: 400;
+  line-height: 45.92px;
+  align-self: flex-start;
+  margin-bottom: 20px;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed
+}
+
+.input {
+  border: none;
+  width: 100%;
+}
+
+.inputContainer span {
+  color: #8F8F8F;
+}
+
+.inputContainer {
+  display: flex;
+  background: #FCFCFC;
+  padding: 10px 10px;
+  border-radius: 10px;
+  box-shadow: 0px 4.679279327392578px 9.358558654785156px 0px #32324702;
+  box-shadow: 0px 4.679279327392578px 4.679279327392578px 0px #00000014;
+  min-width: 250px;
+  min-height: 28px;
+}
+
+input:focus{
+  outline: none;
+}
+
+textarea:focus {
+  outline: none;
+}
+
+.add-another-ticket-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  height: 10%;
+}
+
+.add-another-ticket-text {
+  font-family: Outfit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 18px;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.primary-color {
+  color: #00AAD6;
+}
+
+.secondary-color {
+  color: #514F4F;
+}
+
+.tickets-viewer-container {
+  width: 22%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  padding-top: 10px;
+}
+
+.outfit-font {
+  font-family: Outfit;
+  font-weight: 400;
+  line-height: 18px;
+  font-size: 16px;
+  color: #514F4F;
+}
+
+.individual-ticket-container {
+  display: flex;
+  align-items: center;
+  padding-right: 25px;
+  margin-bottom: 15px;
+}
+
+.ticket-list-container {
+  overflow-y: scroll;
+  max-height: 310px;
+}
+
+.delete-icon {
+  cursor: pointer;
+} 
+
+.delete-icon:hover {
+  color: red;
+} 
+
+/* New classes for Step 5 functionality */
+.middle-configuration-panel {
+  width: 35%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 15px;
+}
+
+.field-label {
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.form-section {
+  margin-bottom: 20px;
+}
+
+.tabs-ticket-form {
+  width: 100%;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.description-field {
+  width: 100%;
+}
+
+.drag-handle {
+  cursor: grab;
+  margin-right: 8px;
+  color: #999;
+  display: flex;
+  align-items: center;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+}
+
+.drag-over {
+  border: 2px dashed #00AAD6 !important;
+  background-color: #f0f9ff !important;
+}
+
+/* Responsive layout improvements */
+.tickets-viewer-container {
+  flex: 0 0 280px !important;
+  min-width: 250px !important;
+  width: auto !important;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.middle-configuration-panel {
+  flex: 1 !important;
+  min-width: 350px !important;
+  max-width: 500px !important;
+  width: auto !important;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+/* Form improvements */
+.inputContainer {
+  width: 100% !important;
+  min-width: auto !important;
+  box-sizing: border-box;
+  padding: 12px 15px;
+  min-height: 44px;
+}
+
+.input {
+  font-size: 14px;
+  background: transparent;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 1200px) {
+  .eventsContainer {
+    flex-direction: column !important;
+  }
+  
+  .tickets-viewer-container,
+  .middle-configuration-panel {
+    flex: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: auto !important;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .view {
+    padding: 10px;
+  }
+  
+  .tableContainer {
+    padding: 10px;
+  }
+  
+  .tickets-viewer-container,
+  .middle-configuration-panel {
+    padding: 10px;
+  }
+  
+  .form-grid {
+    gap: 8px;
+  }
+  
+  .inputContainer {
+    padding: 10px 12px;
+  }
+}
+/* Fine-tune panel sizing to eliminate scrollbar */
+.tickets-viewer-container {
+  flex: 0 0 24% !important;
+  width: 24% !important;
+  max-width: 24% !important;
+  min-width: 200px !important;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  height: fit-content;
+}
+
+.middle-configuration-panel {
+  flex: 1 !important;
+  width: auto !important;
+  max-width: 75% !important;
+  min-width: 0 !important;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Strict form field constraints */
+.inputContainer {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: auto !important;
+  box-sizing: border-box !important;
+  padding: 12px 15px;
+  min-height: 44px;
+  overflow: hidden;
+}
+
+.input {
+  width: 100% !important;
+  max-width: 100% !important;
+  font-size: 14px;
+  background: transparent;
+  border: none;
+  box-sizing: border-box;
+}
+
+.form-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 15px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+/* Mobile responsive - stack vertically on small screens */
+@media (max-width: 1024px) {
+  .eventsContainer {
+    flex-direction: column !important;
+  }
+  
+  .tickets-viewer-container {
+    flex: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: auto !important;
+  }
+  
+  .middle-configuration-panel {
+    flex: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: auto !important;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.form-field {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+/* Ensure all child elements respect container width */
+.middle-configuration-panel * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.tickets-viewer-container * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Force text wrapping */
+.field-label {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Additional overflow prevention */
+* {
+  box-sizing: border-box;
+}
+
+.eventsContainer > * {
+  max-width: 100%;
+  overflow-x: hidden;
+}

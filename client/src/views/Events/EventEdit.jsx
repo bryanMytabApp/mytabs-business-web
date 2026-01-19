@@ -1,59 +1,34 @@
 import React, { useEffect, useRef, useState } from "react";
 import styles from './EventEdit.module.css'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Checkbox,
-  Pagination,
-  Chip,
-  Menu,
-  MenuItem,
   IconButton,
 } from '@mui/material/'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import moment from 'moment'
 import { useNavigate, useParams } from "react-router-dom";
-import { deleteEvent, getEvent, getEventsByUserId, getPresignedUrlForEvent, updateEvent } from "../../services/eventService";
-import { applySearch, getEventPicture } from "../../utils/common"
+import { getEvent, getPresignedUrlForEvent, updateEvent } from "../../services/eventService";
+import { getBusiness } from "../../services/businessService";
+import { getEventPicture } from "../../utils/common"
 import { toast } from "react-toastify";
 import { State, City } from 'country-state-city';
-import { MTBSelector, MTBTicketsEditor } from "../../components";
+import { MTBSelector, EventEditTickets } from "../../components";
 import { DemoContainer } from "@mui/x-date-pickers/internals/demo";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { processImage } from "../../components/MTBDropZone/MTBDropZone";
 import axios from "axios";
-import RSVPFormEditor from "./RSVPFormEditor";
-import RSVPSubmissionsView from "./RSVPSubmissionsView";
 
 const countryCode = 'US';
 let userId
 
 const EventEdit = () => {
-  const [selectedItems, setSelectedItems] = useState([])
   const [states, setStates] = useState([])
-  const [item, setItem] = useState({
-    name: '',
-    description: '',
-    startDate: null,
-    endDate: null,
-    state: '',
-    city: '',
-    zipCode: '',
-    address1: '',
-    address2: ''
-  })
+  const [item, setItem] = useState({})
   const [tickets, setTickets] = useState([])
   const [cities, setCities] = useState([])
   const [editScreen, setEditScreen] = useState(0)
   const [uploadedImage, setUploadedImage] = useState(null)
   const [hasChanged, setHasChanged] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [businessData, setBusinessData] = useState(null)
   const routeProps = useParams()
 
   const navigation = useNavigate();
@@ -77,57 +52,51 @@ const EventEdit = () => {
     return JSON.parse(jsonPayload)["custom:user_id"];
   };
 
-
+  const init = () => {
+    let { eventId } = routeProps
+    if(!eventId || !userId) {
+      return
+    }
+    
+    // Fetch event data
+    getEvent(userId, eventId)
+      .then(res => {
+        let item = res.data
+        item.startDate = moment(item.startDate)
+        item.endDate = moment(item.endDate)
+        setItem(item)
+        setTickets(item.tickets || [])
+      })
+      .catch(err => console.error(err))
+    
+    // Fetch business data for address and tax calculation
+    getBusiness(userId)
+      .then(res => {
+        console.log('🏢 Business data fetched:', res.data);
+        setBusinessData(res.data)
+      })
+      .catch(err => {
+        console.error('❌ Error fetching business data:', err);
+        // Don't show error to user as business data is optional
+      })
+  }
 
   useEffect(() => {
     const token = localStorage.getItem("idToken");
     userId = parseJwt(token);
+    init()
     let availableStates = State.getStatesOfCountry(countryCode);
     setStates(availableStates)
-    
-    // Fetch event data immediately after getting userId
-    if (userId && routeProps.eventId) {
-      setIsLoading(true)
-      console.log('Fetching event:', { userId, eventId: routeProps.eventId })
-      getEvent(userId, routeProps.eventId)
-        .then(res => {
-          console.log('Event data received:', res.data)
-          let eventItem = res.data
-          eventItem.startDate = moment(eventItem.startDate)
-          eventItem.endDate = moment(eventItem.endDate)
-          console.log('Setting item:', eventItem)
-          setItem(eventItem)
-          setTickets(eventItem.tickets || [])
-          
-          // Load cities for the event's state
-          if (eventItem.state && availableStates.length > 0) {
-            let selectedState = availableStates.find(state => state.name === eventItem.state)
-            if (selectedState) {
-              let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
-              setCities(availableCities)
-            }
-          }
-          setIsLoading(false)
-        })
-        .catch(err => {
-          console.error('Error fetching event:', err)
-          setIsLoading(false)
-        })
-    } else {
-      console.log('Missing userId or eventId:', { userId, eventId: routeProps.eventId })
-    }
-  }, [routeProps.eventId]);
+  }, []);
 
   useEffect(() => {
-    if(!item.state || states.length === 0) {
+    if(!item.state) {
       return
     }
     let selectedState = states.find(state => state.name === item.state)
-    if (selectedState) {
-      let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
-      setCities(availableCities)
-    }
-  }, [item.state, states])
+    let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
+    setCities(availableCities)
+  }, [item.state])
 
   const changeEditScreen = (next) => {
     if(next === 0 && !ticketsValidated()) {
@@ -141,18 +110,6 @@ const EventEdit = () => {
     let error = false
     if(ticket.option === 'External link') {
       if((!ticket.link1 && !ticket.link2 && !ticket.link3) || !ticket.type) {
-        error = true
-      }
-    } else if(ticket.option === 'Tickets with Tabs') {
-      if(!ticket.type || !ticket.price || !ticket.quantity) {
-        error = true
-      }
-      // Validate price is a positive number
-      if(ticket.price && (isNaN(ticket.price) || parseFloat(ticket.price) <= 0)) {
-        error = true
-      }
-      // Validate quantity is a positive integer
-      if(ticket.quantity && (isNaN(ticket.quantity) || parseInt(ticket.quantity) <= 0)) {
         error = true
       }
     } else {
@@ -221,17 +178,34 @@ const EventEdit = () => {
       toast.error('Please fill the tickets with errors')
       return
     }
+    
+    console.log('🔄 Saving event with tickets in this order:', tickets.map((t, i) => ({ index: i, type: t.type, option: t.option })));
+    
     let itemCopy = Object.assign({}, item)
     itemCopy.startDate = moment(itemCopy.startDate).toString()
     itemCopy.endDate = moment(itemCopy.endDate).toString()
     itemCopy.tickets = tickets
     itemCopy.timeChanged = hasChanged
 
+    console.log('🔄 itemCopy.tickets being sent to server:', itemCopy.tickets.map((t, i) => ({ index: i, type: t.type, option: t.option })));
+
     let data
     try {
       let res = await updateEvent(itemCopy)
       data = res.data
       toast.success("Saved changes!");
+      
+      // Update the local item state with the saved data to prevent re-fetch from overriding
+      if (data && data.tickets) {
+        console.log('🔄 Server returned tickets in this order:', data.tickets.map((t, i) => ({ index: i, type: t.type, option: t.option })));
+        // Update local state with server response to maintain order
+        let updatedItem = { ...item };
+        updatedItem.startDate = moment(data.startDate);
+        updatedItem.endDate = moment(data.endDate);
+        setItem(updatedItem);
+        setTickets(data.tickets || []);
+      }
+      
     } catch (error) {
       toast.error("Cannot save changes");
       console.error(error);
@@ -283,11 +257,6 @@ const EventEdit = () => {
             My Ads
           </h1>
         </div>
-        {isLoading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-            <p>Loading event details...</p>
-          </div>
-        ) : (
         <div className={styles.tableContainer}>
           <div className={styles.buttonsContainer}>
             <button
@@ -314,266 +283,248 @@ const EventEdit = () => {
             >
               Tickets
             </button>
-            <button
-              className={
-                createMultipleClasses([
-                  styles.contentSelector,
-                  styles['outfit-font'],
-                  editScreen == 2 ? styles['primary-background'] : styles['white-background'],
-                  editScreen == 2 ? styles['white-color'] : styles['secundary-color'],
-                ])}
-              onClick={() => changeEditScreen(2)}
-            >
-              RSVP Form
-            </button>
-            <button
-              className={
-                createMultipleClasses([
-                  styles.contentSelector,
-                  styles['outfit-font'],
-                  editScreen == 3 ? styles['primary-background'] : styles['white-background'],
-                  editScreen == 3 ? styles['white-color'] : styles['secundary-color'],
-                ])}
-              onClick={() => changeEditScreen(3)}
-            >
-              RSVP Submissions
-            </button>
           </div>
-          {editScreen === 1 ?
-            <MTBTicketsEditor
-              tickets={tickets}
-              setTickets={setTickets}
-            /> : editScreen === 2 ?
-            <RSVPFormEditor
-              eventId={item._id}
-              businessId={userId}
-            /> : editScreen === 3 ?
-            <RSVPSubmissionsView
-              eventId={item._id}
-              businessId={userId}
-            /> :
-            <div style={{
-                display: 'flex',
-                width: '100%',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '90%',
+          
+          {/* Sliding Container */}
+          <div className={styles.slidingContainer}>
+            <div 
+              className={styles.slidingContent}
+              style={{
+                transform: `translateX(${editScreen === 0 ? '0%' : '-50%'})`,
+                transition: 'transform 0.3s ease-in-out'
               }}
             >
-              <div
-                className={createMultipleClasses([styles.contentDivider, styles.leftMainContainer])}
-                style={{
-                  width: '44%',
-                  position: 'relative'
-                }}
-              >
-                <div className={styles.advertisementImg} >
-                  <img
-                    src={uploadedImage ? uploadedImage : getEventPicture(item._id)}
-                    alt={item.name}
-                    style={{ borderRadius: '10px' }}
-                    width="420" height="420"
-                  ></img>
-                  <button
-                    className={createMultipleClasses([
-                      styles.baseButton,
-                      styles.buttonAbsolute,
-                      styles['primary-background']
-                    ])}
-                    onClick={uploadFile}
+              {/* General Details Panel */}
+              <div className={styles.slidePanel}>
+                <div style={{
+                    display: 'flex',
+                    width: '100%',
+                    justifyContent: 'center',
+                    alignItems: 'top',
+                    height: '90%',
+                  }}
+                >
+                  <div
+                    className={createMultipleClasses([styles.contentDivider, styles.leftMainContainer])}
+                    style={{
+                      width: '44%',
+                      position: 'relative'
+                    }}
                   >
-                    Submit
-                    <span class="material-symbols-outlined">
-                      arrow_upward
+                    <div className={styles.advertisementImg} >
+                      <img
+                        src={uploadedImage ? uploadedImage : getEventPicture(item._id)}
+                        alt={item.name}
+                        style={{ borderRadius: '10px' }}
+                        width="420" 
+                      ></img>
+                      <button
+                        className={createMultipleClasses([
+                          styles.baseButton,
+                          styles.buttonAbsolute,
+                          styles['primary-background']
+                        ])}
+                        onClick={uploadFile}
+                      >
+                        Upload
+                        <span className="material-symbols-outlined">
+                          arrow_upward
+                        </span>
+                      </button>
+                    </div>
+                  
+                  </div>
+                  <div
+                    className={styles.contentDivider}
+                    style={{
+                      width: '56%',
+                      display: 'flex',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <span style={{ width: '100%' }}>
+                      <div className={styles.title} style={{ marginBottom: 0 }}>
+                        Event Name
+                      </div>
+                      <div className={styles.inputContainer} style={{ width: '50%' }}>
+                        <input
+                          className={styles.input}
+                          type="text"
+                          value={item.name}
+                          placeholder="Type name"
+                          onBlur={() => {}}
+                          onChange={(e) => handleItemChange('name',e.target.value)}
+                        />
+                      </div>
                     </span>
-                  </button>
-                </div>
-                <div className={styles.advertisementImg}>
-                  <img
-                    src={uploadedImage ? uploadedImage : getEventPicture(item._id)}
-                    alt={item.name}
-                    style={{ borderRadius: '10px' }}
-                    width="70" height="70"
-                  />
+                    <span style={{ width: '100%' }}>
+                      <div className={styles.title} style={{ marginBottom: 0 }}>
+                        Description
+                      </div>
+                      <div className={styles.inputContainer} style={{ width: '80%', marginBottom: '0px' }}>
+                        <textarea
+                          className={styles.input}
+                          style={{ width: '100%', height: '60px', resize: 'none' }}
+                          cols="20" rows="1"
+                          value={item.description}
+                          placeholder="Description 140 characters"
+                          onBlur={() => {}}
+                          onChange={(e) => handleItemChange('description',e.target.value)}
+                        />
+                      </div>
+                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <div className={styles.title} style={{ marginBottom: 0 }}>
+                        Start time, end time and location
+                      </div>
+                      <div className={styles.gridContainer}>
+                        <DemoContainer components={['DateTimePicker']} sx={{ width: '100%' }} >
+                          <DateTimePicker
+                            sx={{
+                              display: 'flex',
+                              background: '#FCFCFC',
+                              borderRadius: '10px !important',
+
+                              boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                              boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                              // maxWidth: '500px',
+                              // width: '50%',
+                              minHeight: '28px',
+                              '& .MuiOutlinedInput-notchedOutline': {
+                                border: 'none',
+                                borderRadius: '10px'
+                              },
+                              '& .MuiInputLabel-root': {
+                                transformOrigin: '0px 35px'
+                              },
+                            }}
+                            value={item.startDate}
+                            label="Start time" 
+                            maxDateTime={item.endDate}
+                            minDateTime={moment()}
+                            onChange={(newValue) => handleItemChange('startDate', newValue)}
+                          />
+                        </DemoContainer>
+                        <DemoContainer components={['DateTimePicker']} sx={{ width: '100%' }} >
+                          <DateTimePicker
+                            value={item.endDate}
+                            label="End time"
+                            sx={{
+                              display: 'flex',
+                              background: '#FCFCFC',
+                              borderRadius: '10px',
+                              boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                              boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                              minHeight: '28px',
+                              '& .MuiOutlinedInput-notchedOutline': {
+                                border: 'none'
+                              },
+                              '& .MuiInputLabel-root': {
+                                transformOrigin: '0px 35px'
+                              },
+                            }}
+                            minDateTime={item.startDate}
+                            onChange={(newValue) => handleItemChange('endDate', newValue)}
+                          />
+                        </DemoContainer>
+                        <div style={{ width: '86.5%', margin: '7px 0 0 0' }}>
+                          <MTBSelector
+                            onBlur={() => ("state")}
+                            name={"state"}
+                            placeholder='State'
+                            autoComplete='State'
+                            value={item.state}
+                            itemName={"name"}
+                            itemValue={"name"}
+                            options={states}
+                            onChange={(selected) => {
+                              handleItemChange('state', selected.name);
+                            }}
+                            styles={{
+                              display: 'flex',
+                              background: '#FCFCFC',
+                              borderRadius: '10px',
+                              boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                              boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                              width: '100%',
+                              height: '28px',
+                            }}
+                          />
+                        </div>
+                        <div style={{ width: '86.5%', margin: '7px 0 0 0' }}>
+                          <MTBSelector
+                            onBlur={() => ("city")}
+                            name={"city"}
+                            placeholder='City'
+                            autoComplete='City'
+                            value={item.city}
+                            itemName={"name"}
+                            itemValue={"name"}
+                            options={cities}
+                            onChange={(selected) => {
+                              handleItemChange('city', selected.name);
+                            }}
+                            appearDisabled={!item.state}
+                            styles={{
+                              display: 'flex',
+                              background: '#FCFCFC',
+                              borderRadius: '10px',
+                              boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                              boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
+                              width: '100%',
+                              height: '28px',
+                            }}
+                          />
+                        </div>
+                        <div className={styles.inputContainer} style={{ margin: '0 10px 10px 0', width: '93%' }}>
+                          <input
+                            className={styles.input}
+                            type="text"
+                            value={item.zipCode}
+                            placeholder="Zip Code"
+                            onBlur={() => {}}
+                            onChange={(e) => handleItemChange('zipCode',e.target.value)}
+                          />
+                        </div>
+                        <div className={styles.inputContainer} style={{ margin: '0 10px 10px 0', width: '93%' }}>
+                          <input
+                            className={styles.input}
+                            type="text"
+                            value={item.address1}
+                            placeholder="Address1"
+                            onBlur={() => {}}
+                            onChange={(e) => handleItemChange('address1',e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div
-                className={styles.contentDivider}
-                style={{
-                  width: '56%',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  alignContent: 'center',
-                }}
-              >
-                <span style={{ width: '100%' }}>
-                  <div className={styles.title} style={{ marginBottom: 0 }}>
-                    Event Name
-                  </div>
-                  <div className={styles.inputContainer} style={{ width: '50%' }}>
-                    <input
-                      className={styles.input}
-                      type="text"
-                      value={item.name}
-                      placeholder="Type name"
-                      onBlur={() => {}}
-                      onChange={(e) => handleItemChange('name',e.target.value)}
-                    />
-                  </div>
-                </span>
-                <span style={{ width: '100%' }}>
-                  <div className={styles.title} style={{ marginBottom: 0 }}>
-                    Description
-                  </div>
-                  <div className={styles.inputContainer} style={{ width: '80%', marginBottom: '0px' }}>
-                    <textarea
-                      className={styles.input}
-                      style={{ width: '100%', height: '60px', resize: 'none' }}
-                      cols="20" rows="1"
-                      value={item.description}
-                      placeholder="Description 140 characters"
-                      onBlur={() => {}}
-                      onChange={(e) => handleItemChange('description',e.target.value)}
-                    />
-                  </div>
-                </span>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div className={styles.title} style={{ marginBottom: 0 }}>
-                    Start time, end time and location
-                  </div>
-                  <div className={styles.gridContainer}>
-                    <DemoContainer components={['DateTimePicker']} sx={{ width: '100%' }} >
-                      <DateTimePicker
-                        sx={{
-                          display: 'flex',
-                          background: '#FCFCFC',
-                          borderRadius: '10px !important',
-
-                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                          // maxWidth: '500px',
-                          // width: '50%',
-                          minHeight: '28px',
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            border: 'none',
-                            borderRadius: '10px'
-                          },
-                          '& .MuiInputLabel-root': {
-                            transformOrigin: '0px 35px'
-                          },
-                        }}
-                        value={item.startDate}
-                        label="Start time" 
-                        maxDateTime={item.endDate}
-                        minDateTime={moment()}
-                        onChange={(newValue) => handleItemChange('startDate', newValue)}
-                      />
-                    </DemoContainer>
-                    <DemoContainer components={['DateTimePicker']} sx={{ width: '100%' }} >
-                      <DateTimePicker
-                        value={item.endDate}
-                        label="End time"
-                        sx={{
-                          display: 'flex',
-                          background: '#FCFCFC',
-                          borderRadius: '10px',
-                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                          minHeight: '28px',
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            border: 'none'
-                          },
-                          '& .MuiInputLabel-root': {
-                            transformOrigin: '0px 35px'
-                          },
-                        }}
-                        minDateTime={item.startDate}
-                        onChange={(newValue) => handleItemChange('endDate', newValue)}
-                      />
-                    </DemoContainer>
-                    <div style={{ width: '86.5%', margin: '7px 0 0 0' }}>
-                      <MTBSelector
-                        onBlur={() => ("state")}
-                        name={"state"}
-                        placeholder='State'
-                        autoComplete='State'
-                        value={item.state}
-                        itemName={"name"}
-                        itemValue={"name"}
-                        options={states}
-                        onChange={(selected) => {
-                          handleItemChange('state', selected);
-                        }}
-                        styles={{
-                          display: 'flex',
-                          background: '#FCFCFC',
-                          borderRadius: '10px',
-                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                          width: '100%',
-                          height: '28px',
-                        }}
-                      />
-                    </div>
-                    <div style={{ width: '86.5%', margin: '7px 0 0 0' }}>
-                      <MTBSelector
-                        onBlur={() => ("city")}
-                        name={"city"}
-                        placeholder='City'
-                        autoComplete='City'
-                        value={item.city}
-                        itemName={"name"}
-                        itemValue={"name"}
-                        options={cities}
-                        onChange={(selected) => {
-                          handleItemChange('city', selected);
-                        }}
-                        appearDisabled={!item.state}
-                        styles={{
-                          display: 'flex',
-                          background: '#FCFCFC',
-                          borderRadius: '10px',
-                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                          width: '100%',
-                          height: '28px',
-                        }}
-                      />
-                    </div>
-                    <div className={styles.inputContainer} style={{ margin: '0 10px 10px 0', width: '93%' }}>
-                      <input
-                        className={styles.input}
-                        type="text"
-                        value={item.zipCode}
-                        placeholder="Zip Code"
-                        onBlur={() => {}}
-                        onChange={(e) => handleItemChange('zipCode',e.target.value)}
-                      />
-                    </div>
-                    <div className={styles.inputContainer} style={{ margin: '0 10px 10px 0', width: '93%' }}>
-                      <input
-                        className={styles.input}
-                        type="text"
-                        value={item.address1}
-                        placeholder="Address1"
-                        onBlur={() => {}}
-                        onChange={(e) => handleItemChange('address1',e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
+              
+              {/* Tickets Panel */}
+              <div className={styles.slidePanel}>
+                <EventEditTickets
+                  tickets={tickets}
+                  setTickets={setTickets}
+                  eventInfo={item}
+                  addressOption={0} // Using business address by default
+                  businessData={businessData} // Pass the fetched business data
+                  onTestPurchase={(taxAmount, taxBreakdown) => {
+                    console.log('Test purchase clicked with tax:', { taxAmount, taxBreakdown });
+                    // Handle test purchase functionality here
+                  }}
+                />
               </div>
             </div>
-          }
-          <button
-            className={createMultipleClasses([styles.baseButton, styles.createEventButton])}
-            style={{ marginTop: '0px' }}
-            onClick={_updateEvent}
-          >
-            Save Ad
-          </button>
+          </div>
         </div>
-        )}
+        <button
+          className={createMultipleClasses([styles.baseButton, styles.createEventButton])}
+          onClick={_updateEvent}
+        >
+          Save Ad
+        </button>
       </div>
     </div>
  )

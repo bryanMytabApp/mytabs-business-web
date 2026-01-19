@@ -8,6 +8,7 @@ import MTBSubscriptionRateCard from "./MTBSubscriptionRateCard/MTBSubscriptionRa
 import MTBCategorySelector from "./MTBCategorySelector/MTBCategorySelector";
 import MTBModalGeneric from "./MTBModal/MTBModalGeneric";
 import MTBTicketsEditor from "./MTBTicketsEditor/MTBTicketsEditor";
+import EventEditTickets from "./EventEditTickets/EventEditTickets";
 import MTBMenuActions from "./MTBMenuActions/MTBMenuActions";
 import MTBComingSoon from "./MTBComingSoon/MTBComingSoon";
 
@@ -22,6 +23,7 @@ export {
   MTBCategorySelector,
   MTBModalGeneric,
   MTBTicketsEditor,
+  EventEditTickets,
   MTBMenuActions,
   MTBComingSoon
 }

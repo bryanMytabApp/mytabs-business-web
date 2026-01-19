@@ -167,3 +167,56 @@ textarea:focus {
 .delete-icon:hover {
   color: red;
 } 
+/* New classes for Step 5 functionality */
+.middle-configuration-panel {
+  width: 45%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 20px;
+}
+
+.field-label {
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.form-section {
+  margin-bottom: 20px;
+}
+
+.tabs-ticket-form {
+  width: 100%;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.description-field {
+  width: 100%;
+}
+
+.drag-handle {
+  cursor: grab;
+  margin-right: 8px;
+  color: #999;
+  display: flex;
+  align-items: center;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}

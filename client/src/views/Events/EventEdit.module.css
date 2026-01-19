@@ -24,19 +24,19 @@ h1 {
   margin-top: 10px;
   border-radius: 10px;
   padding: 15px;
-  /* box-sizing: border-box; */
-  width: 97%;
-  height: 97%;
+  width: 98%;
+  height: 95%;
   background: rgba(253, 253, 253, 0.3);
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   position: relative;
+  box-sizing: border-box;
 }
 .contentContainer {
-  width: 88%;
-  height: 88%;
+  width: 95%;
+  height: 85%; /* Reduced from 90% to make room for button */
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -67,9 +67,10 @@ h1 {
   color: white;
   border: none;
   border-radius: 16px;
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  align-self: center;
+  margin-top: 10px; /* Reduced from 20px */
+  margin-bottom: 10px; /* Added bottom margin */
+  z-index: 40;
 }
 .title {
   font-family: Outfit;
@@ -191,7 +192,11 @@ textarea:focus {
   padding: 6px 8px;
   border-radius: 100px;
   box-sizing: border-box;
-  margin-left: 95px;
+  margin-left: 0px;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
 }
 .contentSelector:first-child {
   margin-right: 10px;
@@ -230,4 +235,32 @@ textarea:focus {
   color: #00AAD6;
   border: 2px solid #00AAD6;
   
+}
+/* Sliding Animation Styles */
+.slidingContainer {
+  width: 100%;
+  min-height: 400px; /* Reduced from 500px */
+  height: auto;
+  overflow: hidden; /* Hide overflow to prevent content bleeding */
+  position: relative;
+  flex: 1;
+}
+
+.slidingContent {
+  display: flex;
+  width: 200%; /* Two panels side by side */
+  height: 100%;
+  transition: transform 0.3s ease-in-out;
+}
+
+.slidePanel {
+  width: 50%; /* Each panel takes half of the sliding content */
+  min-height: 400px; /* Reduced from 500px */
+  height: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow: hidden; /* Prevent content from overflowing the panel */
 }
