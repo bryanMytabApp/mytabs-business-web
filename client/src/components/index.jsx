@@ -11,6 +11,7 @@ import MTBTicketsEditor from "./MTBTicketsEditor/MTBTicketsEditor";
 import EventEditTickets from "./EventEditTickets/EventEditTickets";
 import MTBMenuActions from "./MTBMenuActions/MTBMenuActions";
 import MTBComingSoon from "./MTBComingSoon/MTBComingSoon";
+import TicketPreview from "./TicketPreview/TicketPreview";
 
 export {
   MTBButton,
@@ -25,5 +26,6 @@ export {
   MTBTicketsEditor,
   EventEditTickets,
   MTBMenuActions,
-  MTBComingSoon
+  MTBComingSoon,
+  TicketPreview
 }
