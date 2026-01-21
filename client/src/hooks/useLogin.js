@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useNavigate} from "react-router-dom";
 import { getToken } from "../services/authService";
@@ -12,6 +12,22 @@ const useLogin = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [returnUrl, setReturnUrl] = useState(null);
+
+  // Extract returnUrl from query parameters on component mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const encodedReturnUrl = params.get('returnUrl');
+    if (encodedReturnUrl) {
+      try {
+        const decodedReturnUrl = decodeURIComponent(encodedReturnUrl);
+        setReturnUrl(decodedReturnUrl);
+        console.log('📍 Return URL detected:', decodedReturnUrl);
+      } catch (error) {
+        console.error('Failed to decode returnUrl:', error);
+      }
+    }
+  }, []);
 
   const goToPasswordRecovery = () => {
     navigate("/password-recovery");
@@ -56,10 +72,23 @@ const useLogin = () => {
 
       let userId = parseJwt(res.IdToken);
 
-      // Skip subscription check for now - allow all users to access
-      // TODO: Re-enable subscription enforcement when ready
-      console.log("Subscription check disabled - allowing access");
-      navigate("/admin/home");
+      // If returnUrl exists, redirect there with auth parameters
+      if (returnUrl) {
+        const token = res.IdToken;
+        const userIdFromToken = userId?.sub || userId?.email || username.trim();
+        
+        // Append token and userId to returnUrl
+        const separator = returnUrl.includes('?') ? '&' : '?';
+        const authenticatedUrl = `${returnUrl}${separator}token=${encodeURIComponent(token)}&userId=${encodeURIComponent(userIdFromToken)}`;
+        
+        console.log('🔐 Redirecting to verification with auth:', authenticatedUrl);
+        window.location.href = authenticatedUrl;
+      } else {
+        // Skip subscription check for now - allow all users to access
+        // TODO: Re-enable subscription enforcement when ready
+        console.log("Subscription check disabled - allowing access");
+        navigate("/admin/home");
+      }
     } catch (error) {
       toast.error("Invalid user and/or password");
       console.error("Login failed:", error);
