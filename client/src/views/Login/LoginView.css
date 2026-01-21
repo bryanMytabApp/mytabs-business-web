@@ -34,6 +34,23 @@
   opacity: 0.5;
 }
 
+.Login-view .Container-box-responsive {
+  display: flex;
+  bottom: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  right: 0;
+  background: rgba(250, 248, 246, 0.47);
+  border-radius: 63px 0px 0px 0px;
+  padding: 32px;
+  position: fixed;
+  left: 491px;
+  top: 0px;
+  box-shadow: -9px 0px 16px 0px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  backdrop-filter: blur(30px);
+}
+
 .Login-view .Container-box {
   display: flex;
   bottom: 0;
@@ -92,8 +109,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin: 16%;
+  margin: 3% 16%;
   justify-content: center;
+  flex: fit-content;
 }
 
 .Login-view .Body-categories {
@@ -112,14 +130,16 @@
   display: flex;
   justify-content: space-between;
   background: #ffffffff;
-  width: 97.5%;
+  width: 100%;
   bottom: 0;
-  position: absolute;
-  padding: 32px 16px 48px 16px;
+  position: fixed;
+  padding: 12px 12px 16px 12px;
   z-index: 0;
   right: 0;
   box-shadow: 0px 4px 32px 0px rgba(0, 0, 0, 0.15);
   font-family: "Outfit-Regular";
+  gap: 10px;
+  align-items: center;
 }
 
 .input-container {
@@ -186,7 +206,6 @@
   font-size: 20.091px;
   font-style: normal;
   font-weight: 400;
-  line-height: 45.921px;
 }
 
 .or {
@@ -201,11 +220,12 @@
 
 .progress-bar {
   position: absolute;
-  bottom: 128px;
+  bottom: 79px;
   height: 8px;
   background-color: orange;
   margin-left: -33px;
   transition: width 0.3s ease;
+  width: 100%;
 }
 
 .Forgot-password {
@@ -222,16 +242,16 @@
 .agree-text {
   color: var(--base-dark, #2c2c2c);
   font-family: Outfit, sans-serif;
-  font-size: 16px;
-  line-height: 45.92px;
+  font-size: 12px;
+  line-height: 16px;
   font-weight: 400;
 }
 
 .agree-text-underline {
   color: var(--base-dark, #2c2c2c);
   font-family: Outfit, sans-serif;
-  font-size: 16px;
-  line-height: 45.92px;
+  font-size: 12px;
+  line-height: 16px;
   text-decoration: underline;
   font-weight: 500;
 }
@@ -314,4 +334,268 @@
   gap: 16px;
   margin: 110px 16%;
   justify-content: center;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .Login-view {
+    min-height: 100vh;
+    height: auto;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 10px;
+    overflow-y: visible;
+  }
+
+  .rectangle {
+    display: none;
+  }
+
+  .Login-view::before {
+    display: none;
+  }
+
+  /* Hide desktop positioned elements */
+  .welcome-back,
+  .log-in-to-your-account,
+  .log-in-to-your-account-subtext {
+    display: none;
+  }
+
+  .myTabsLogo {
+    position: static;
+    display: block;
+    margin: 0 auto 15px;
+    max-width: 120px;
+  }
+
+  .Login-view .Container-box,  
+  .Login-view .Container-box-responsive,
+  .Login-view .MainContent {
+    position: static;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    border-radius: 20px;
+    padding: 15px;
+    width: 100%;
+    max-width: 500px;
+    min-height: auto;
+    height: auto;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+    margin: 10px 0;
+  }
+
+  .Login-view .Headers {
+    display: none;
+  }
+
+  /* Hide Admin Portal link on mobile - targets the div with border-top */
+  .Login-view .Container-box > div[style*="border-top"] {
+    display: none !important;
+  }
+
+  .Login-view .Container-box-responsive > div[style*="border-top"] {
+    display: none !important;
+  }
+
+  .Login-view .Body {
+    margin: 0;
+    gap: 10px;
+  }
+
+  .Login-view .Body-categories {
+    margin: 0;
+    gap: 10px;
+  }
+
+  .formContainer {
+    margin: 0;
+    gap: 10px;
+  }
+
+  .Account-details {
+    font-size: 16px;
+    line-height: 22px;
+    text-align: center;
+    margin-bottom: 8px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Fix text wrapping and display issues */
+  .Login-view .Container-box,
+  .Login-view .Container-box-responsive,
+  .Login-view .Container-box * {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+  }
+
+  .Login-view .Footer {
+    position: static !important;
+    width: 100% !important;
+    padding: 10px 0 0 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    text-align: center !important;
+    margin: 0 !important;
+    bottom: auto !important;
+    right: auto !important;
+  }
+
+  .Login-view .Footer > div:first-child {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: none !important;
+  }
+
+  .Login-view .Footer button {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: none !important;
+    padding: 12px 20px !important;
+    font-size: 16px !important;
+    border-radius: 12px !important;
+  }
+
+  .already-have-an-account-log-in {
+    position: static;
+    right: auto;
+    text-align: center;
+    display: block;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    font-size: 14px !important;
+    line-height: 20px !important;
+    margin-top: 10px !important;
+  }
+
+  .already-have-an-account-log-in-span,
+  .already-have-an-account-log-in-span2 {
+    font-size: 14px !important;
+    line-height: 20px !important;
+  }
+
+  .Sign-up-account-test {
+    line-height: 20px;
+    text-align: center;
+    font-size: 14px;
+  }
+
+  .agree-text {
+    line-height: 20px;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .Forgot-password {
+    line-height: 20px;
+    text-align: center;
+    display: block;
+    margin-top: 8px;
+    font-size: 14px;
+  }
+
+  .registration-back {
+    display: none !important;
+  }
+
+  .back-reg {
+    display: none !important;
+  }
+
+  .or {
+    margin: 8px 0;
+    font-size: 14px;
+  }
+
+  /* Fix input width overflow on mobile */
+  .MTB-input,
+  .input-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 60px !important;
+  }
+
+  .MTB-input input,
+  .input-container input {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    height: 40px !important;
+    font-size: 14px !important;
+  }
+
+  /* Fix Actions section for password recovery and registration */
+  .Login-view .Actions {
+    position: static !important;
+    width: 100% !important;
+    margin-top: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .Login-view .Actions button {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 12px 20px !important;
+    font-size: 16px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Hide progress bar on mobile to save space */
+  .progress-bar {
+    display: none !important;
+  }
+}
+
+  .Sign-up-account-text-responsive {
+    display: none ;
+  }
+
+
+@media (max-width: 480px) {
+  .Login-view {
+    padding: 15px;
+  }
+
+  .Login-view .Container-box, 
+  .Login-view .Container-box-responsive,
+  .Login-view .MainContent {
+    padding: 25px 15px;
+  }
+
+  .Sign-up-account-text-responsive{
+    display: block;
+  }
+
+  .Account-details {
+    font-size: 20px;
+    line-height: 28px;
+  }
+
+  .myTabsLogo {
+    max-width: 120px;
+    margin-bottom: 20px;
+  }
+
+  .formContainer {
+    gap: 15px;
+  }
+
+  .agree-text,
+  .already-have-an-account-log-in-span,
+  .already-have-an-account-log-in-span2 {
+    font-size: 13px;
+    line-height: 20px;
+  }
 }

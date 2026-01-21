@@ -26,7 +26,7 @@ export default function LoginView() {
         alt='logo'
       />
 
-      <div className='Container-box'>
+      <div className='Container-box-responsive'>
         <div className='Headers'>
           <div className='Sign-up-account-text'>
             Don't have an account? &nbsp; &nbsp;
@@ -107,6 +107,8 @@ export default function LoginView() {
             isLoading={isLoading}>
             Log In
           </MTBButton>
+          <div class="Sign-up-account-text-responsive Sign-up-account-text">Don't have an account? &nbsp; &nbsp;<span class="Sign-up-underline">Sign up</span></div>
+ 
         </div>
         <div style={{
           textAlign: 'center', 

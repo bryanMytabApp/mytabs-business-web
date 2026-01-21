@@ -32,8 +32,8 @@ export default function PasswordRecovery() {
   const [part, setPart] = useState(0);
 
   const firstHeaderText = [
-    "In order to change your password, we need to verify your identity. Enter the email address associated with your Tabs account.",
-    "If your email address exists in our database, you will receive a code. Enter it below. Make sure to check Spam. ",
+    "To reset your password, we need to verify your identity. Please enter the email address linked to your account.",
+    "If your email is registered in our system, you'll receive a code. Please check your inbox (including Spam) and enter the code below.",
   ];
 
   const myRef = useRef(null);
@@ -197,7 +197,7 @@ export default function PasswordRecovery() {
         alt='logo'
       />
       <div className='Headers'>Registration</div>
-      <div className='Container-box'>
+      <div className='Container-box-responsive'>
         {part > 0 && (
           <div
             className='back-reg'
@@ -226,23 +226,15 @@ export default function PasswordRecovery() {
             {firstHeaderText[part]}
           </div>
           {part === 0 && (
-            <>
-              <table style={{gap: "20px"}}>
-                <tr colspan='2'>
-                  <td>
-                    <MTBInput
-                      style={{marginRight: "10px"}}
-                      name='email'
-                      placeholder='Email'
-                      autoComplete='email'
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      helper={errors.email && {type: "warning", text: errors.email}}
-                    />
-                  </td>
-                </tr>
-              </table>
-            </>
+            <MTBInput
+              style={{marginRight: "10px"}}
+              name='email'
+              placeholder='Email'
+              autoComplete='email'
+              value={formData.email}
+              onChange={handleInputChange}
+              helper={errors.email && {type: "warning", text: errors.email}}
+            />
           )}
           {part === 1 && (
             <>

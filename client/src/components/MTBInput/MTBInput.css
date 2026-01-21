@@ -143,13 +143,23 @@ div.MTB-input input:focus-visible {
 
 .view-icon {
 
-  right: 20px;
+  right: 40px;
   height: 20px;
   cursor: pointer;
   background-color: transparent;
   border: none;
 }
 
+@media (max-width: 768px) {
+  .view-icon {
+    right: 15px;  
+    top: 10px;
+    height: 20px;
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+  }
+}
 
 .Helper-text img {
   margin-right: 4px;

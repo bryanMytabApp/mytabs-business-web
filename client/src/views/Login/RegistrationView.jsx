@@ -526,7 +526,7 @@ export default function RegistrationView() {
         alt='logo'
       />
       <div className='Headers'>Registration</div>
-      <div className='Container-box'>
+      <div className='Container-box-responsive'>
         {part > 0 && (
           <div
             className='back-reg'
@@ -556,33 +556,28 @@ export default function RegistrationView() {
           </div>
           {part === 0 && (
             <>
-              <table style={{gap: "20px"}}>
-                <tr colspan='2'>
-                  <td>
-                    <MTBInput
-                      style={{marginRight: "10px"}}
-                      name='email'
-                      placeholder='Email'
-                      autoComplete='email'
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      helper={errors.email && {type: "warning", text: errors.email}}
-                    />
-                  </td>
-
-                  <td>
-                    <MTBInput
-                      style={{marginLeft: "10px"}}
-                      name='username'
-                      placeholder='Username'
-                      autoComplete='username'
-                      value={formData.username}
-                      onChange={handleInputChange}
-                      helper={errors.username && {type: "warning", text: errors.username}}
-                    />
-                  </td>
-                </tr>
-              </table>
+              <div style={{display: "flex", gap: "20px", width: "100%"}}>
+                <div style={{flex: 1}}>
+                  <MTBInput
+                    name='email'
+                    placeholder='Email'
+                    autoComplete='email'
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    helper={errors.email && {type: "warning", text: errors.email}}
+                  />
+                </div>
+                <div style={{flex: 1}}>
+                  <MTBInput
+                    name='username'
+                    placeholder='Username'
+                    autoComplete='username'
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    helper={errors.username && {type: "warning", text: errors.username}}
+                  />
+                </div>
+              </div>
 
               <MTBInput
                 type='text'
@@ -614,83 +609,63 @@ export default function RegistrationView() {
                 onChange={handleInputChange}
                 helper={errors.confirmPassword && {type: "warning", text: errors.confirmPassword}}
               />
-              <table>
-                <tr colspan='2'>
-                  <td>
-                    <MTBInputValidator
-                      textRequirement={"One uppercase letter"}
-                      isValid={validationState.hasUppercase}
-                    />
-                  </td>
-                  <td>
-                    <MTBInputValidator
-                      textRequirement={"One special character"}
-                      isValid={validationState.hasSymbol}
-                    />
-                  </td>
-                </tr>
-                <tr colspan='2'>
-                  <td>
-                    <MTBInputValidator
-                      textRequirement={"One number"}
-                      isValid={validationState.hasNumber}
-                    />
-                  </td>
-                  <td>
-                    <MTBInputValidator
-                      textRequirement={"11+ characters"}
-                      isValid={validationState.hasAtLeastNumCharacters}
-                    />
-                  </td>
-                </tr>
-                <tr colspan='2'>
-                  <td>
-                    <MTBInputValidator
-                      textRequirement={"One lowercase letter"}
-                      isValid={validationState.hasLowercase}
-                    />
-                  </td>
-                </tr>
-              </table>
+              <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px"}}>
+                <MTBInputValidator
+                  textRequirement={"One uppercase letter"}
+                  isValid={validationState.hasUppercase}
+                />
+                <MTBInputValidator
+                  textRequirement={"One special character"}
+                  isValid={validationState.hasSymbol}
+                />
+                <MTBInputValidator
+                  textRequirement={"One number"}
+                  isValid={validationState.hasNumber}
+                />
+                <MTBInputValidator
+                  textRequirement={"11+ characters"}
+                  isValid={validationState.hasAtLeastNumCharacters}
+                />
+                <MTBInputValidator
+                  textRequirement={"One lowercase letter"}
+                  isValid={validationState.hasLowercase}
+                />
+              </div>
             </>
           )}
           {part === 1 && (
             <>
-              <table>
-                <tr colspan='2'>
-                  <td>
-                    <MTBInput
-                      style={{marginRight: "10px"}}
-                      onBlur={() => handleBlur("firstName")}
-                      name='firstName'
-                      placeholder='First Name'
-                      autoComplete='given-name'
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      helper={
-                        errors.firstName ? {type: "warning", text: errors.firstName} : undefined
+              <div style={{display: "flex", gap: "20px", width: "100%"}}>
+                <div style={{flex: 1}}>
+                  <MTBInput
+                    onBlur={() => handleBlur("firstName")}
+                    name='firstName'
+                    placeholder='First Name'
+                    autoComplete='given-name'
+                    value={formData.firstName}
+                    onChange={handleInputChange}
+                    helper={
+                      errors.firstName ? {type: "warning", text: errors.firstName} : undefined
+                    }
+                  />
+                </div>
+                <div style={{flex: 1}}>
+                  <MTBInput
+                    onBlur={() => handleBlur("lastName")}
+                    name='lastName'
+                    placeholder='Last Name'
+                    autoComplete='lastName'
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    helper={
+                      errors.lastName && {
+                        type: "warning",
+                        text: errors.lastName,
                       }
-                    />
-                  </td>
-                  <td>
-                    <MTBInput
-                      style={{marginLeft: "10px"}}
-                      onBlur={() => handleBlur("lastName")}
-                      name='lastName'
-                      placeholder='Last Name'
-                      autoComplete='lastName'
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      helper={
-                        errors.lastName && {
-                          type: "warning",
-                          text: errors.lastName,
-                        }
-                      }
-                    />
-                  </td>
-                </tr>
-              </table>
+                    }
+                  />
+                </div>
+              </div>
 
               <div className='Account-details' style={{color: "black"}}>
                 {secondHeaderText}
