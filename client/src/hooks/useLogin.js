@@ -4,6 +4,7 @@ import { useNavigate} from "react-router-dom";
 import { getToken } from "../services/authService";
 import { getCustomerSubscription } from "../services/paymentService";
 import { parseJwt } from "../utils/common";
+import { isValidReturnUrl, buildAuthenticatedReturnUrl } from "../utils/authUtils";
 
 
 const useLogin = () => {
@@ -70,16 +71,37 @@ const useLogin = () => {
       localStorage.setItem("username", username.trim());
       toast.success("Welcome!");
 
-      let userId = parseJwt(res.IdToken);
+      // Parse the full JWT payload to get user info
+      const token = res.IdToken;
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map(function (c) {
+            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join("")
+      );
+      const tokenPayload = JSON.parse(jsonPayload);
+      
+      // Extract userId - try custom:user_id first, then sub (Cognito user ID), then email
+      // FIX v2: Properly extract userId from JWT payload (not calling .sub on string)
+      const userIdFromToken = tokenPayload["custom:user_id"] || tokenPayload.sub || tokenPayload.email || username.trim();
+      console.log('🔑 [useLogin v2] Extracted userId from token:', userIdFromToken, 'type:', typeof userIdFromToken);
 
-      // If returnUrl exists, redirect there with auth parameters
+      // If returnUrl exists, validate and redirect there with auth parameters
       if (returnUrl) {
-        const token = res.IdToken;
-        const userIdFromToken = userId?.sub || userId?.email || username.trim();
+        // Validate returnUrl to prevent open redirect attacks
+        if (!isValidReturnUrl(returnUrl)) {
+          console.error('❌ Invalid returnUrl - redirecting to dashboard');
+          toast.warning("Invalid return URL - redirecting to dashboard");
+          navigate("/admin/home");
+          return;
+        }
         
-        // Append token and userId to returnUrl
-        const separator = returnUrl.includes('?') ? '&' : '?';
-        const authenticatedUrl = `${returnUrl}${separator}token=${encodeURIComponent(token)}&userId=${encodeURIComponent(userIdFromToken)}`;
+        // Build authenticated URL with token and userId
+        const authenticatedUrl = buildAuthenticatedReturnUrl(returnUrl, token, userIdFromToken);
         
         console.log('🔐 Redirecting to verification with auth:', authenticatedUrl);
         window.location.href = authenticatedUrl;

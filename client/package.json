@@ -57,7 +57,7 @@
     "react-svg": "^16.1.34",
     "react-toastify": "^10.0.5",
     "serverless-deployment-bucket": "^1.6.0",
-    "serverless-s3-sync": "^3.3.0",
+    "serverless-s3-sync": "^1.17.3",
     "web-vitals": "^4.0.1"
   }
 }
