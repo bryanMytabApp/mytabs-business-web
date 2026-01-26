@@ -107,7 +107,7 @@ export default function LoginView() {
             isLoading={isLoading}>
             Log In
           </MTBButton>
-          <div class="Sign-up-account-text-responsive Sign-up-account-text">Don't have an account? &nbsp; &nbsp;<span class="Sign-up-underline">Sign up</span></div>
+          <div class="Sign-up-account-text-responsive Sign-up-account-text">Don't have an account? &nbsp; &nbsp;<span class="Sign-up-underline" onClick={handleSignUp}>Sign up</span></div>
  
         </div>
         <div style={{
