@@ -233,7 +233,7 @@ const EventCreate = () => {
   }
 
   const disabledButtonOnStepThree = () => {
-    return addressOption === 1 && (!item.city || item.zipCode.length < 5 || !item.address1)
+    return addressOption === 1 && !item.address1
   }
 
   useEffect(() => {
@@ -1193,7 +1193,7 @@ const EventCreate = () => {
                   Where is it located
                 </div>
                 <span
-                  style={{ width: '100%', display: 'flex', cursor: 'pointer', }}
+                  style={{ width: '100%', display: 'flex', cursor: 'pointer', marginBottom: '15px' }}
                   onClick={() => setAddressOption(0)}
                 >
                   <div
@@ -1205,7 +1205,6 @@ const EventCreate = () => {
                       cursor: 'pointer',
                       boxShadow: '0px 0px 0px 4px #98A2B324',
                       marginRight: '10px',
-                      marginBottom: '20px'
                     }}
                   >
                     <div>
@@ -1221,7 +1220,7 @@ const EventCreate = () => {
                   </div>
                 </span>
                 <span
-                  style={{ width: '100%', display: 'flex', cursor: 'pointer', }}
+                  style={{ width: '100%', display: 'flex', cursor: 'pointer', marginBottom: '15px' }}
                   onClick={() => setAddressOption(1)}
                 >
                   <div
@@ -1233,7 +1232,6 @@ const EventCreate = () => {
                       cursor: 'pointer',
                       boxShadow: '0px 0px 0px 4px #98A2B324',
                       marginRight: '10px',
-                      marginBottom: '10px',
                     }}
                   >
                     <div>
@@ -1250,82 +1248,86 @@ const EventCreate = () => {
                 </span>
                 {addressOption === 1 && (
                   <span style={{ width: '100%' }}>
-                    {/* Street Address with Google Places Autocomplete */}
-                    <div className={styles.inputContainer} style={{ width: '100%', marginBottom: '10px' }}>
+                    {/* Google Places Autocomplete Input */}
+                    <div className={styles.inputContainer} style={{ width: '100%', marginBottom: '15px' }}>
                       <input
                         ref={addressInputRef}
                         className={styles.input}
                         type="text"
-                        value={item.address1}
                         placeholder="Start typing address..."
                         onBlur={() => {}}
-                        onChange={(e) => handleItemChange('address1',e.target.value)}
+                        onChange={() => {}} // Google Places handles the changes
                       />
-                    </div>                  
-                    {/* City, State, Zip Row */}
-                    <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', gap: '10px', marginBottom: '10px' }}>
-                      <span style={{ flex: 2 }}>
-                        <MTBSelector
-                          onBlur={() => ("city")}
-                          name={"city"}
-                          placeholder='City'
-                          autoComplete='City'
-                          value={item.city}
-                          itemName={"name"}
-                          itemValue={"name"}
-                          options={cities}
-                          onChange={(selected) => {
-                            handleItemChange('city', selected.name);
-                          }}
-                          appearDisabled={!item.state}
-                          styles={{
-                            display: 'flex',
-                            background: '#FCFCFC',
-                            borderRadius: '10px',
-                            boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                            width: '100%',
-                            height: '28px',
-                          }}
-                        />
-                      </span>
-                      <span style={{ flex: 1 }}>
-                        <MTBSelector
-                          onBlur={() => ("state")}
-                          name={"state"}
-                          placeholder='State'
-                          autoComplete='State'
-                          value={item.state}
-                          itemName={"name"}
-                          itemValue={"name"}
-                          options={states}
-                          onChange={(selected) => {
-                            handleItemChange('state', selected.name);
-                          }}
-                          styles={{
-                            display: 'flex',
-                            background: '#FCFCFC',
-                            borderRadius: '10px',
-                            boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                            width: '100%',
-                            height: '28px',
-                          }}
-                        />
-                      </span>
-                      <div className={styles.inputContainer} style={{ flex: 1 }}>
-                        <input
-                          className={styles.input}
-                          type="text"
-                          value={item.zipCode}
-                          placeholder="Zip Code"
-                          onBlur={() => {}}
-                          onChange={(e) => handleItemChange('zipCode',e.target.value)}
-                          maxLength="5"
-                          pattern="[0-9]*"
-                        />
-                      </div>
                     </div>
                     
-                    {/* Optional Address Line 2 */}
+                    {/* Address Details Display (Read-only) - Horizontal Layout */}
+                    {(item.address1 || item.city || item.state || item.zipCode) && (
+                      <div style={{
+                        backgroundColor: '#F8F9FA',
+                        border: '1px solid #E9ECEF',
+                        borderRadius: '10px',
+                        padding: '15px',
+                        marginBottom: '15px'
+                      }}>
+                        <div style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#495057',
+                          marginBottom: '10px'
+                        }}>
+                          Address Details:
+                        </div>
+                        
+                        <div style={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: '15px',
+                          alignItems: 'center'
+                        }}>
+                          {item.address1 && (
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#6C757D',
+                              flex: '2 1 200px'
+                            }}>
+                              <strong>Street:</strong> {item.address1}
+                            </div>
+                          )}
+                          
+                          {item.city && (
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#6C757D',
+                              flex: '1 1 120px'
+                            }}>
+                              <strong>City:</strong> {item.city}
+                            </div>
+                          )}
+                          
+                          {item.state && (
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#6C757D',
+                              flex: '0 1 80px'
+                            }}>
+                              <strong>State:</strong> {item.state}
+                            </div>
+                          )}
+                          
+                          {item.zipCode && (
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#6C757D',
+                              flex: '0 1 100px'
+                            }}>
+                              <strong>Zip:</strong> {item.zipCode}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Optional Address Line 2 - Keep this as manual input */}
                     <div className={styles.inputContainer} style={{ width: '100%', marginBottom: '10px' }}>
                       <input
                         className={styles.input}

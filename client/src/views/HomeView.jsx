@@ -13,8 +13,8 @@ import myEventsInactiveIcon from "../assets/menu/myEventsInactive.svg";
 import myEventsActiveIcon from "../assets/menu/myEventsActive.svg";
 import analyticsActiveIcon from "../assets/menu/analyticsActive.svg";
 import analyticsInactiveIcon from "../assets/menu/analyticsInactive.svg";
-import myTicketsActiveIcon from "../assets/menu/analyticsActive.svg"; // Placeholder - will be replaced with ticket icon
-import myTicketsInactiveIcon from "../assets/menu/analyticsInactive.svg"; // Placeholder - will be replaced with ticket icon
+import myTicketsActiveIcon from "../assets/menu/ticketActive.svg";
+import myTicketsInactiveIcon from "../assets/menu/ticketInactive.svg";
 import upgradesAddonsActiveIcon from "../assets/menu/upgradesAddonsActive.svg";
 import upgradesAddonsInactiveIcon from "../assets/menu/upgradesAddonsInactive.svg";
 import shopActiveIcon from "../assets/menu/shopActive.svg";
@@ -26,6 +26,7 @@ import logout from "../assets/menu/logout.svg";
 import {UserDataProvider} from "../utils/UserDataProvider";
 import {getCookie} from "../utils/Tools.ts";
 import {MTBLoading} from "../components";
+import {hasMyTicketsAccess} from "../utils/authUtils";
 
 const options = [
   {
@@ -121,6 +122,30 @@ export default function HomeView() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [userHasTicketAccess, setUserHasTicketAccess] = useState(false);
+
+  // Check ticket access on component mount
+  useEffect(() => {
+    const checkTicketAccess = () => {
+      const hasAccess = hasMyTicketsAccess();
+      setUserHasTicketAccess(hasAccess);
+      console.log('🎫 User has My Tickets access:', hasAccess);
+    };
+
+    checkTicketAccess();
+  }, []);
+
+  // Filter options based on user access
+  const getFilteredOptions = () => {
+    return options.filter(option => {
+      // Hide My Tickets if user doesn't have access
+      if (option.title === "My Tickets" && !userHasTicketAccess) {
+        return false;
+      }
+      // Hide other restricted items (Admin Portal should be in bottom section only)
+      return !["Logout", "Configuration", "Admin Portal"].includes(option.title);
+    });
+  };
 
   const handleExpand = () => {
     setIsExpanded(!isExpanded);
@@ -179,9 +204,7 @@ export default function HomeView() {
                   borderRadius: "10px",
                 }}
               >
-                {options
-                  .filter((item) => !["Logout", "Configuration", "Admin Portal"].includes(item.title))
-                  .map((item) => (
+                {getFilteredOptions().map((item) => (
                     <NavLink
                       key={item.path}
                       to={item.path}
@@ -258,31 +281,33 @@ export default function HomeView() {
                       </span>
                     )}
                   </NavLink>
-                  <NavLink
-                    key={options[options.length - 2].path}
-                    style={{
-                      backgroundColor: !isExpanded ? null : "white",
-                      fontFamily: "Poppins",
-                      fontWeight: 500,
-                    }}
-                    className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
-                    to={options[options.length - 2].path}
-                    children={({isActive}) => (
-                      <>
-                        <div style={{ display: isActive ? 'block' : 'none' }}>
-                          <ReactSVG src={options[options.length - 2].icon.active} />
-                        </div>
-                        <div style={{ display: isActive ? 'none' : 'block' }}>
-                          <ReactSVG src={options[options.length - 2].icon.inactive} />
-                        </div>
-                        {isExpanded && (
-                          <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
-                            {options[options.length - 2].title}
-                          </span>
-                        )}
-                      </>
-                    )}
-                  />
+                  {userHasTicketAccess && (
+                    <NavLink
+                      key={options[options.length - 2].path}
+                      style={{
+                        backgroundColor: !isExpanded ? null : "white",
+                        fontFamily: "Poppins",
+                        fontWeight: 500,
+                      }}
+                      className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
+                      to={options[options.length - 2].path}
+                      children={({isActive}) => (
+                        <>
+                          <div style={{ display: isActive ? 'block' : 'none' }}>
+                            <ReactSVG src={options[options.length - 2].icon.active} />
+                          </div>
+                          <div style={{ display: isActive ? 'none' : 'block' }}>
+                            <ReactSVG src={options[options.length - 2].icon.inactive} />
+                          </div>
+                          {isExpanded && (
+                            <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
+                              {options[options.length - 2].title}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    />
+                  )}
                   <div
                     style={{
                       height: "1px",

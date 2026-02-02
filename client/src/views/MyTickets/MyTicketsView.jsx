@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './MyTicketsView.css';
 import CustomerServiceView from './CustomerServiceView';
 import receiptService from '../../services/receiptService';
+import { hasMyTicketsAccess } from '../../utils/authUtils';
 
 const MyTicketsView = () => {
   const [events, setEvents] = useState([]);
@@ -12,6 +13,23 @@ const MyTicketsView = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrCodeData, setQRCodeData] = useState(null);
+  const [hasAccess, setHasAccess] = useState(false);
+
+  // Check access on component mount
+  useEffect(() => {
+    const checkAccess = () => {
+      const accessGranted = hasMyTicketsAccess();
+      setHasAccess(accessGranted);
+      
+      if (!accessGranted) {
+        console.log('🚫 Access denied to My Tickets - unauthorized user');
+      } else {
+        console.log('✅ Access granted to My Tickets');
+      }
+    };
+
+    checkAccess();
+  }, []);
 
   // Mock data for now - will be replaced with actual API calls
   const mockEvents = [
@@ -284,6 +302,29 @@ const MyTicketsView = () => {
     return (
       <div className="my-tickets-view">
         <div className="loading">Loading ticket data...</div>
+      </div>
+    );
+  }
+
+  // Access control check
+  if (!hasAccess) {
+    return (
+      <div className="my-tickets-view">
+        <div className="access-denied">
+          <div className="access-denied-content">
+            <h1>🚫 Access Denied</h1>
+            <p>You don't have permission to access the My Tickets feature.</p>
+            <p>This feature is restricted to authorized users only.</p>
+            <div className="access-denied-actions">
+              <button 
+                onClick={() => window.history.back()} 
+                className="back-button"
+              >
+                ← Go Back
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

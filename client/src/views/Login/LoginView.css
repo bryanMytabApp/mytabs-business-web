@@ -559,7 +559,7 @@
 }
 
   .Sign-up-account-text-responsive {
-    display: none ;
+    display: none;
   }
 
 
@@ -576,6 +576,27 @@
 
   .Sign-up-account-text-responsive{
     display: block;
+    margin-top: 20px !important;
+    padding: 15px 0 !important;
+    text-align: center !important;
+    border-top: 1px solid #eee !important;
+    font-size: 16px !important;
+    line-height: 24px !important;
+  }
+
+  .Sign-up-account-text-responsive .Sign-up-underline {
+    display: inline-block !important;
+    padding: 8px 12px !important;
+    margin-left: 8px !important;
+    background-color: #f8f9fa !important;
+    border-radius: 8px !important;
+    min-height: 44px !important;
+    line-height: 28px !important;
+    font-weight: 600 !important;
+    color: #00AAD6 !important;
+    text-decoration: underline !important;
+    cursor: pointer !important;
+    touch-action: manipulation !important;
   }
 
   .Account-details {

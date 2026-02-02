@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './AdminPortal.css';
+import { hasMyTicketsAccess } from '../../utils/authUtils';
 
 const AdminPortal = () => {
   const [environment, setEnvironment] = useState('prod'); // dev or prod
@@ -8,6 +9,23 @@ const AdminPortal = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, active, inactive
   const [searchTerm, setSearchTerm] = useState('');
+  const [hasAccess, setHasAccess] = useState(false);
+
+  // Check access on component mount
+  useEffect(() => {
+    const checkAccess = () => {
+      const accessGranted = hasMyTicketsAccess();
+      setHasAccess(accessGranted);
+      
+      if (!accessGranted) {
+        console.log('🚫 Access denied to Admin Portal - unauthorized user');
+      } else {
+        console.log('✅ Access granted to Admin Portal');
+      }
+    };
+
+    checkAccess();
+  }, []);
   
   // Environment-specific API URLs
   const API_URLS = {
@@ -138,6 +156,29 @@ const AdminPortal = () => {
 
   if (loading) {
     return <div className="admin-portal"><div className="loading">Loading businesses...</div></div>;
+  }
+
+  // Access control check
+  if (!hasAccess) {
+    return (
+      <div className="admin-portal">
+        <div className="access-denied">
+          <div className="access-denied-content">
+            <h1>🚫 Access Denied</h1>
+            <p>You don't have permission to access the Admin Portal.</p>
+            <p>This feature is restricted to authorized administrators only.</p>
+            <div className="access-denied-actions">
+              <button 
+                onClick={() => window.history.back()} 
+                className="back-button"
+              >
+                ← Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
