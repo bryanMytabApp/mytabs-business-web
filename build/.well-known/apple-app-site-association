@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [{
+      "appIDs": [
+        "43ZKAP9G3U.com.bluepeople.mytabsmobiletesting"
+      ],
+      "components": [{
+        "paths": [
+          "/*"
+        ]
+      }]
+    }]
+  }
+}

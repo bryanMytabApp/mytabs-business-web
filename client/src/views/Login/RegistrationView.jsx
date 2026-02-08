@@ -225,14 +225,30 @@ export default function RegistrationView() {
     value = name === "username" ? encodeValue : value;
     try {
       const response = await getUserExistance({attribute: name, value});
+      // If the API returns successfully with exists: true, show error
+      if (response && response.exists) {
+        let nameText = name.charAt(0).toUpperCase() + name.slice(1);
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [name]: `${name == "phoneNumber" ? "Phone" : nameText} already exists.`,
+        }));
+      } else {
+        // Clear the error if user doesn't exist
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [name]: undefined,
+        }));
+      }
     } catch (error) {
-      let nameText = name.charAt(0).toUpperCase() + name.slice(1);
-      if (error.enhancedMessage) {
+      // Only show error if it's a specific "already exists" error from the API
+      if (error.enhancedMessage && error.enhancedMessage.toLowerCase().includes('exist')) {
+        let nameText = name.charAt(0).toUpperCase() + name.slice(1);
         setErrors((prevErrors) => ({
           ...prevErrors,
           [name]: `${name == "phoneNumber" ? "Phone" : nameText} already exists.`,
         }));
       }
+      // Otherwise, silently fail (network errors, etc. shouldn't block registration)
     }
   }, 500);
 
@@ -423,26 +439,41 @@ export default function RegistrationView() {
 
     if (formData.email) {
       try {
-        await getUserExistance({attribute: "email", value: encodeURIComponent(formData.email)});
+        const response = await getUserExistance({attribute: "email", value: encodeURIComponent(formData.email)});
+        console.log("Email check response:", response);
+        if (response && response.exists === true) {
+          errors.email = "Email already exists.";
+        }
       } catch (error) {
-        errors.email = "Email already exists.";
+        console.error("Error checking email existence:", error);
+        // Don't block registration if the API is down
       }
     }
     if (formData.username) {
       try {
-        let res = await getUserExistance({attribute: "username", value: formData.username});
+        const response = await getUserExistance({attribute: "username", value: formData.username});
+        console.log("Username check response:", response);
+        if (response && response.exists === true) {
+          errors.username = "Username already exists.";
+        }
       } catch (error) {
-        errors.username = "Username already exists.";
+        console.error("Error checking username existence:", error);
+        // Don't block registration if the API is down
       }
     }
     if (formData.phoneNumber) {
       try {
-        await getUserExistance({
+        const response = await getUserExistance({
           attribute: "phoneNumber",
           value: encodeURIComponent(`+1${formData.phoneNumber}`),
         });
+        console.log("Phone check response:", response);
+        if (response && response.exists === true) {
+          errors.phoneNumber = "Phone already exists.";
+        }
       } catch (error) {
-        errors.phoneNumber = "Phone already exists.";
+        console.error("Error checking phone existence:", error);
+        // Don't block registration if the API is down
       }
     }
 
@@ -463,6 +494,20 @@ export default function RegistrationView() {
     let token
     try {
       const response = await signUp(signUpPayload);
+      
+      // Check if auto-login failed
+      if (response.autoLoginFailed) {
+        toast.success("Account created successfully! Please log in with your email.");
+        // Upload image if provided
+        if(uploadedImage) {
+          // We can't upload without token, so skip it
+          toast.info("Please log in to complete your profile setup.");
+        }
+        // Redirect to login page
+        navigate("/login");
+        return;
+      }
+      
       token = response.IdToken
       localStorage.setItem("idToken", response.IdToken);
       toast.success("Welcome!");

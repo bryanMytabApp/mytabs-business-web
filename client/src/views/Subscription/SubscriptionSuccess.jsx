@@ -26,10 +26,25 @@ const SubscriptionSuccess = () => {
   };
 
   useEffect(() => {
-    let planData = JSON.parse( localStorage.getItem( "checkoutResult" ) );
-    setSelectedPlan(planData.plan );
-    setSelectedPrice(planData.price);
-    setSelectedBenefits(planBenefits["Basic"]);
+    try {
+      let planData = JSON.parse(localStorage.getItem("checkoutResult"));
+      if (planData && planData.plan) {
+        setSelectedPlan(planData.plan);
+        setSelectedPrice(planData.price || 0);
+        setSelectedBenefits(planBenefits[planData.plan] || planBenefits["Basic"]);
+      } else {
+        // Default to Basic if no plan data found
+        setSelectedPlan("Premium");
+        setSelectedPrice(0);
+        setSelectedBenefits(planBenefits["Premium"]);
+      }
+    } catch (error) {
+      console.error("Error loading checkout result:", error);
+      // Default to Premium if error
+      setSelectedPlan("Premium");
+      setSelectedPrice(0);
+      setSelectedBenefits(planBenefits["Premium"]);
+    }
   }, []);
   return (
     <div style={{flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh"}}>
