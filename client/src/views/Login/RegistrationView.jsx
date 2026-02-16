@@ -494,24 +494,19 @@ export default function RegistrationView() {
     let token
     try {
       const response = await signUp(signUpPayload);
-      
-      // Check if auto-login failed
-      if (response.autoLoginFailed) {
-        toast.success("Account created successfully! Please log in with your email.");
-        // Upload image if provided
-        if(uploadedImage) {
-          // We can't upload without token, so skip it
-          toast.info("Please log in to complete your profile setup.");
-        }
-        // Redirect to login page
-        navigate("/login");
-        return;
-      }
-      
       token = response.IdToken
       localStorage.setItem("idToken", response.IdToken);
       toast.success("Welcome!");
     } catch (error) {
+      // Check if this is an account creation success but auto-login failure
+      if (error.response && error.response.status === 201) {
+        // Account was created successfully, but auto-login failed
+        toast.success("Account created successfully! Please log in.");
+        navigate("/login");
+        return;
+      }
+
+      // Handle other errors
       let errorMessage = "An unexpected error occurred. Please try again.";
 
       if (error.enhancedMessage) {
@@ -619,7 +614,7 @@ export default function RegistrationView() {
                     autoComplete='username'
                     value={formData.username}
                     onChange={handleInputChange}
-                    helper={errors.username && {type: "warning", text: errors.username}}
+                    helper={errors.username ? {type: "warning", text: errors.username} : {type: "info", text: "One word, no spaces (e.g., johndoe123)"}}
                   />
                 </div>
               </div>
@@ -715,105 +710,65 @@ export default function RegistrationView() {
               <div className='Account-details' style={{color: "black"}}>
                 {secondHeaderText}
               </div>
-              <div style={{ width: '100%' }}>
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                  <div style={{ width: '48%' }}>
-                    {/* <div className={styles.title} style={{ marginBottom: 0 }}>
-                      Location
-                    </div> */}
-                    <div style={{ width: '100%', margin: '7px 0 0 0' }}>
-                      <MTBSelector
-                        onBlur={() => ("state")}
-                        name={"state"}
-                        placeholder='State'
-                        autoComplete='State'
-                        value={formData.state}
-                        itemName={"name"}
-                        itemValue={"name"}
-                        options={states}
-                        onChange={(selected, fieldName) => {
-                          handleInputChange(selected, 'state');
-                        }}
-                        styles={{
-                          display: 'flex',
-                          background: '#FCFCFC',
-                          borderRadius: '10px',
-                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                          width: '100%',
-                          height: '50px',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </div>
+              
+              {/* Google Places Autocomplete Input */}
+              <div style={{ width: '100%', marginBottom: '15px' }}>
+                <input
+                  ref={addressInputRef}
+                  className={createMultipleClasses([
+                    styles.input,
+                  ])}
+                  type="text"
+                  placeholder="Start typing address..."
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '10px',
+                    border: '1px solid #E0E0E0',
+                    fontSize: '14px'
+                  }}
+                  onBlur={() => {}}
+                  onChange={() => {}} // Google Places handles the changes
+                />
+              </div>
+              
+              {/* Address Details Display (Read-only) */}
+              {(formData.address1 || formData.city || formData.state || formData.zipCode) && (
+                <div style={{
+                  backgroundColor: '#F8F9FA',
+                  border: '1px solid #E9ECEF',
+                  borderRadius: '10px',
+                  padding: '15px',
+                  marginBottom: '15px'
+                }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#495057' }}>
+                    Selected Address:
                   </div>
-                  <div style={{ width: '48%' }}>
-                    <MTBSelector
-                      onBlur={() => ("city")}
-                      name={"city"}
-                      placeholder='City'
-                      autoComplete='City'
-                      value={formData.city}
-                      itemName={"name"}
-                      itemValue={"name"}
-                      options={cities}
-                      onChange={(selected, fieldName) => {
-                        handleInputChange(selected, 'city');
-                      }}
-                      appearDisabled={!formData.state}
-                      styles={{
-                        display: 'flex',
-                        background: '#FCFCFC',
-                        borderRadius: '10px',
-                        boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                        boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                        width: '100%',
-                        height: '50px',
-                        boxSizing: 'border-box',
-                      }}
-                    />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', fontSize: '14px', color: '#6C757D' }}>
+                    {formData.address1 && (
+                      <div style={{ flex: '1 1 100%' }}>
+                        <strong>Street:</strong> {formData.address1}
+                      </div>
+                    )}
+                    {formData.city && (
+                      <div style={{ flex: '1 1 45%' }}>
+                        <strong>City:</strong> {formData.city}
+                      </div>
+                    )}
+                    {formData.state && (
+                      <div style={{ flex: '1 1 45%' }}>
+                        <strong>State:</strong> {formData.state}
+                      </div>
+                    )}
+                    {formData.zipCode && (
+                      <div style={{ flex: '1 1 45%' }}>
+                        <strong>Zip Code:</strong> {formData.zipCode}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-              <div style={{ width: '100%', marginTop: '10px' }}>
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                  <div
-                    className={createMultipleClasses([
-                      styles.inputContainer,
-                    ])}
-                    style={{ width: '48%' }}
-                  >
-                    <input
-                      className={createMultipleClasses([
-                        styles.input,
-                      ])}
-                      type="text"
-                      value={formData.zipCode}
-                      placeholder="Zip Code"
-                      onBlur={() => {}}
-                      onChange={(e) => handleInputChange(e.target.value, 'zipCode')}
-                    />
-                  </div>
-                  <div
-                    className={createMultipleClasses([
-                      styles.inputContainer,
-                    ])}
-                    style={{ width: '48%' }}
-                  >
-                    <input
-                      ref={addressInputRef}
-                      className={createMultipleClasses([
-                        styles.input,
-                      ])}
-                      type="text"
-                      value={formData.address1}
-                      placeholder="Start typing address..."
-                      onBlur={() => {}}
-                      onChange={(e) => handleInputChange(e.target.value, 'address1')}
-                    />
-                  </div>
-                </div>
-              </div>
+              )}
+              
               <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
                 <div style={{ width: '48%' }}>
                   <div className={styles.title} style={{ marginBottom: 0 }}>
