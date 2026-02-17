@@ -41,26 +41,14 @@ const AnalyticsView = () => {
       setBusinessInfo(business);
       console.log("✅ Business info loaded:", business.name);
 
-      // Fetch followers analytics
-      let followersCount = 0;
-      try {
-        console.log("2️⃣ Fetching followers analytics...");
-        const analyticsResponse = await getBusinessAnalytics(userId);
-        followersCount = analyticsResponse.data?.followersCount || 0;
-        console.log("✅ Followers count:", followersCount);
-      } catch (err) {
-        console.warn("⚠️ Could not fetch followers count:", err.message);
-        // Continue without followers count
-      }
-
       // Fetch all events for the business
-      console.log("3️⃣ Fetching events...");
+      console.log("2️⃣ Fetching events...");
       const eventsResponse = await getEventsByUserId(userId);
       const eventsData = eventsResponse.data || [];
       console.log("✅ Events loaded:", eventsData.length);
 
-      // Fetch PTA count for each event
-      console.log("4️⃣ Fetching PTA counts for", eventsData.length, "events...");
+      // Fetch PTA count for each event (for the table breakdown)
+      console.log("3️⃣ Fetching PTA counts for", eventsData.length, "events...");
       const eventsWithPTA = await Promise.all(
         eventsData.map(async (event) => {
           try {
@@ -82,6 +70,22 @@ const AnalyticsView = () => {
 
       setEvents(eventsWithPTA);
 
+      // Fetch analytics summary (includes followers count and total PTA)
+      console.log("4️⃣ Fetching analytics summary...");
+      let followersCount = 0;
+      let totalPTA = 0;
+      try {
+        const analyticsResponse = await getBusinessAnalytics(userId);
+        followersCount = analyticsResponse.data?.followersCount || 0;
+        totalPTA = analyticsResponse.data?.totalPTA || 0;
+        console.log("✅ Analytics summary - Followers:", followersCount, "Total PTA:", totalPTA);
+      } catch (err) {
+        console.warn("⚠️ Could not fetch analytics summary:", err.message);
+        // Fallback: calculate from individual events if backend fails
+        totalPTA = eventsWithPTA.reduce((sum, event) => sum + (event.ptaCount || 0), 0);
+        console.log("⚠️ Using fallback PTA calculation:", totalPTA);
+      }
+
       // Calculate analytics
       const now = new Date();
       const activeEventsCount = eventsWithPTA.filter(event => {
@@ -89,15 +93,10 @@ const AnalyticsView = () => {
         return eventDate >= now;
       }).length;
 
-      // Calculate total PTA across all events
-      const totalPTACount = eventsWithPTA.reduce((sum, event) => {
-        return sum + (event.ptaCount || 0);
-      }, 0);
-
       const analyticsData = {
         totalFollowers: followersCount,
         totalEvents: eventsWithPTA.length,
-        totalPTA: totalPTACount,
+        totalPTA: totalPTA,
         activeEvents: activeEventsCount,
       };
 

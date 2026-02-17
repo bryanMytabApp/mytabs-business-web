@@ -106,10 +106,23 @@ const useLogin = () => {
         console.log('🔐 Redirecting to verification with auth:', authenticatedUrl);
         window.location.href = authenticatedUrl;
       } else {
-        // Skip subscription check for now - allow all users to access
-        // TODO: Re-enable subscription enforcement when ready
-        console.log("Subscription check disabled - allowing access");
-        navigate("/admin/home");
+        // Check if user has an active subscription
+        try {
+          const subscriptionResponse = await getCustomerSubscription({userId: userIdFromToken});
+          
+          if (!subscriptionResponse.data.hasSubscription || !subscriptionResponse.data.priceId) {
+            console.log("No active subscription found - redirecting to subscription page");
+            navigate("/subscription");
+            return;
+          }
+          
+          console.log("Active subscription found - allowing access");
+          navigate("/admin/home");
+        } catch (error) {
+          console.error("Error checking subscription:", error);
+          // If subscription check fails, redirect to subscription page to be safe
+          navigate("/subscription");
+        }
       }
     } catch (error) {
       toast.error("Invalid user and/or password");

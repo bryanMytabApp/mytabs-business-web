@@ -225,14 +225,30 @@ export default function RegistrationView() {
     value = name === "username" ? encodeValue : value;
     try {
       const response = await getUserExistance({attribute: name, value});
+      // If the API returns successfully with exists: true, show error
+      if (response && response.exists) {
+        let nameText = name.charAt(0).toUpperCase() + name.slice(1);
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [name]: `${name == "phoneNumber" ? "Phone" : nameText} already exists.`,
+        }));
+      } else {
+        // Clear the error if user doesn't exist
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [name]: undefined,
+        }));
+      }
     } catch (error) {
-      let nameText = name.charAt(0).toUpperCase() + name.slice(1);
-      if (error.enhancedMessage) {
+      // Only show error if it's a specific "already exists" error from the API
+      if (error.enhancedMessage && error.enhancedMessage.toLowerCase().includes('exist')) {
+        let nameText = name.charAt(0).toUpperCase() + name.slice(1);
         setErrors((prevErrors) => ({
           ...prevErrors,
           [name]: `${name == "phoneNumber" ? "Phone" : nameText} already exists.`,
         }));
       }
+      // Otherwise, silently fail (network errors, etc. shouldn't block registration)
     }
   }, 500);
 
@@ -423,26 +439,41 @@ export default function RegistrationView() {
 
     if (formData.email) {
       try {
-        await getUserExistance({attribute: "email", value: encodeURIComponent(formData.email)});
+        const response = await getUserExistance({attribute: "email", value: encodeURIComponent(formData.email)});
+        console.log("Email check response:", response);
+        if (response && response.exists === true) {
+          errors.email = "Email already exists.";
+        }
       } catch (error) {
-        errors.email = "Email already exists.";
+        console.error("Error checking email existence:", error);
+        // Don't block registration if the API is down
       }
     }
     if (formData.username) {
       try {
-        let res = await getUserExistance({attribute: "username", value: formData.username});
+        const response = await getUserExistance({attribute: "username", value: formData.username});
+        console.log("Username check response:", response);
+        if (response && response.exists === true) {
+          errors.username = "Username already exists.";
+        }
       } catch (error) {
-        errors.username = "Username already exists.";
+        console.error("Error checking username existence:", error);
+        // Don't block registration if the API is down
       }
     }
     if (formData.phoneNumber) {
       try {
-        await getUserExistance({
+        const response = await getUserExistance({
           attribute: "phoneNumber",
           value: encodeURIComponent(`+1${formData.phoneNumber}`),
         });
+        console.log("Phone check response:", response);
+        if (response && response.exists === true) {
+          errors.phoneNumber = "Phone already exists.";
+        }
       } catch (error) {
-        errors.phoneNumber = "Phone already exists.";
+        console.error("Error checking phone existence:", error);
+        // Don't block registration if the API is down
       }
     }
 
@@ -467,6 +498,15 @@ export default function RegistrationView() {
       localStorage.setItem("idToken", response.IdToken);
       toast.success("Welcome!");
     } catch (error) {
+      // Check if this is an account creation success but auto-login failure
+      if (error.response && error.response.status === 201) {
+        // Account was created successfully, but auto-login failed
+        toast.success("Account created successfully! Please log in.");
+        navigate("/login");
+        return;
+      }
+
+      // Handle other errors
       let errorMessage = "An unexpected error occurred. Please try again.";
 
       if (error.enhancedMessage) {
@@ -574,7 +614,7 @@ export default function RegistrationView() {
                     autoComplete='username'
                     value={formData.username}
                     onChange={handleInputChange}
-                    helper={errors.username && {type: "warning", text: errors.username}}
+                    helper={errors.username ? {type: "warning", text: errors.username} : {type: "info", text: "One word, no spaces (e.g., johndoe123)"}}
                   />
                 </div>
               </div>
@@ -670,105 +710,65 @@ export default function RegistrationView() {
               <div className='Account-details' style={{color: "black"}}>
                 {secondHeaderText}
               </div>
-              <div style={{ width: '100%' }}>
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                  <div style={{ width: '48%' }}>
-                    {/* <div className={styles.title} style={{ marginBottom: 0 }}>
-                      Location
-                    </div> */}
-                    <div style={{ width: '100%', margin: '7px 0 0 0' }}>
-                      <MTBSelector
-                        onBlur={() => ("state")}
-                        name={"state"}
-                        placeholder='State'
-                        autoComplete='State'
-                        value={formData.state}
-                        itemName={"name"}
-                        itemValue={"name"}
-                        options={states}
-                        onChange={(selected, fieldName) => {
-                          handleInputChange(selected, 'state');
-                        }}
-                        styles={{
-                          display: 'flex',
-                          background: '#FCFCFC',
-                          borderRadius: '10px',
-                          boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                          boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                          width: '100%',
-                          height: '50px',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </div>
+              
+              {/* Google Places Autocomplete Input */}
+              <div style={{ width: '100%', marginBottom: '15px' }}>
+                <input
+                  ref={addressInputRef}
+                  className={createMultipleClasses([
+                    styles.input,
+                  ])}
+                  type="text"
+                  placeholder="Start typing address..."
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '10px',
+                    border: '1px solid #E0E0E0',
+                    fontSize: '14px'
+                  }}
+                  onBlur={() => {}}
+                  onChange={() => {}} // Google Places handles the changes
+                />
+              </div>
+              
+              {/* Address Details Display (Read-only) */}
+              {(formData.address1 || formData.city || formData.state || formData.zipCode) && (
+                <div style={{
+                  backgroundColor: '#F8F9FA',
+                  border: '1px solid #E9ECEF',
+                  borderRadius: '10px',
+                  padding: '15px',
+                  marginBottom: '15px'
+                }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#495057' }}>
+                    Selected Address:
                   </div>
-                  <div style={{ width: '48%' }}>
-                    <MTBSelector
-                      onBlur={() => ("city")}
-                      name={"city"}
-                      placeholder='City'
-                      autoComplete='City'
-                      value={formData.city}
-                      itemName={"name"}
-                      itemValue={"name"}
-                      options={cities}
-                      onChange={(selected, fieldName) => {
-                        handleInputChange(selected, 'city');
-                      }}
-                      appearDisabled={!formData.state}
-                      styles={{
-                        display: 'flex',
-                        background: '#FCFCFC',
-                        borderRadius: '10px',
-                        boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                        boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                        width: '100%',
-                        height: '50px',
-                        boxSizing: 'border-box',
-                      }}
-                    />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', fontSize: '14px', color: '#6C757D' }}>
+                    {formData.address1 && (
+                      <div style={{ flex: '1 1 100%' }}>
+                        <strong>Street:</strong> {formData.address1}
+                      </div>
+                    )}
+                    {formData.city && (
+                      <div style={{ flex: '1 1 45%' }}>
+                        <strong>City:</strong> {formData.city}
+                      </div>
+                    )}
+                    {formData.state && (
+                      <div style={{ flex: '1 1 45%' }}>
+                        <strong>State:</strong> {formData.state}
+                      </div>
+                    )}
+                    {formData.zipCode && (
+                      <div style={{ flex: '1 1 45%' }}>
+                        <strong>Zip Code:</strong> {formData.zipCode}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-              <div style={{ width: '100%', marginTop: '10px' }}>
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                  <div
-                    className={createMultipleClasses([
-                      styles.inputContainer,
-                    ])}
-                    style={{ width: '48%' }}
-                  >
-                    <input
-                      className={createMultipleClasses([
-                        styles.input,
-                      ])}
-                      type="text"
-                      value={formData.zipCode}
-                      placeholder="Zip Code"
-                      onBlur={() => {}}
-                      onChange={(e) => handleInputChange(e.target.value, 'zipCode')}
-                    />
-                  </div>
-                  <div
-                    className={createMultipleClasses([
-                      styles.inputContainer,
-                    ])}
-                    style={{ width: '48%' }}
-                  >
-                    <input
-                      ref={addressInputRef}
-                      className={createMultipleClasses([
-                        styles.input,
-                      ])}
-                      type="text"
-                      value={formData.address1}
-                      placeholder="Start typing address..."
-                      onBlur={() => {}}
-                      onChange={(e) => handleInputChange(e.target.value, 'address1')}
-                    />
-                  </div>
-                </div>
-              </div>
+              )}
+              
               <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
                 <div style={{ width: '48%' }}>
                   <div className={styles.title} style={{ marginBottom: 0 }}>

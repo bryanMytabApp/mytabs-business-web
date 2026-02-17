@@ -41,6 +41,38 @@ const SubscriptionView = () => {
   };
   return (
     <div style={{flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh"}}>
+      <button
+        onClick={() => navigation("/admin/home")}
+        style={{
+          position: "absolute",
+          top: "60px",
+          left: "40px",
+          padding: "12px 24px",
+          backgroundColor: "#F18026",
+          color: "white",
+          border: "none",
+          borderRadius: "8px",
+          fontSize: "16px",
+          fontWeight: 600,
+          fontFamily: "Outfit",
+          cursor: "pointer",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          transition: "all 0.2s ease",
+          zIndex: 10
+        }}
+        onMouseOver={(e) => {
+          e.target.style.backgroundColor = "#d96f1f";
+          e.target.style.transform = "translateY(-1px)";
+          e.target.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
+        }}
+        onMouseOut={(e) => {
+          e.target.style.backgroundColor = "#F18026";
+          e.target.style.transform = "translateY(0)";
+          e.target.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+        }}
+      >
+        Dashboard
+      </button>
       <div className='Subscription-view'>
         <div className='Subscription-icon'>
           <img src={logo} />

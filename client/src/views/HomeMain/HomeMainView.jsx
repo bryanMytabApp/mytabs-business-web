@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getBusiness } from "../../services/businessService";
 import { getEventsByUserId } from "../../services/eventService";
-import { getBusinessAnalytics } from "../../services/analyticsService";
+import { getBusinessAnalytics, getEventPTACount } from "../../services/analyticsService";
 import { parseJwt } from "../../utils/common";
 import "./HomeMainView.css";
 
@@ -40,12 +40,34 @@ const HomeMainView = () => {
       const events = eventsRes.data || [];
       
       const now = new Date();
-      const upcoming = events
+      // Filter all upcoming events for the count
+      const allUpcoming = events
         .filter(e => new Date(e.date) >= now)
-        .sort((a, b) => new Date(a.date) - new Date(b.date))
-        .slice(0, 3);
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
       
-      setUpcomingEvents(upcoming);
+      // Show only first 3 upcoming events in the preview section
+      const upcomingForDisplay = allUpcoming.slice(0, 3);
+      
+      // Fetch PTA count for each upcoming event
+      const upcomingWithPTA = await Promise.all(
+        upcomingForDisplay.map(async (event) => {
+          try {
+            const ptaResponse = await getEventPTACount(event._id);
+            return {
+              ...event,
+              ptaCount: ptaResponse.data?.count || 0,
+            };
+          } catch (err) {
+            console.warn(`Could not fetch PTA for event ${event._id}:`, err);
+            return {
+              ...event,
+              ptaCount: 0,
+            };
+          }
+        })
+      );
+      
+      setUpcomingEvents(upcomingWithPTA);
 
       // Fetch analytics for followers count and total PTA
       let followersCount = 0;
@@ -60,7 +82,7 @@ const HomeMainView = () => {
 
       setMetrics({
         totalEvents: events.length,
-        activeEvents: upcoming.length,
+        activeEvents: allUpcoming.length, // Use full count, not sliced
         followers: followersCount,
         totalPTA: totalPTA,
       });
@@ -192,7 +214,7 @@ const HomeMainView = () => {
                     </div>
                   </div>
                   <div className="event-pta">
-                    {event.attendees?.length || 0} PTA
+                    {event.ptaCount || 0} PTA
                   </div>
                 </div>
               ))}
