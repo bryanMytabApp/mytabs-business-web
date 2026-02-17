@@ -12,8 +12,7 @@ import { getEventPicture } from "../../utils/common"
 import { toast } from "react-toastify";
 import { State, City } from 'country-state-city';
 import { MTBSelector, EventEditTickets } from "../../components";
-import { DemoContainer } from "@mui/x-date-pickers/internals/demo";
-import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { processImage } from "../../components/MTBDropZone/MTBDropZone";
 import axios from "axios";
 
@@ -29,6 +28,9 @@ const EventEdit = () => {
   const [uploadedImage, setUploadedImage] = useState(null)
   const [hasChanged, setHasChanged] = useState(false)
   const [businessData, setBusinessData] = useState(null)
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const startTimeInputRef = useRef(null)
+  const endTimeInputRef = useRef(null)
   const routeProps = useParams()
 
   const navigation = useNavigate();
@@ -307,7 +309,7 @@ const EventEdit = () => {
                   <div
                     className={createMultipleClasses([styles.contentDivider, styles.leftMainContainer])}
                     style={{
-                      width: '44%',
+                      width: '35%',
                       position: 'relative'
                     }}
                   >
@@ -316,7 +318,7 @@ const EventEdit = () => {
                         src={uploadedImage ? uploadedImage : getEventPicture(item._id)}
                         alt={item.name}
                         style={{ borderRadius: '10px' }}
-                        width="420" 
+                        width="340" 
                       ></img>
                       <button
                         className={createMultipleClasses([
@@ -378,55 +380,174 @@ const EventEdit = () => {
                         Start time, end time and location
                       </div>
                       <div className={styles.gridContainer}>
-                        <DemoContainer components={['DateTimePicker']} sx={{ width: '100%' }} >
-                          <DateTimePicker
+                        {/* Date Picker - Full Width */}
+                        <div style={{ width: '100%', marginBottom: '10px' }}>
+                          <DatePicker
+                            open={datePickerOpen}
+                            onOpen={() => setDatePickerOpen(true)}
+                            onClose={() => setDatePickerOpen(false)}
+                            minDate={moment()}
                             sx={{
-                              display: 'flex',
-                              background: '#FCFCFC',
-                              borderRadius: '10px !important',
-
-                              boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                              boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                              // maxWidth: '500px',
-                              // width: '50%',
-                              minHeight: '28px',
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                border: 'none',
-                                borderRadius: '10px'
-                              },
-                              '& .MuiInputLabel-root': {
-                                transformOrigin: '0px 35px'
-                              },
-                            }}
-                            value={item.startDate}
-                            label="Start time" 
-                            maxDateTime={item.endDate}
-                            minDateTime={moment()}
-                            onChange={(newValue) => handleItemChange('startDate', newValue)}
-                          />
-                        </DemoContainer>
-                        <DemoContainer components={['DateTimePicker']} sx={{ width: '100%' }} >
-                          <DateTimePicker
-                            value={item.endDate}
-                            label="End time"
-                            sx={{
-                              display: 'flex',
+                              width: '100%',
                               background: '#FCFCFC',
                               borderRadius: '10px',
                               boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                              boxShadow: '0px 4.679279327392578px 4.679279327392578px 0px #00000014',
-                              minHeight: '28px',
                               '& .MuiOutlinedInput-notchedOutline': {
                                 border: 'none'
                               },
-                              '& .MuiInputLabel-root': {
-                                transformOrigin: '0px 35px'
+                              '& .MuiIconButton-root': {
+                                padding: '8px',
+                                marginRight: '4px'
                               },
+                              '& .MuiSvgIcon-root': {
+                                fontSize: '24px',
+                                color: '#666'
+                              },
+                              '& .MuiInputBase-input': {
+                                cursor: 'pointer'
+                              }
                             }}
-                            minDateTime={item.startDate}
-                            onChange={(newValue) => handleItemChange('endDate', newValue)}
+                            slotProps={{
+                              textField: {
+                                placeholder: 'MM/DD/YYYY',
+                                onClick: () => setDatePickerOpen(true),
+                                InputProps: {
+                                  style: {
+                                    padding: '0',
+                                    fontSize: '16px',
+                                    cursor: 'pointer'
+                                  }
+                                },
+                                inputProps: {
+                                  style: {
+                                    padding: '16px 14px',
+                                    fontSize: '16px',
+                                    cursor: 'pointer'
+                                  },
+                                  readOnly: true
+                                }
+                              }
+                            }}
+                            value={item.startDate}
+                            onChange={(newValue) => {
+                              const newStart = moment(newValue).hour(item.startDate ? moment(item.startDate).hour() : 12).minute(item.startDate ? moment(item.startDate).minute() : 0);
+                              const newEnd = moment(newValue).hour(item.endDate ? moment(item.endDate).hour() : 14).minute(item.endDate ? moment(item.endDate).minute() : 0);
+                              handleItemChange('startDate', newStart);
+                              handleItemChange('endDate', newEnd);
+                            }}
                           />
-                        </DemoContainer>
+                        </div>
+
+                        {/* Start and End Time - On Same Line */}
+                        <div style={{ width: '100%', display: 'flex', gap: '20px', marginBottom: '10px' }}>
+                          {/* Start Time */}
+                          <div style={{ flex: '1' }}>
+                            <div 
+                              className={styles.inputContainer} 
+                              onClick={() => startTimeInputRef.current?.showPicker?.()}
+                              style={{ 
+                                width: '100%',
+                                padding: '14px',
+                                minHeight: '56px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                position: 'relative',
+                                cursor: 'pointer'
+                              }}>
+                              <input
+                                ref={startTimeInputRef}
+                                className={styles.input}
+                                type="time"
+                                value={item.startDate ? moment(item.startDate).format('HH:mm') : ''}
+                                onChange={(e) => {
+                                  const [hours, minutes] = e.target.value.split(':');
+                                  const updatedStart = moment(item.startDate || new Date()).hour(parseInt(hours)).minute(parseInt(minutes));
+                                  handleItemChange('startDate', updatedStart);
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.target.showPicker?.();
+                                }}
+                                style={{
+                                  fontSize: '16px',
+                                  fontFamily: 'Roboto, sans-serif',
+                                  width: '100%',
+                                  border: 'none',
+                                  background: 'transparent',
+                                  outline: 'none',
+                                  cursor: 'pointer',
+                                  paddingRight: '40px'
+                                }}
+                              />
+                              <span 
+                                className="material-icons" 
+                                style={{ 
+                                  position: 'absolute',
+                                  right: '14px',
+                                  color: '#666',
+                                  fontSize: '24px',
+                                  pointerEvents: 'none'
+                                }}
+                              >
+                                schedule
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* End Time */}
+                          <div style={{ flex: '1' }}>
+                            <div 
+                              className={styles.inputContainer} 
+                              onClick={() => endTimeInputRef.current?.showPicker?.()}
+                              style={{ 
+                                width: '100%',
+                                padding: '14px',
+                                minHeight: '56px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                position: 'relative',
+                                cursor: 'pointer'
+                              }}>
+                              <input
+                                ref={endTimeInputRef}
+                                className={styles.input}
+                                type="time"
+                                value={item.endDate ? moment(item.endDate).format('HH:mm') : ''}
+                                onChange={(e) => {
+                                  const [hours, minutes] = e.target.value.split(':');
+                                  const updatedEnd = moment(item.endDate || new Date()).hour(parseInt(hours)).minute(parseInt(minutes));
+                                  handleItemChange('endDate', updatedEnd);
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.target.showPicker?.();
+                                }}
+                                style={{
+                                  fontSize: '16px',
+                                  fontFamily: 'Roboto, sans-serif',
+                                  width: '100%',
+                                  border: 'none',
+                                  background: 'transparent',
+                                  outline: 'none',
+                                  cursor: 'pointer',
+                                  paddingRight: '40px'
+                                }}
+                              />
+                              <span 
+                                className="material-icons" 
+                                style={{ 
+                                  position: 'absolute',
+                                  right: '14px',
+                                  color: '#666',
+                                  fontSize: '24px',
+                                  pointerEvents: 'none'
+                                }}
+                              >
+                                schedule
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                         <div style={{ width: '86.5%', margin: '7px 0 0 0' }}>
                           <MTBSelector
                             onBlur={() => ("state")}
