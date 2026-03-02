@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './CustomerServiceView.css';
 import receiptService from '../../services/receiptService';
+import ticketManagementService from '../../services/ticketManagementService';
 
 const CustomerServiceView = ({ purchase, onBack }) => {
   const [notes, setNotes] = useState('');
@@ -33,15 +34,56 @@ const CustomerServiceView = ({ purchase, onBack }) => {
     }
   ];
 
-  const handleSaveCustomer = () => {
-    alert(`✅ Customer details updated successfully!\n\nUpdated information:\n• Name: ${customerData.name}\n• Email: ${customerData.email}\n• Phone: ${customerData.phone}\n\nChanges saved to database and Stripe customer record.`);
-    setEditingCustomer(false);
+  const handleSaveCustomer = async () => {
+    try {
+      // Get current user ID from localStorage
+      const idToken = localStorage.getItem('idToken');
+      const userId = localStorage.getItem('userId');
+      
+      if (!userId || !idToken) {
+        alert('❌ Authentication required. Please log in again.');
+        return;
+      }
+
+      // Update customer details via API
+      const result = await ticketManagementService.updateCustomerDetails(
+        purchase.confirmationNumber,
+        customerData,
+        userId
+      );
+
+      alert(`✅ Customer details updated successfully!\n\nUpdated information:\n• Name: ${customerData.name}\n• Email: ${customerData.email}\n• Phone: ${customerData.phone}\n\nChanges saved to database and Stripe customer record.`);
+      setEditingCustomer(false);
+    } catch (error) {
+      console.error('Failed to update customer details:', error);
+      alert(`❌ Failed to update customer details\n\nError: ${error.message || 'Unknown error'}\n\nPlease try again or contact support.`);
+    }
   };
 
-  const handleResendTickets = () => {
+  const handleResendTickets = async () => {
     const confirmed = window.confirm(`Resend tickets to ${customerData.email}?`);
     if (confirmed) {
-      alert(`✅ Tickets successfully resent!\n\nSent to: ${customerData.email}\nIncluded:\n• Digital ticket with QR code\n• Event details and location\n• Apple Wallet pass (iOS)\n• Receipt copy\n\nDelivery confirmed.`);
+      try {
+        // Get current user ID from localStorage
+        const idToken = localStorage.getItem('idToken');
+        const userId = localStorage.getItem('userId');
+        
+        if (!userId || !idToken) {
+          alert('❌ Authentication required. Please log in again.');
+          return;
+        }
+
+        // Resend ticket via API
+        const result = await ticketManagementService.resendTicket(
+          purchase.confirmationNumber,
+          userId
+        );
+
+        alert(`✅ Tickets successfully resent!\n\nSent to: ${customerData.email}\nIncluded:\n• Digital ticket with QR code\n• Event details and location\n• Apple Wallet pass (iOS)\n• Receipt copy\n\nDelivery confirmed at ${new Date(result.timestamp).toLocaleString()}`);
+      } catch (error) {
+        console.error('Failed to resend tickets:', error);
+        alert(`❌ Failed to resend tickets\n\nError: ${error.message || 'Unknown error'}\n\nPlease try again or contact support.`);
+      }
     }
   };
 

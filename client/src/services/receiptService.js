@@ -3,6 +3,9 @@
  * Handles PDF receipt generation with MyTabs branding and QR codes
  */
 
+import jsPDF from 'jspdf';
+import QRCode from 'qrcode';
+
 class ReceiptService {
   /**
    * Generate PDF receipt for a ticket purchase
@@ -12,20 +15,274 @@ class ReceiptService {
    */
   async generatePDFReceipt(purchase, event) {
     try {
-      // Create PDF content structure
+      // Create PDF document
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Build receipt data
       const receiptData = this.buildReceiptData(purchase, event);
       
-      // For now, simulate PDF generation with a text-based receipt
-      // In production, this would use a PDF library like jsPDF or PDFKit
-      const pdfContent = this.createTextReceipt(receiptData);
+      // Generate QR code as data URL
+      const qrCodeDataUrl = await this.generateQRCodeDataUrl(receiptData.qrCode.data);
       
-      // Create blob for download
-      const blob = new Blob([pdfContent], { type: 'application/pdf' });
-      return blob;
+      // Add content to PDF
+      await this.addReceiptContent(doc, receiptData, qrCodeDataUrl);
+      
+      // Return PDF as blob
+      return doc.output('blob');
     } catch (error) {
       console.error('PDF generation failed:', error);
       throw new Error('Failed to generate PDF receipt');
     }
+  }
+
+  /**
+   * Generate QR code as data URL
+   * @param {string} data - QR code data
+   * @returns {Promise<string>} Data URL
+   */
+  async generateQRCodeDataUrl(data) {
+    try {
+      return await QRCode.toDataURL(data, {
+        width: 200,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+    } catch (error) {
+      console.error('QR code generation failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Add receipt content to PDF document
+   * @param {jsPDF} doc - PDF document
+   * @param {Object} data - Receipt data
+   * @param {string} qrCodeDataUrl - QR code data URL
+   */
+  async addReceiptContent(doc, data, qrCodeDataUrl) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPos = 20;
+
+    // Header - MyTabs Branding
+    doc.setFillColor(41, 128, 185); // MyTabs blue
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('MyTabs', pageWidth / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(data.company.tagline, pageWidth / 2, 28, { align: 'center' });
+    doc.text(data.company.website, pageWidth / 2, 34, { align: 'center' });
+
+    yPos = 50;
+
+    // Receipt Title
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TICKET RECEIPT', pageWidth / 2, yPos, { align: 'center' });
+    
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Receipt #: ${data.receipt.number}`, pageWidth / 2, yPos, { align: 'center' });
+
+    yPos += 15;
+
+    // Event Information Section
+    this.addSection(doc, 'EVENT INFORMATION', yPos);
+    yPos += 10;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Event:`, 20, yPos);
+    doc.setFont('helvetica', 'bold');
+    doc.text(data.event.name, 60, yPos);
+    yPos += 6;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Date & Time:`, 20, yPos);
+    doc.text(`${data.event.date} at ${data.event.time}`, 60, yPos);
+    yPos += 6;
+    
+    doc.text(`Location:`, 20, yPos);
+    doc.text(data.event.location, 60, yPos);
+    yPos += 6;
+    
+    doc.text(`Venue:`, 20, yPos);
+    doc.text(data.event.venue, 60, yPos);
+    yPos += 12;
+
+    // Customer Information Section
+    this.addSection(doc, 'CUSTOMER INFORMATION', yPos);
+    yPos += 10;
+    
+    doc.text(`Name:`, 20, yPos);
+    doc.text(data.customer.name, 60, yPos);
+    yPos += 6;
+    
+    doc.text(`Email:`, 20, yPos);
+    doc.text(data.customer.email, 60, yPos);
+    yPos += 6;
+    
+    doc.text(`Phone:`, 20, yPos);
+    doc.text(data.customer.phone, 60, yPos);
+    yPos += 12;
+
+    // Purchase Details Section
+    this.addSection(doc, 'PURCHASE DETAILS', yPos);
+    yPos += 10;
+    
+    doc.text(`Tickets:`, 20, yPos);
+    doc.text(data.purchase.tickets, 60, yPos);
+    yPos += 6;
+    
+    doc.text(`Quantity:`, 20, yPos);
+    doc.text(data.purchase.quantity, 60, yPos);
+    yPos += 6;
+    
+    doc.text(`Unit Price:`, 20, yPos);
+    doc.text(`$${data.purchase.unitPrice}`, 60, yPos);
+    yPos += 10;
+    
+    // Payment breakdown
+    doc.text(`Subtotal:`, 20, yPos);
+    doc.text(`$${data.purchase.subtotal}`, pageWidth - 40, yPos, { align: 'right' });
+    yPos += 6;
+    
+    doc.text(`Service Fee:`, 20, yPos);
+    doc.text(`$${data.purchase.serviceFee}`, pageWidth - 40, yPos, { align: 'right' });
+    yPos += 6;
+    
+    doc.text(`Processing Fee:`, 20, yPos);
+    doc.text(`$${data.purchase.processingFee}`, pageWidth - 40, yPos, { align: 'right' });
+    yPos += 6;
+    
+    doc.text(`Tax:`, 20, yPos);
+    doc.text(`$${data.purchase.tax}`, pageWidth - 40, yPos, { align: 'right' });
+    yPos += 8;
+    
+    // Total line
+    doc.setLineWidth(0.5);
+    doc.line(20, yPos, pageWidth - 20, yPos);
+    yPos += 6;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text(`TOTAL:`, 20, yPos);
+    doc.text(`$${data.purchase.total}`, pageWidth - 40, yPos, { align: 'right' });
+    yPos += 12;
+
+    // Payment Information Section
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    this.addSection(doc, 'PAYMENT INFORMATION', yPos);
+    yPos += 10;
+    
+    doc.text(`Payment Method:`, 20, yPos);
+    doc.text(data.receipt.paymentMethod, 60, yPos);
+    yPos += 6;
+    
+    doc.text(`Transaction ID:`, 20, yPos);
+    doc.text(data.receipt.transactionId, 60, yPos);
+    yPos += 6;
+    
+    doc.text(`Date Processed:`, 20, yPos);
+    doc.text(data.receipt.date, 60, yPos);
+    yPos += 6;
+    
+    doc.text(`Status:`, 20, yPos);
+    doc.setTextColor(0, 128, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAID', 60, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    yPos += 12;
+
+    // QR Code Section
+    if (qrCodeDataUrl) {
+      this.addSection(doc, 'QR CODE FOR EVENT ENTRY', yPos);
+      yPos += 10;
+      
+      // Add QR code image
+      const qrSize = 50;
+      const qrX = (pageWidth - qrSize) / 2;
+      doc.addImage(qrCodeDataUrl, 'PNG', qrX, yPos, qrSize, qrSize);
+      yPos += qrSize + 8;
+      
+      doc.setFontSize(8);
+      doc.text(data.qrCode.instructions, pageWidth / 2, yPos, { align: 'center' });
+      yPos += 10;
+    }
+
+    // Important Information Section
+    if (yPos > pageHeight - 60) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    this.addSection(doc, 'IMPORTANT INFORMATION', yPos);
+    yPos += 8;
+    
+    doc.setFontSize(9);
+    const importantInfo = [
+      '• Please arrive 30 minutes before event start time',
+      '• Present this receipt or QR code for entry',
+      '• No refunds after event date',
+      `• For support, contact: ${data.company.support}`,
+      '• Keep this receipt for your records'
+    ];
+    
+    importantInfo.forEach(info => {
+      doc.text(info, 20, yPos);
+      yPos += 5;
+    });
+
+    // Footer
+    yPos = pageHeight - 30;
+    doc.setFillColor(240, 240, 240);
+    doc.rect(0, yPos, pageWidth, 30, 'F');
+    
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Thank you for choosing ${data.company.name}!`, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 6;
+    doc.text(`Visit ${data.company.website} for more events`, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 8;
+    doc.setFontSize(8);
+    doc.text(`Generated: ${data.receipt.date}`, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 4;
+    doc.text(`Receipt #: ${data.receipt.number}`, pageWidth / 2, yPos, { align: 'center' });
+  }
+
+  /**
+   * Add section header to PDF
+   * @param {jsPDF} doc - PDF document
+   * @param {string} title - Section title
+   * @param {number} yPos - Y position
+   */
+  addSection(doc, title, yPos) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    doc.setFillColor(240, 240, 240);
+    doc.rect(15, yPos - 4, pageWidth - 30, 8, 'F');
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(title, 20, yPos + 2);
   }
 
   /**

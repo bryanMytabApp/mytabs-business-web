@@ -37,6 +37,10 @@ h1 {
 }
 .eventsContainer {
   display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 30px;
 }
 .contentContainer {
   width: 80%;
@@ -374,4 +378,32 @@ textarea:focus {
   border-color: #00AAD6;
   background: rgba(0, 170, 214, 0.05);
   transform: translateY(-2px);
+}
+
+
+/* Date Range Picker Sidebar Styles */
+:global(.rdrStaticRange) {
+  font-size: 16px !important;
+  padding: 12px 20px !important;
+  font-family: Outfit !important;
+}
+
+:global(.rdrStaticRangeLabel) {
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  font-family: Outfit !important;
+}
+
+:global(.rdrStaticRanges) {
+  width: 200px !important;
+}
+
+/* Hide the default date display at the top */
+:global(.rdrDateDisplayWrapper) {
+  display: none !important;
+}
+
+/* Remove extra spacing */
+:global(.rdrDateRangeWrapper) {
+  padding-top: 0 !important;
 }

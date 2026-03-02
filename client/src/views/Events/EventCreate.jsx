@@ -9,6 +9,9 @@ import {
 import {toast} from "react-toastify";
 import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import { DesktopTimePicker } from '@mui/x-date-pickers/DesktopTimePicker';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import moment from 'moment'
@@ -18,15 +21,41 @@ import selectIconActive from "../../assets/atoms/selectIconActive.svg";
 import tabsTicketsHeader from "../../assets/Tabs-tickets-header-hoz.png";
 import { MTBDropZone, MTBSelector, TicketPreview } from "../../components";
 import { State, City } from 'country-state-city';
-import { createEvent, getPresignedUrlForEvent } from "../../services/eventService";
+import { createEvent, getPresignedUrlForEvent, getEventsByUserId } from "../../services/eventService";
 import { getBusiness } from "../../services/businessService";
+import { getCustomerSubscription, getSystemSubscriptions } from "../../services/paymentService";
 import axios from "axios";
+import { DateRangePicker } from 'react-date-range';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
 
 const eventTypes = [
   {
     name: 'Event',
     icon: 'event_available',
     type: "0",
+    enabled: true,
+  },
+  {
+    name: 'Shows',
+    icon: 'theater_comedy',
+    type: "1",
+    enabled: false,
+    comingSoon: true,
+  },
+  {
+    name: 'Menu',
+    icon: 'restaurant_menu',
+    type: "2",
+    enabled: false,
+    comingSoon: true,
+  },
+  {
+    name: 'Sales/Special',
+    icon: 'local_offer',
+    type: "3",
+    enabled: false,
+    comingSoon: true,
   },
 ]
 
@@ -85,6 +114,14 @@ const getTicketTypeOptions = (ticketOption) => {
 
 let userId
 const countryCode = 'US';
+
+// Subscription plan limits
+const PLAN_LIMITS = {
+  1: 3,   // Basic: 3 ad spaces
+  2: 10,  // Plus: 10 ad spaces
+  3: 25   // Premium: 25 ad spaces
+}
+
 const baseTicket = {
   option: 'Tabs Tickets',
   type: '',
@@ -103,7 +140,7 @@ const baseTabsTicket = {
 }
 
 const EventCreate = () => {
-  const [selectedItem, setSelectedItem] = useState("")
+  const [selectedItem, setSelectedItem] = useState("0")  // Pre-select "Event"
   const [states, setStates] = useState([])
   const [cities, setCities] = useState([])
   const [step, setStep] = useState(0)
@@ -117,6 +154,29 @@ const EventCreate = () => {
   const [fieldErrors, setFieldErrors] = useState({})
   const [showTestModal, setShowTestModal] = useState(false)
   const [testPurchaseUrl, setTestPurchaseUrl] = useState('')
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const startTimeInputRef = useRef(null)
+  const endTimeInputRef = useRef(null)
+  
+  // Multi-date picker state for Shows
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: new Date(),
+      endDate: new Date(),
+      key: 'selection'
+    }
+  ])
+  const [selectedShowDates, setSelectedShowDates] = useState([])
+  
+  // Get user's subscription level and calculate remaining ad spaces
+  const subscriptionLevel = businessData?.subscriptionLevel || 1 // Default to Basic
+  const totalAdSpaces = PLAN_LIMITS[subscriptionLevel] || 3
+  
+  // Existing events count fetched from backend
+  const [existingEventsCount, setExistingEventsCount] = useState(0)
+  
+  // Calculate remaining ad spaces user can create
+  const MAX_SHOW_DATES = Math.max(0, totalAdSpaces - existingEventsCount)
 
   const [item, setItem] = useState({
     name: '',
@@ -242,7 +302,7 @@ const EventCreate = () => {
     let availableStates = State.getStatesOfCountry(countryCode);
     setStates(availableStates)
     
-    // Fetch business data for tax calculation and address display
+    // Fetch business data, subscription, and events count
     const fetchBusinessData = async () => {
       try {
         console.log('🏢 Fetching business data for address and tax calculation...');
@@ -266,6 +326,56 @@ const EventCreate = () => {
             state: !data.state,
             zipCode: !data.zipCode
           });
+        }
+        
+        // Fetch subscription data to get user's plan level
+        try {
+          console.log('💳 Fetching subscription data...');
+          const systemSubsRes = await getSystemSubscriptions();
+          const customerSubRes = await getCustomerSubscription({ userId });
+          
+          let subscriptionLevel = 1; // Default to Basic
+          
+          if (customerSubRes?.data?.hasSubscription && customerSubRes?.data?.priceId) {
+            // Find the subscription item that matches the user's priceId
+            const subItem = systemSubsRes?.data?.find((el) => el.priceId === customerSubRes.data.priceId);
+            if (subItem) {
+              subscriptionLevel = subItem.level;
+              console.log('💳 User subscription level:', subscriptionLevel, ['Basic', 'Plus', 'Premium'][subscriptionLevel - 1]);
+            } else {
+              console.warn('💳 Could not find matching subscription item, defaulting to Basic');
+            }
+          } else {
+            console.log('💳 User has no active subscription, defaulting to Basic');
+          }
+          
+          // Fetch existing events count to calculate remaining ad spaces
+          console.log('📊 Fetching existing events count...');
+          const eventsRes = await getEventsByUserId(userId);
+          const eventsCount = eventsRes.data?.length || 0;
+          setExistingEventsCount(eventsCount);
+          console.log('📊 Existing events count:', eventsCount);
+          
+          // Calculate and log remaining ad spaces
+          const totalAdSpaces = PLAN_LIMITS[subscriptionLevel] || 3;
+          const remainingSpaces = Math.max(0, totalAdSpaces - eventsCount);
+          console.log('📊 Subscription plan details:', {
+            level: subscriptionLevel,
+            planName: ['Basic', 'Plus', 'Premium'][subscriptionLevel - 1],
+            totalAdSpaces,
+            existingEvents: eventsCount,
+            remainingSpaces
+          });
+          
+          // Store subscription level in businessData for use in component
+          setBusinessData(prev => ({
+            ...prev,
+            subscriptionLevel: subscriptionLevel
+          }));
+          
+        } catch (error) {
+          console.error('📊 Error fetching subscription or events:', error);
+          setExistingEventsCount(0);
         }
       } catch (error) {
         console.error('🏢 Error fetching business data:', error);
@@ -355,18 +465,28 @@ const EventCreate = () => {
   }, [addressOption]);
 
   const parseJwt = (token) => {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map(function (c) {
-          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-        })
-        .join("")
-    );
+    if (!token || typeof token !== 'string' || token.split('.').length !== 3) {
+      console.warn('Invalid or missing JWT token in EventCreate');
+      return null;
+    }
+    
+    try {
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map(function (c) {
+            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join("")
+      );
 
-    return JSON.parse(jsonPayload)["custom:user_id"];
+      return JSON.parse(jsonPayload)["custom:user_id"];
+    } catch (error) {
+      console.error('Error parsing JWT token:', error);
+      return null;
+    }
   };
 
   const changeTicketSelectedAttr = (attr, value) => {
@@ -1006,7 +1126,7 @@ const EventCreate = () => {
               {eventTypes.map(event => (
                 <div
                   key={event.type}
-                  onClick={() => setSelectedItem(event.type)}
+                  onClick={() => event.enabled && setSelectedItem(event.type)}
                   style={{
                     position: "relative",
                     display: "flex",
@@ -1017,6 +1137,8 @@ const EventCreate = () => {
                     backgroundColor: "white",
                     borderRadius: "15%",
                     flexDirection: "column",
+                    opacity: event.enabled ? 1 : 0.5,
+                    cursor: event.enabled ? "pointer" : "not-allowed",
                   }}>
                   <div
                     style={{
@@ -1055,6 +1177,16 @@ const EventCreate = () => {
                       </span>
                     {/* <Icon path={iconPath} size={"40px"} color={clicked ? "#00AAD7" : "#919797"} /> */}
                     {event.name}
+                    {event.comingSoon && (
+                      <span style={{
+                        fontSize: "12px",
+                        color: "#999",
+                        marginTop: "4px",
+                        fontStyle: "italic"
+                      }}>
+                        (Coming Soon)
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1062,99 +1194,527 @@ const EventCreate = () => {
             <button
               disabled={!selectedItem}
               className={createMultipleClasses([styles.baseButton, styles.createEventButton, !selectedItem ? styles.disabled : ''])}
-              onClick={() => handleContinue(1)}
+              onClick={() => {
+                // If Shows is selected (type "1"), go to multi-date picker step
+                if (selectedItem === "1") {
+                  setStep(0.5)
+                } else {
+                  handleContinue(1)
+                }
+              }}
             >
               Next
             </button>
           </div>
         )}
-        {step === 1 && (
+        {step === 0.5 && (
           <div style={{
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
               flexDirection: 'column',
-              width: '710px',
+              width: '100%',
+              maxWidth: '1000px',
+              padding: '0 40px',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%',marginBottom: '30px' }}>
-              <span style={{ width: '100%' }}>
-                <div className={styles.title}>
-                  Whats the name of your event?
-                </div>
-                <div className={styles.inputContainer} style={{ width: '100%' }}>
-                  <input
-                    className={styles.input}
-                    type="text"
-                    value={item.name}
-                    placeholder="Type name"
-                    onBlur={() => {}}
-                    onChange={(e) => handleItemChange('name',e.target.value)}
-                  />
-                </div>
-              </span>
-            </div>
-            <Divider variant="middle" flexItem color="#CFF4FC" />
-            <div className={styles.title} style={{ marginTop: '10px' }}>
-              When does your event start and end?
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', flexDirection: 'column', width: '100%',marginBottom: '30px' }}>
-              <div style={{ width: '100%', display: 'flex', marginTop: '10px', justifyContent: 'space-between' }}>
-                <DemoContainer components={['DateTimePicker']} sx={{ width: '48%' }} >
-                  <DateTimePicker
-                    sx={{
-                      display: 'flex',
-                      background: '#FCFCFC',
-                      borderRadius: '10px',
-                      boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                      // maxWidth: '500px',
-                      // width: '50%',
-                      minHeight: '28px',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        border: 'none'
-                      },
-                      '& .MuiInputLabel-root': {
-                        transformOrigin: '0px 35px'
+            <h5 className={styles.title} style={{ marginBottom: '40px' }}>
+              Please select dates for tour.
+            </h5>
+            
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '15px',
+              padding: '20px',
+              boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)',
+            }}>
+              <DateRangePicker
+                onChange={item => {
+                  // Calculate all dates in the range
+                  const start = moment(item.selection.startDate)
+                  const end = moment(item.selection.endDate)
+                  const dates = []
+                  let current = start.clone()
+                  
+                  while (current.isSameOrBefore(end)) {
+                    dates.push(current.toDate())
+                    current.add(1, 'day')
+                  }
+                  
+                  // Check if selection exceeds max dates
+                  if (dates.length > MAX_SHOW_DATES) {
+                    toast.error(`You can only select up to ${MAX_SHOW_DATES} dates. Please select a shorter date range.`)
+                    return // Don't update the selection
+                  }
+                  
+                  // Update both the range and selected dates
+                  setDateRange([item.selection])
+                  setSelectedShowDates(dates)
+                }}
+                moveRangeOnFirstSelection={false}
+                months={2}
+                ranges={dateRange}
+                direction="horizontal"
+                minDate={new Date()}
+                staticRanges={[
+                  {
+                    label: 'Today',
+                    range: () => ({
+                      startDate: new Date(),
+                      endDate: new Date()
+                    }),
+                    isSelected: () => false
+                  },
+                  {
+                    label: 'This week',
+                    range: () => ({
+                      startDate: new Date(),
+                      endDate: moment().endOf('week').toDate()
+                    }),
+                    isSelected: () => false
+                  },
+                  {
+                    label: 'This weekend',
+                    range: () => {
+                      const now = moment()
+                      const saturday = now.clone().day(6) // Saturday
+                      const sunday = now.clone().day(7) // Sunday
+                      
+                      // If today is after Sunday, get next weekend
+                      if (now.day() === 0 || now.isAfter(sunday)) {
+                        return {
+                          startDate: saturday.add(1, 'week').toDate(),
+                          endDate: sunday.add(1, 'week').toDate()
+                        }
                       }
-                    }}
-                    value={item.startDate}
-                    label="Start time" 
-                    maxDateTime={item.endDate ? item.endDate : null}
-                    minDateTime={moment()}
-                    onChange={(newValue) => handleItemChange('startDate',newValue)}
-                  />
-                </DemoContainer>
-                <DemoContainer components={['DateTimePicker']} sx={{ width: '48%' }} >
-                  <DateTimePicker
-                    value={item.endDate}
-                    label="End time"
-                    sx={{
-                      display: 'flex',
-                      background: '#FCFCFC',
-                      borderRadius: '10px',
-                      boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
-                      minHeight: '28px',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        border: 'none'
-                      },
-                      '& .MuiInputLabel-root': {
-                        transformOrigin: '0px 35px'
+                      
+                      return {
+                        startDate: saturday.toDate(),
+                        endDate: sunday.toDate()
                       }
-                    }}
-                    minDateTime={item.startDate ? item.startDate : moment()}
-                    onChange={(newValue) => handleItemChange('endDate',newValue)}
-                  />
-                </DemoContainer>
+                    },
+                    isSelected: () => false
+                  },
+                  {
+                    label: 'Next week',
+                    range: () => ({
+                      startDate: moment().add(1, 'week').startOf('week').toDate(),
+                      endDate: moment().add(1, 'week').endOf('week').toDate()
+                    }),
+                    isSelected: () => false
+                  },
+                  {
+                    label: 'Full Remaining Days',
+                    range: () => ({
+                      startDate: new Date(),
+                      endDate: moment().add(MAX_SHOW_DATES - 1, 'days').toDate()
+                    }),
+                    isSelected: () => false
+                  }
+                ]}
+                inputRanges={[]}
+              />
+              
+              {/* Custom date display and buttons at bottom */}
+              <div style={{
+                marginTop: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '15px',
+                padding: '0 20px',
+                fontFamily: 'Outfit'
+              }}>
+                {/* Start Date */}
+                <div style={{
+                  padding: '12px 20px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  backgroundColor: 'white',
+                  fontSize: '16px',
+                  color: '#333',
+                  minWidth: '150px',
+                  textAlign: 'center'
+                }}>
+                  {moment(dateRange[0].startDate).format('MMM D, YYYY')}
+                </div>
+                
+                {/* Separator */}
+                <span style={{ color: '#999', fontSize: '18px' }}>–</span>
+                
+                {/* End Date */}
+                <div style={{
+                  padding: '12px 20px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  backgroundColor: 'white',
+                  fontSize: '16px',
+                  color: '#333',
+                  minWidth: '150px',
+                  textAlign: 'center'
+                }}>
+                  {moment(dateRange[0].endDate).format('MMM D, YYYY')}
+                </div>
+                
+                {/* Cancel Button */}
+                <button
+                  onClick={() => {
+                    // Reset to today
+                    setDateRange([{
+                      startDate: new Date(),
+                      endDate: new Date(),
+                      key: 'selection'
+                    }])
+                    setSelectedShowDates([])
+                  }}
+                  style={{
+                    padding: '12px 30px',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    backgroundColor: 'white',
+                    fontSize: '16px',
+                    color: '#666',
+                    cursor: 'pointer',
+                    fontFamily: 'Outfit',
+                    fontWeight: 500,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = '#f5f5f5'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'white'
+                  }}
+                >
+                  Cancel
+                </button>
+                
+                {/* Next Button */}
+                <button
+                  onClick={() => handleContinue(1)}
+                  disabled={selectedShowDates.length === 0}
+                  style={{
+                    padding: '12px 40px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    backgroundColor: selectedShowDates.length === 0 ? '#ccc' : '#F09925',
+                    fontSize: '16px',
+                    color: 'white',
+                    cursor: selectedShowDates.length === 0 ? 'not-allowed' : 'pointer',
+                    fontFamily: 'Outfit',
+                    fontWeight: 600,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedShowDates.length > 0) {
+                      e.target.style.backgroundColor = '#d88520'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedShowDates.length > 0) {
+                      e.target.style.backgroundColor = '#F09925'
+                    }
+                  }}
+                >
+                  Next
+                </button>
               </div>
             </div>
-            <button
-              disabled={disabledButtonOnStepTwo()}
-              className={createMultipleClasses([styles.baseButton, styles.createEventButton, disabledButtonOnStepTwo() ? styles.disabled : ''])}
-              onClick={() => handleContinue(2)}
-            >
-              Next
-            </button>
+
+            {/* Dates selected counter */}
+            <div style={{
+              marginTop: '15px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '16px',
+              color: '#666',
+              fontFamily: 'Outfit'
+            }}>
+              <span>Dates selected</span>
+              <input
+                type="text"
+                value={selectedShowDates.length}
+                readOnly
+                style={{
+                  width: '50px',
+                  padding: '8px',
+                  textAlign: 'center',
+                  border: '1px solid #ddd',
+                  borderRadius: '5px',
+                  fontSize: '16px',
+                  backgroundColor: '#f5f5f5'
+                }}
+              />
+              <span>of</span>
+              <input
+                type="text"
+                value={MAX_SHOW_DATES}
+                readOnly
+                style={{
+                  width: '60px',
+                  padding: '8px',
+                  textAlign: 'center',
+                  border: '1px solid #ddd',
+                  borderRadius: '5px',
+                  fontSize: '16px',
+                  backgroundColor: '#f5f5f5'
+                }}
+              />
+            </div>
           </div>
+        )}
+        {step === 1 && (
+          <div style={{
+              display: 'flex',
+              justifyContent: 'flex-start',
+              alignItems: 'flex-start',
+              flexDirection: 'column',
+              width: '850px',
+              padding: '0 40px',
+            }}
+          >
+            <div style={{ width: '100%', marginBottom: '60px' }}>
+              <div className={styles.title} style={{ marginBottom: '20px' }}>
+                What's the name of your event?
+              </div>
+              <div className={styles.inputContainer} style={{ 
+                width: '100%',
+                padding: '14px',
+                minHeight: '56px',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <input
+                  className={styles.input}
+                  type="text"
+                  value={item.name}
+                  placeholder="Type event title"
+                  autoFocus
+                  style={{
+                    fontSize: '16px',
+                    fontFamily: 'Roboto, sans-serif'
+                  }}
+                  onBlur={() => {}}
+                  onChange={(e) => handleItemChange('name',e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div style={{ width: '100%' }}>
+              <div className={styles.title} style={{ marginBottom: '20px' }}>
+                When does your event start and end?
+              </div>
+              
+              <div style={{ width: '100%', marginBottom: '20px' }}>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#666', 
+                  marginBottom: '8px',
+                  fontFamily: 'Outfit'
+                }}>
+                  Pick a date: e.g. Thu 21 March, 2023
+                </div>
+                {/* Date Picker - Full Width */}
+                <div style={{ width: '100%', marginBottom: '20px' }}>
+                  <DatePicker
+                      open={datePickerOpen}
+                      onOpen={() => setDatePickerOpen(true)}
+                      onClose={() => setDatePickerOpen(false)}
+                      minDate={moment()}
+                      sx={{
+                        width: '100%',
+                        background: '#FCFCFC',
+                        borderRadius: '10px',
+                        boxShadow: '0px 4.679279327392578px 9.358558654785156px 0px #32324702',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          border: 'none'
+                        },
+                        '& .MuiIconButton-root': {
+                          padding: '8px',
+                          marginRight: '4px'
+                        },
+                        '& .MuiSvgIcon-root': {
+                          fontSize: '24px',
+                          color: '#666'
+                        },
+                        '& .MuiInputBase-input': {
+                          cursor: 'pointer'
+                        }
+                      }}
+                      slotProps={{
+                        textField: {
+                          placeholder: 'MM/DD/YYYY',
+                          onClick: () => setDatePickerOpen(true),
+                          InputProps: {
+                            style: {
+                              padding: '0',
+                              fontSize: '16px',
+                              cursor: 'pointer'
+                            }
+                          },
+                          inputProps: {
+                            style: {
+                              padding: '16px 14px',
+                              fontSize: '16px',
+                              cursor: 'pointer'
+                            },
+                            readOnly: true
+                          }
+                        }
+                      }}
+                      value={item.startDate}
+                      minDate={moment()}
+                      onChange={(newValue) => {
+                        // Set the date for both start and end
+                        const newStart = moment(newValue).hour(item.startDate ? moment(item.startDate).hour() : 12).minute(item.startDate ? moment(item.startDate).minute() : 0);
+                        const newEnd = moment(newValue).hour(item.endDate ? moment(item.endDate).hour() : 14).minute(item.endDate ? moment(item.endDate).minute() : 0);
+                        handleItemChange('startDate', newStart);
+                        handleItemChange('endDate', newEnd);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Start and End Time - On Same Line */}
+                <div style={{ width: '100%', display: 'flex', gap: '20px' }}>
+                  {/* Start Time */}
+                  <div style={{ flex: '1' }}>
+                    <div style={{ 
+                      fontSize: '13px', 
+                      fontWeight: 500, 
+                      color: '#666', 
+                      marginBottom: '8px',
+                      fontFamily: 'Outfit'
+                    }}>
+                      Start time
+                    </div>
+                    <div 
+                      className={styles.inputContainer} 
+                      onClick={() => startTimeInputRef.current?.showPicker?.()}
+                      style={{ 
+                        width: '100%',
+                        padding: '14px',
+                        minHeight: '56px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        position: 'relative',
+                        cursor: 'pointer'
+                      }}>
+                      <input
+                        ref={startTimeInputRef}
+                        className={styles.input}
+                        type="time"
+                        value={item.startDate ? moment(item.startDate).format('HH:mm') : ''}
+                        onChange={(e) => {
+                          const [hours, minutes] = e.target.value.split(':');
+                          const updatedStart = moment(item.startDate || new Date()).hour(parseInt(hours)).minute(parseInt(minutes));
+                          handleItemChange('startDate', updatedStart);
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.target.showPicker?.();
+                        }}
+                        style={{
+                          fontSize: '16px',
+                          fontFamily: 'Roboto, sans-serif',
+                          width: '100%',
+                          border: 'none',
+                          background: 'transparent',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          paddingRight: '40px'
+                        }}
+                      />
+                      <span 
+                        className="material-icons" 
+                        style={{ 
+                          position: 'absolute',
+                          right: '14px',
+                          color: '#666',
+                          fontSize: '24px',
+                          pointerEvents: 'none'
+                        }}
+                      >
+                        schedule
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* End Time */}
+                  <div style={{ flex: '1' }}>
+                    <div style={{ 
+                      fontSize: '13px', 
+                      fontWeight: 500, 
+                      color: '#666', 
+                      marginBottom: '8px',
+                      fontFamily: 'Outfit'
+                    }}>
+                      End time
+                    </div>
+                    <div 
+                      className={styles.inputContainer} 
+                      onClick={() => endTimeInputRef.current?.showPicker?.()}
+                      style={{ 
+                        width: '100%',
+                        padding: '14px',
+                        minHeight: '56px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        position: 'relative',
+                        cursor: 'pointer'
+                      }}>
+                      <input
+                        ref={endTimeInputRef}
+                        className={styles.input}
+                        type="time"
+                        value={item.endDate ? moment(item.endDate).format('HH:mm') : ''}
+                        onChange={(e) => {
+                          const [hours, minutes] = e.target.value.split(':');
+                          const updatedEnd = moment(item.endDate || new Date()).hour(parseInt(hours)).minute(parseInt(minutes));
+                          handleItemChange('endDate', updatedEnd);
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.target.showPicker?.();
+                        }}
+                        style={{
+                          fontSize: '16px',
+                          fontFamily: 'Roboto, sans-serif',
+                          width: '100%',
+                          border: 'none',
+                          background: 'transparent',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          paddingRight: '40px'
+                        }}
+                      />
+                      <span 
+                        className="material-icons" 
+                        style={{ 
+                          position: 'absolute',
+                          right: '14px',
+                          color: '#666',
+                          fontSize: '24px',
+                          pointerEvents: 'none'
+                        }}
+                      >
+                        schedule
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                disabled={disabledButtonOnStepTwo()}
+                className={createMultipleClasses([styles.baseButton, styles.createEventButton, disabledButtonOnStepTwo() ? styles.disabled : ''])}
+                onClick={() => handleContinue(2)}
+                style={{ alignSelf: 'flex-end', marginTop: '40px' }}
+              >
+                Next
+              </button>
+            </div>
         )}
         {step === 2 && (
           <div style={{

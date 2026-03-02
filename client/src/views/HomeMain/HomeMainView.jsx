@@ -167,7 +167,7 @@ const HomeMainView = () => {
               onClick={() => navigate("/admin/my-events")}
             >
               <span className="action-icon">📅</span>
-              Create Event
+              Create Ad
             </button>
             <button 
               className="action-button"

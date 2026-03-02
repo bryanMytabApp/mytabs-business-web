@@ -140,10 +140,14 @@ const MyTicketsView = () => {
 
       const ticketResults = await Promise.all(ticketPromises);
 
-      // Filter to events with tickets and fetch their ticket types in parallel
-      const eventsWithTicketSales = ticketResults.filter(result => result.tickets && result.tickets.length > 0);
+      // Filter to events with ticketing enabled (check for ticketTypes in event data)
+      const eventsWithTicketing = ticketResults.filter(result => {
+        const event = result.event;
+        // Check if event has ticketTypes defined (indicates "Tickets with Tabs" is enabled)
+        return event.ticketTypes && Array.isArray(event.ticketTypes) && event.ticketTypes.length > 0;
+      });
       
-      const ticketTypePromises = eventsWithTicketSales.map(result =>
+      const ticketTypePromises = eventsWithTicketing.map(result =>
         http.get(`payments/tickets/event/types/${result.eventId}`)
           .then(response => ({ eventId: result.eventId, ticketTypes: response.data.ticketTypes || [] }))
           .catch(err => {
@@ -155,10 +159,11 @@ const MyTicketsView = () => {
       const ticketTypeResults = await Promise.all(ticketTypePromises);
 
       // Build the data structures
-      eventsWithTicketSales.forEach(result => {
+      eventsWithTicketing.forEach(result => {
         ticketsData[result.eventId] = result.tickets;
         eventsWithTickets.push(result.event);
-        console.log(`✅ Event ${result.event.name} has ${result.tickets.length} tickets`);
+        const ticketCount = result.tickets ? result.tickets.length : 0;
+        console.log(`✅ Event ${result.event.name} has ${ticketCount} tickets sold`);
       });
 
       ticketTypeResults.forEach(result => {
@@ -166,7 +171,7 @@ const MyTicketsView = () => {
         console.log(`📋 Fetched ${result.ticketTypes.length} ticket types for event ${result.eventId}`);
       });
 
-      console.log('🎫 Events with ticket sales:', eventsWithTickets.length);
+      console.log('🎫 Events with ticketing enabled:', eventsWithTickets.length);
 
       setEvents(eventsWithTickets);
       setTicketsByEvent(ticketsData);
@@ -985,9 +990,15 @@ const MyTicketsView = () => {
 
         {filteredEvents.length === 0 && events.length === 0 && (
           <div className="no-results">
-            <h3>No Events with Tickets</h3>
-            <p>You don't have any events with ticket sales enabled yet.</p>
-            <p>Enable "Tickets with Tabs" on your events to start selling tickets.</p>
+            <h3>No Events with Ticketing Enabled</h3>
+            <p>You don't have any events with "Tickets with Tabs" enabled yet.</p>
+            <p>To get started:</p>
+            <ol style={{ textAlign: 'left', display: 'inline-block', marginTop: '10px' }}>
+              <li>Go to your event settings</li>
+              <li>Enable "Tickets with Tabs" option</li>
+              <li>Configure your ticket types and pricing</li>
+              <li>Your event will appear here for ticket management</li>
+            </ol>
           </div>
         )}
 

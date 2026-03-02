@@ -15,6 +15,8 @@ import analyticsActiveIcon from "../assets/menu/analyticsActive.svg";
 import analyticsInactiveIcon from "../assets/menu/analyticsInactive.svg";
 import myTicketsActiveIcon from "../assets/menu/ticketActive.svg";
 import myTicketsInactiveIcon from "../assets/menu/ticketInactive.svg";
+import teamActiveIcon from "../assets/menu/teamActive.svg";
+import teamInactiveIcon from "../assets/menu/teamInactive.svg";
 import upgradesAddonsActiveIcon from "../assets/menu/upgradesAddonsActive.svg";
 import upgradesAddonsInactiveIcon from "../assets/menu/upgradesAddonsInactive.svg";
 import shopActiveIcon from "../assets/menu/shopActive.svg";
@@ -68,6 +70,14 @@ const options = [
       inactive: myTicketsInactiveIcon,
     },
     title: "My Tickets",
+  },
+  {
+    path: "/admin/team",
+    icon: {
+      active: teamActiveIcon,
+      inactive: teamInactiveIcon,
+    },
+    title: "Team Management",
   },
   {
     path: "/admin/upgrades-and-add-ons",
@@ -135,15 +145,39 @@ export default function HomeView() {
     checkTicketAccess();
   }, []);
 
+  // Get user role from token
+  const getUserRole = () => {
+    try {
+      const idToken = localStorage.getItem('idToken');
+      if (!idToken) return null;
+      
+      const tokenPayload = JSON.parse(atob(idToken.split('.')[1]));
+      return tokenPayload['custom:role'];
+    } catch (error) {
+      console.error('Error parsing token:', error);
+      return null;
+    }
+  };
+
   // Filter options based on user access
   const getFilteredOptions = () => {
+    const userRole = getUserRole();
+    const isVerifier = userRole === 'verifier' || userRole === 'scanner';
+    
+    console.log('🔐 User role:', userRole, 'isVerifier:', isVerifier);
+
     return options.filter(option => {
+      // Verifiers should not see any main navigation items
+      if (isVerifier) {
+        return false;
+      }
+
       // Hide My Tickets if user doesn't have access
       if (option.title === "My Tickets" && !userHasTicketAccess) {
         return false;
       }
       // Hide other restricted items (Admin Portal should be in bottom section only)
-      return !["Logout", "Configuration", "Admin Portal"].includes(option.title);
+      return !["Logout", "Configuration", "Admin Portal", "Team Management"].includes(option.title);
     });
   };
 
@@ -265,22 +299,51 @@ export default function HomeView() {
                     )}
                   </div>
 
-                  <NavLink
-                    key={options[options.length - 3].path}
-                    style={{
-                      backgroundColor: !isExpanded ? null : "white",
-                      fontFamily: "Poppins",
-                      fontWeight: 500,
-                    }}
-                    className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
-                    to={options[options.length - 3].path}>
-                    <ReactSVG src={options[options.length - 3].icon} />
-                    {isExpanded && (
-                      <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
-                        {options[options.length - 3].title}
-                      </span>
-                    )}
-                  </NavLink>
+                  {!getUserRole() || (getUserRole() !== 'verifier' && getUserRole() !== 'scanner') ? (
+                    <>
+                      <NavLink
+                        key={options[options.length - 3].path}
+                        style={{
+                          backgroundColor: !isExpanded ? null : "white",
+                          fontFamily: "Poppins",
+                          fontWeight: 500,
+                        }}
+                        className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
+                        to={options[options.length - 3].path}>
+                        <ReactSVG src={options[options.length - 3].icon} />
+                        {isExpanded && (
+                          <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
+                            {options[options.length - 3].title}
+                          </span>
+                        )}
+                      </NavLink>
+                      <NavLink
+                        key="/admin/team"
+                        style={{
+                          backgroundColor: !isExpanded ? null : "white",
+                          fontFamily: "Poppins",
+                          fontWeight: 500,
+                        }}
+                        className={isExpanded ? "Menu-option" : "Menu-option-expanded"}
+                        to="/admin/team"
+                        children={({isActive}) => (
+                          <>
+                            <div style={{ display: isActive ? 'block' : 'none' }}>
+                              <ReactSVG src={teamActiveIcon} />
+                            </div>
+                            <div style={{ display: isActive ? 'none' : 'block' }}>
+                              <ReactSVG src={teamInactiveIcon} />
+                            </div>
+                            {isExpanded && (
+                              <span style={{marginLeft: "8px", backgroundColor: "white", fontWeight: 500}}>
+                                Team Management
+                              </span>
+                            )}
+                          </>
+                        )}
+                      />
+                    </>
+                  ) : null}
                   {userHasTicketAccess && (
                     <NavLink
                       key={options[options.length - 2].path}

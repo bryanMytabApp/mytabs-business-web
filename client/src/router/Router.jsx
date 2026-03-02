@@ -22,12 +22,14 @@ import EventsView from "../views/Events/EventsView";
 import EventCreate from "../views/Events/EventCreate";
 import EventEdit from "../views/Events/EventEdit";
 import PasswordRecovery from "../views/Login/PasswordRecovery";
+import ChangePasswordView from "../views/Login/ChangePasswordView";
 import DeleteAccountView from "../views/Login/DeleteAccountView";
 import AdminPortal from "../views/Admin/AdminPortal";
 import TicketPurchase from "../views/Tickets/TicketPurchase";
 import TicketSuccess from "../views/Tickets/TicketSuccess";
 import TicketCancel from "../views/Tickets/TicketCancel";
 import BusinessRedirect from "../views/BusinessRedirect";
+import TeamManagement from "../views/TeamManagement/TeamManagement";
 
 const routerHandler = (isIntern, allowPass = false) => {
   const _idToken = localStorage.getItem("idToken");
@@ -60,12 +62,22 @@ const router = createBrowserRouter([
       {
         path: "login",
         element: <LoginView />,
-        loader: () => routerHandler(false),
+        loader: () => {
+          // Check if there's a returnUrl parameter - if so, allow the login page to handle the redirect
+          const params = new URLSearchParams(window.location.search);
+          const hasReturnUrl = params.has('returnUrl');
+          return routerHandler(false, hasReturnUrl);
+        },
       },
       {
         path: "password-recovery",
         element: <PasswordRecovery />,
         loader: () => routerHandler(false, true),
+      },
+      {
+        path: "change-password",
+        element: <ChangePasswordView />,
+        loader: () => routerHandler(true, true),
       },
       {
         path: "delete-account",
@@ -204,6 +216,11 @@ const router = createBrowserRouter([
           {
             path: "admin-portal",
             element: <AdminPortal />,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "team",
+            element: <TeamManagement />,
             loader: () => routerHandler(true),
           },
         ],

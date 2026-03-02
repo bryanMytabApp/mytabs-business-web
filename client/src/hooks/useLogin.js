@@ -66,6 +66,26 @@ const useLogin = () => {
       setIsLoading(true);
       let res = await getToken({ username: username.trim(), password: password });
 
+      // Check if password change is required
+      if (res.challengeName === 'NEW_PASSWORD_REQUIRED') {
+        console.log('🔐 Password change required - redirecting to change password page');
+        
+        // Store challenge data in sessionStorage
+        sessionStorage.setItem('passwordChallenge', JSON.stringify({
+          username: res.username,
+          session: res.session,
+          challengeParameters: res.challengeParameters
+        }));
+        
+        // Redirect to change password page with returnUrl if present
+        if (returnUrl) {
+          navigate(`/change-password?returnUrl=${encodeURIComponent(returnUrl)}`);
+        } else {
+          navigate('/change-password');
+        }
+        return;
+      }
+
       localStorage.setItem("refToken", res.RefreshToken);
       localStorage.setItem("idToken", res.IdToken);
       localStorage.setItem("username", username.trim());
@@ -90,6 +110,12 @@ const useLogin = () => {
       const userIdFromToken = tokenPayload["custom:user_id"] || tokenPayload.sub || tokenPayload.email || username.trim();
       console.log('🔑 [useLogin v2] Extracted userId from token:', userIdFromToken, 'type:', typeof userIdFromToken);
 
+      // Check if user is a team member (verifier role)
+      const userRole = tokenPayload["custom:role"];
+      const isTeamMember = userRole === "verifier" || userRole === "scanner";
+      
+      console.log('👤 User role:', userRole, 'isTeamMember:', isTeamMember);
+
       // If returnUrl exists, validate and redirect there with auth parameters
       if (returnUrl) {
         // Validate returnUrl to prevent open redirect attacks
@@ -105,8 +131,17 @@ const useLogin = () => {
         
         console.log('🔐 Redirecting to verification with auth:', authenticatedUrl);
         window.location.href = authenticatedUrl;
+        return; // CRITICAL: Stop execution here to prevent subscription check
       } else {
-        // Check if user has an active subscription
+        // Team members (verifiers/scanners) should always go to verify.keeptabs.app
+        if (isTeamMember) {
+          console.log("Team member login - redirecting to verify.keeptabs.app");
+          const verifyUrl = `https://verify.keeptabs.app?token=${encodeURIComponent(token)}&userId=${encodeURIComponent(userIdFromToken)}`;
+          window.location.href = verifyUrl;
+          return;
+        }
+
+        // Check if user has an active subscription (business owners only)
         try {
           const subscriptionResponse = await getCustomerSubscription({userId: userIdFromToken});
           

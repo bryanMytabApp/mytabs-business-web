@@ -55,18 +55,29 @@ export const normalizeIncludes = (str, search) => {
 }
 
 export const parseJwt = (token) => {
-	const base64Url = token.split(".")[1];
-	const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-	const jsonPayload = decodeURIComponent(
-		atob(base64)
-			.split("")
-			.map(function (c) {
-				return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-			})
-			.join("")
-	);
+	// Check if token exists and is valid
+	if (!token || typeof token !== 'string' || token.split('.').length !== 3) {
+		console.warn('Invalid or missing JWT token');
+		return null;
+	}
 
-	return JSON.parse(jsonPayload)["custom:user_id"];
+	try {
+		const base64Url = token.split(".")[1];
+		const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+		const jsonPayload = decodeURIComponent(
+			atob(base64)
+				.split("")
+				.map(function (c) {
+					return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+				})
+				.join("")
+		);
+
+		return JSON.parse(jsonPayload)["custom:user_id"];
+	} catch (error) {
+		console.error('Error parsing JWT token:', error);
+		return null;
+	}
 };
 
 export const getUserIdCognito =  async ( token ) => {

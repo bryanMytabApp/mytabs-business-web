@@ -63,6 +63,15 @@ export const logout = async (params) => {
   }
 };
 
+export const changePassword = async (params) => {
+  try {
+    const response = await http.post("auth/change-password", params);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
 function enhanceError(error) {
   if (error.response && typeof error.response.data === "string") {
     try {
@@ -77,3 +86,13 @@ function enhanceError(error) {
   return error;
 }
 
+
+
+export const completeNewPasswordChallenge = async (params) => {
+  try {
+    const response = await http.post("auth/complete-new-password", params);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};

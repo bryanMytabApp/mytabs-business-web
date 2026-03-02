@@ -114,6 +114,21 @@ export default function LoginView() {
       </div>
       <div class='welcome-back'>Welcome back!</div>
       <div class='log-in-to-your-account'>Log in to your account</div>
+      
+      {/* Version Info */}
+      <div style={{
+        position: 'fixed',
+        bottom: '10px',
+        right: '10px',
+        fontSize: '11px',
+        color: '#999',
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        fontFamily: 'monospace'
+      }}>
+        v1.2.0 • {new Date('2024-12-19T18:30:00Z').toISOString().replace(/[:.]/g, '').slice(0, 15)}
+      </div>
     </div>
   );
 }

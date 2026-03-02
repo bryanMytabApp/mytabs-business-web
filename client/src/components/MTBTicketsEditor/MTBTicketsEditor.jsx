@@ -394,7 +394,7 @@ const MTBTicketsEditor = ({ tickets = [], setTickets, handleContinue, showNext }
                           maxWidth: '150px'
                         }}
                       >
-                        {(ticket.type === 'Custom' && ticket.customName) ? ticket.customName : (ticket.type || `Ticket ${index <= 8 ? `0${index + 1}` : index + 1}`)}
+                        {(ticket.type === 'Custom' && ticket.customLabel) ? ticket.customLabel : (ticket.type || `Ticket ${index <= 8 ? `0${index + 1}` : index + 1}`)}
                       </div>
                       <div className={createMultipleClasses([styles['outfit-font']])}>
                         {ticket.option}
@@ -533,7 +533,7 @@ const MTBTicketsEditor = ({ tickets = [], setTickets, handleContinue, showNext }
                           ))}
                         </select>
                       </div>
-                      {/* Custom ticket name field - only show when Custom is selected */}
+                      {/* Custom ticket label field - only show when Custom is selected */}
                       {tickets[ticketSelectedIndex]?.type === 'Custom' && (
                         <div style={{ marginTop: '10px' }}>
                           <div className={styles['field-label']}>
@@ -543,10 +543,10 @@ const MTBTicketsEditor = ({ tickets = [], setTickets, handleContinue, showNext }
                             <input
                               className={styles.input}
                               type="text"
-                              value={tickets[ticketSelectedIndex]?.customName || ''}
+                              value={tickets[ticketSelectedIndex]?.customLabel || ''}
                               placeholder="Enter custom ticket name"
                               onBlur={() => {}}
-                              onChange={(e) => changeTicketSelectedAttr('customName', e.target.value)}
+                              onChange={(e) => changeTicketSelectedAttr('customLabel', e.target.value)}
                             />
                           </div>
                         </div>
