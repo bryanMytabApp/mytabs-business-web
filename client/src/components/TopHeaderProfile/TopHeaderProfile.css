@@ -1,0 +1,188 @@
+/* TopHeaderProfile — right-hand cluster of the app top bar.
+   Visual model mirrors the AWS console: outlined help "?" + user pill +
+   dropdown with profile metadata. Colors stay neutral (slate / blue) so
+   the orange brand bar stays the visual anchor for primary CTAs. */
+
+.th-topright {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+}
+
+/* Help button: thin outlined dot, fills blue on hover. Sized to match the
+   rest of the top-bar controls (32×32) so they share a clean baseline. */
+.th-help-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  color: #64748B;
+  border: 1px solid #CBD5E1;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color .12s ease, border-color .12s ease, background-color .12s ease;
+}
+.th-help-btn:hover {
+  color: #2563EB;
+  border-color: #2563EB;
+  background: rgba(37, 99, 235, .06);
+}
+.th-help-btn:focus-visible {
+  outline: 2px solid #93C5FD;
+  outline-offset: 2px;
+}
+
+/* Profile pill: avatar + name + caret. Same 32px height as the help and
+   hamburger buttons so they all sit on a single baseline. */
+.th-profile-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px 0 4px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #1F2937;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 220px;
+  transition: background-color .12s ease, border-color .12s ease;
+}
+.th-profile-btn:hover { background: #F3F4F6; }
+.th-profile-btn-open { background: #F3F4F6; border-color: #E5E7EB; }
+.th-profile-btn:focus-visible {
+  outline: 2px solid #93C5FD;
+  outline-offset: 2px;
+}
+
+.th-profile-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.th-caret { color: #6B7280; flex-shrink: 0; }
+
+.th-avatar {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #F09925, #f97316);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: .3px;
+}
+.th-avatar-lg {
+  width: 40px; height: 40px;
+  font-size: 14px;
+}
+
+/* Dropdown menu. */
+.th-profile-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 280px;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, .12);
+  padding: 10px;
+  z-index: 1000;
+  animation: th-prof-fade .12s ease-out;
+}
+@keyframes th-prof-fade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.th-profile-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px 12px;
+}
+.th-profile-id { min-width: 0; flex: 1; }
+.th-profile-name-lg {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.th-profile-email {
+  font-size: 12px;
+  color: #6B7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.th-profile-meta {
+  margin: 0;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  row-gap: 4px;
+  column-gap: 10px;
+  font-size: 12px;
+}
+.th-profile-meta dt {
+  color: #6B7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: 10px;
+  align-self: center;
+}
+.th-profile-meta dd {
+  margin: 0;
+  color: #111827;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.th-profile-divider {
+  height: 1px;
+  background: #E5E7EB;
+  margin: 6px 0;
+}
+
+.th-profile-link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.th-profile-link:hover { background: #F3F4F6; }
+.th-profile-link-danger { color: #DC2626; }
+.th-profile-link-danger:hover { background: #FEF2F2; }
+
+@media (max-width: 540px) {
+  .th-profile-name { display: none; }
+  .th-profile-btn { padding-right: 6px; }
+}

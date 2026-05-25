@@ -1,0 +1,12 @@
+.input-validator-text-req {
+  color: #909090;
+  font-family: Outfit;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.green-filter {
+  filter: brightness(0) saturate(100%) invert(46%) sepia(95%) saturate(4159%) hue-rotate(86deg) brightness(99%) contrast(101%);
+}

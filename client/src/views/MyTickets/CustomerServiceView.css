@@ -1,0 +1,371 @@
+.customer-service-view {
+  padding: 20px;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Header */
+.service-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.service-header h1 {
+  margin: 0;
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.back-button {
+  padding: 10px 20px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.back-button:hover {
+  background-color: #5a6268;
+}
+
+/* Customer Details Section */
+.customer-details-section {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.customer-details-section h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.customer-details-box {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.customer-info-display .info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.customer-info-display .info-row:last-child {
+  margin-bottom: 0;
+}
+
+/* Edit Customer Form */
+.edit-customer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-row {
+  display: flex;
+  gap: 20px;
+}
+
+.form-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-field label {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.form-field input {
+  padding: 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.form-field input:focus {
+  outline: none;
+  border-color: #00AAD6;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.save-btn {
+  padding: 8px 16px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  padding: 8px 16px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Current Purchase Section */
+.current-purchase-section {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.current-purchase-section h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.purchase-details-box {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.purchase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.event-info {
+  flex: 1;
+}
+
+.event-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.event-details, .ticket-info {
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.qr-code-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.qr-code-placeholder {
+  background: white;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  font-family: monospace;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.qr-code {
+  color: #333;
+}
+
+.status-info {
+  font-size: 12px;
+  text-align: center;
+}
+
+.status-info div {
+  margin-bottom: 3px;
+}
+
+/* Purchase History */
+.purchase-history-section {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.purchase-history-section h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.history-list {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.history-item {
+  color: #333;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.history-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Actions Section */
+.actions-section {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.actions-section h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 15px;
+}
+
+.action-button {
+  padding: 15px 10px;
+  background-color: #00AAD6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.3;
+  transition: background-color 0.3s ease;
+}
+
+.action-button:hover {
+  background-color: #0088b3;
+}
+
+.action-button.cancel {
+  background-color: #dc3545;
+}
+
+.action-button.cancel:hover {
+  background-color: #c82333;
+}
+
+/* Notes Section */
+.notes-section {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.notes-section h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.notes-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.notes-textarea {
+  flex: 1;
+  padding: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.notes-textarea:focus {
+  outline: none;
+  border-color: #00AAD6;
+}
+
+.add-note-btn {
+  padding: 10px 20px;
+  background-color: #00AAD6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  height: fit-content;
+}
+
+.existing-notes {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.note-item {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: white;
+  border-radius: 4px;
+  border-left: 3px solid #00AAD6;
+}
+
+.note-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .purchase-header {
+    flex-direction: column;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .action-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .notes-container {
+    flex-direction: column;
+  }
+}

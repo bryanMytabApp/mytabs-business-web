@@ -1,0 +1,9 @@
+{
+  "backendUrl": "https://16psjhr9ni.execute-api.us-east-1.amazonaws.com/prod/",
+  "bucketUrl": "https://mytabs-core-prod.s3.amazonaws.com/",
+  "env": "prod",
+  "userPoolData": {
+    "UserPoolId": "us-east-1_MAXS6xo4n",
+    "ClientId": "6e2i01snasqfdamrne144ua0df"
+  }
+}

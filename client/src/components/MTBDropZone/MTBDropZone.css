@@ -1,0 +1,101 @@
+.drag-and-drop {
+  color: var(--gray-700, #676565);
+  text-align: center;
+  font-family: var(--small-desktop-font-family, "Inter-Light", sans-serif);
+  font-size: var(--small-desktop-font-size, 14px);
+  line-height: var(--small-desktop-line-height, 16px);
+  font-weight: var(--small-desktop-font-weight, 300);
+  position: relative;
+  align-self: stretch;
+
+}
+
+.edit-delete-icons {
+  display: flex;
+  justify-content: space-between;
+  margin-right: 10px;
+  width: 100%;
+}
+
+.dropzone-Helper-text {
+  display: flex;
+  padding: 0px 8px;
+  align-items: center;
+  justify-self: flex-end;
+  gap: 8px;
+}
+.drag-and-drop-container {
+  border-radius: 8px;
+  border-style: dashed;
+  border-color: var(--gray-300, #bebdbd);
+  border-width: 1px;
+  padding: 9px 16px 9px 16px;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  height: 256px;
+  position: relative;
+  overflow: hidden;
+}
+
+.drag-and-drop-labels {
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  flex-shrink: 0;
+  position: relative;
+
+}
+
+.drag-and-drop-secondary-label {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.drag-and-drop-text {
+  color: var(--gray-500, #929191);
+  text-align: center;
+  font-family: var(--mini-desktop-font-family, "Inter-Regular", sans-serif);
+  font-size: var(--mini-desktop-font-size, 12px);
+  line-height: var(--mini-desktop-line-height, 14px);
+  font-weight: var(--mini-desktop-font-weight, 400);
+  position: relative;
+}
+
+.drag-and-drop-browse {
+  color: var(--primary-default, #e8737a);
+  text-align: center;
+  font-family: var(--mini-desktop-font-family, "Inter-Regular", sans-serif);
+  font-size: var(--mini-desktop-font-size, 12px);
+  line-height: var(--mini-desktop-line-height, 14px);
+  font-weight: var(--mini-desktop-font-weight, 400);
+  position: relative;
+}
+
+.drag-and-drop-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 1;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .Geo-create-li-files>div {
+    max-height: 60vh; 
+    max-width: 100%; 
+  }
+}

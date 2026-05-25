@@ -1,0 +1,442 @@
+.previewContainer {
+  width: 30%;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+  background: transparent;
+  border-radius: 10px;
+  min-width: 280px;
+  max-width: 320px;
+  box-sizing: border-box;
+}
+
+.previewTitle {
+  font-family: Outfit;
+  font-size: 20.09px;
+  font-weight: 700;
+  line-height: 25px;
+  margin-bottom: 15px;
+  color: #00AAD6;
+}
+
+/* Mobile Phone Frame */
+.mobileTicketContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0;
+  height: auto;
+}
+
+/* Ticket Card Inside Phone */
+.ticketCard {
+  background: white;
+  border-radius: 12px;
+  margin: 0;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+  max-width: fit-content;
+}
+
+.eventImage {
+  height: 60px;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px 12px 0 0;
+  margin: -15px -15px 15px -15px;
+  position: relative;
+}
+
+.tabsHeaderImage {
+  position: absolute;
+  height: 39px;
+  width: auto;
+  z-index: 2;
+}
+
+.eventLabel {
+  font-family: Outfit;
+  font-size: 10px;
+  font-weight: 500;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.eventTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 10px;
+}
+
+.eventTitle {
+  font-family: Outfit;
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0;
+  line-height: 1.3;
+  flex: 1;
+}
+
+.ticketLabel {
+  font-family: Outfit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #00AAD6;
+  margin-bottom: 0;
+  text-align: center;
+  background: rgba(0, 170, 214, 0.1);
+  padding: 4px 12px;
+  border-radius: 12px;
+  display: inline-block;
+  max-width: 145px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dateTimeRow {
+  display: flex;
+  margin-bottom: 15px;
+  gap: 20px;
+}
+
+.dateSection, .timeSection {
+  flex: 1;
+}
+
+.nameOrderRow {
+  display: flex;
+  margin-bottom: 15px;
+  gap: 20px;
+}
+
+.nameSection, .orderSection {
+  flex: 1;
+}
+
+.locationSection {
+  margin-bottom: 15px;
+}
+
+.sectionLabel {
+  font-family: Outfit;
+  font-size: 10px;
+  font-weight: 500;
+  color: #888;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sectionValue {
+  font-family: Outfit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.4;
+}
+
+.barcodeSection {
+  padding: 15px;
+  border-top: 1px dashed #ddd;
+  margin-top: auto;
+  flex-shrink: 0;
+  background: #fafafa;
+}
+
+/* Fee Breakdown Section */
+.feeBreakdownSection {
+  background: #F0F9FF;
+  padding: 12px;
+  margin: 15px 0;
+  border-radius: 8px;
+  border: 1px solid #BAE6FD;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.feeBreakdownTitle {
+  font-family: Outfit;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #0369A1;
+  font-size: 14px;
+}
+
+.feeBreakdownContent {
+  font-size: 13px;
+  color: #0C4A6E;
+}
+
+.feeRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  padding: 1px 0;
+}
+
+.feeValue {
+  font-weight: 500;
+}
+
+.feeRowTotal {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 2px solid #BAE6FD;
+  font-weight: 600;
+  font-size: 14px;
+  padding-bottom: 1px;
+}
+
+.feeValueTotal {
+  font-weight: 600;
+}
+
+.feeRowReceive {
+  display: flex;
+  justify-content: space-between;
+  color: #059669;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 1px 0;
+}
+
+.feeValueReceive {
+  font-weight: 600;
+}
+
+.feeNote {
+  margin-top: 8px;
+  font-size: 8px;
+  color: #64748B;
+  font-style: italic;
+  padding-top: 4px;
+  border-top: 1px solid #E0F2FE;
+}
+
+.barcode {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.barcodeLines {
+  display: flex;
+  gap: 1px;
+  align-items: end;
+  height: 30px;
+}
+
+.barcodeLine {
+  background: #000;
+  border-radius: 0.5px;
+}
+
+/* Action Buttons Below Phone */
+.actionButtons {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.testModeIndicator {
+  background: #FFF3E0;
+  color: #E65100;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: Outfit;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #FFB74D;
+  margin-bottom: 5px;
+}
+
+.testCardInfo {
+  background: #E8F5E8;
+  color: #2D5A2D;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-family: Outfit;
+  font-size: 11px;
+  font-weight: 400;
+  text-align: center;
+  border: 1px solid #A5D6A7;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.purchaseButton {
+  background: #00AAD6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: Outfit;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  width: 100%;
+}
+
+.purchaseButton:hover {
+  background: #0088B3;
+}
+
+.testButton {
+  background: #F09925;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: Outfit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  width: 100%;
+}
+
+.testButton:hover {
+  background: #D17A00;
+}
+
+.emptyState {
+  font-family: Outfit;
+  font-size: 14px;
+  color: #8F8F8F;
+  text-align: center;
+  padding: 40px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Special message styles for other ticket types */
+.entryMessage {
+  background: #E8F5E8;
+  color: #2D5A2D;
+  padding: 12px 20px;
+  margin: 0 20px 20px 20px;
+  border-radius: 8px;
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.externalMessage {
+  background: #FFF3E0;
+  color: #E65100;
+  padding: 12px 20px;
+  margin: 0 20px 20px 20px;
+  border-radius: 8px;
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.infoSection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 20px;
+  gap: 8px;
+  border-top: 1px dashed #ddd;
+  margin-top: auto;
+}
+
+.infoText {
+  font-family: Outfit;
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.descriptionSection {
+  margin-top: 12px;
+  padding: 8px 0;
+  border-top: 1px solid #eee;
+}
+
+.descriptionSection .sectionLabel {
+  font-size: 10px;
+  color: #888;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.descriptionSection .sectionValue {
+  font-size: 12px;
+  color: #333;
+  line-height: 1.4;
+}
+
+.externalButtonsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 20px 20px 20px;
+}
+
+.externalButton {
+  background: #00AAD6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: Outfit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.externalButton:hover {
+  background: #0088B3;
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+  .previewContainer {
+    width: 100%;
+    margin-top: 20px;
+  }
+}
+
+.taxCalculating {
+  display: flex;
+  align-items: center;
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  font-style: italic;
+}

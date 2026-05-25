@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "FYJBDAFXF6.com.keeptabs.mytabs",
+        "paths": [
+          "/b/*",
+          "/m/*",
+          "/e/*",
+          "/o/*",
+          "/app/*"
+        ]
+      }
+    ]
+  }
+}

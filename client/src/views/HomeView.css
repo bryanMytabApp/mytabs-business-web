@@ -1,0 +1,621 @@
+.HomeView {
+  display: flex;
+  flex: 1;
+  background: #FFF;
+  overflow: hidden;
+  height: 100vh;
+}
+
+.HomeView::-webkit-scrollbar {
+  display: none;
+}
+
+.Sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px;
+  background: #FFF;
+  box-shadow: 0px 0px 1px 0px rgba(0, 0, 0, 0.5);
+  width: 64px;
+  align-items: center;
+  z-index: 2;
+}
+
+.Sidebar-expanded {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 12px;
+  background: #FFF;
+  box-shadow: 0px 0px 1px 0px rgba(0, 0, 0, 0.5);
+  width: 250px;
+  align-items: stretch;
+  z-index: 2;
+
+}
+
+.Sidebar img {
+  display: flex;
+  width: 40px;
+  padding: 8px;
+  justify-self: center;
+}
+
+.Sidebar .Menu {
+  display: flex;
+  flex: 1;
+  /* overflow: auto; */
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.Sidebar-expanded .Menu {
+  display: flex;
+  flex: 1;
+  /* overflow: auto; */
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.Sidebar .Menu::-webkit-scrollbar {
+  display: flex;
+  flex-direction: column;
+}
+
+.Sidebar .Menu-option {
+  display: flex;
+  /* padding: 8px; */
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  border-radius: 12px;
+  background: #FFF;
+  text-decoration: none;
+  background-color: #FFF;
+  border: 1.1px solid #F2F2F7;
+  width: 32px;
+  height: 32px;
+  justify-content: center;
+  box-shadow: 0px 4.3857598304748535px 4.3857598304748535px 0px #00000014;
+  padding: 8px;
+}
+
+.Sidebar .Menu-option-expanded {
+  display: flex;
+  padding: 8px;
+  flex-direction: column;
+  align-items: center;
+  /* gap: 12px; */
+  border-radius: 12px;
+  background: #FFF;
+  text-decoration: none;
+  background-color: #FFF;
+  border: none;
+  width: 32px;
+  height: 32px;
+
+  justify-content: center;
+  box-shadow: 0px 4.3857598304748535px 8.771519660949707px 0px #32324702;
+  padding: 8px;
+}
+
+/* Normalize all SVG icons in sidebar to consistent size */
+.Sidebar .Menu-option > div,
+.Sidebar .Menu-option-expanded > div,
+.Sidebar-expanded .Menu-option > div,
+.Sidebar-expanded .Menu-option-expanded > div {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.Sidebar .Menu-option > div > div,
+.Sidebar .Menu-option-expanded > div > div,
+.Sidebar-expanded .Menu-option > div > div,
+.Sidebar-expanded .Menu-option-expanded > div > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.Sidebar .Menu-option > div > div > div,
+.Sidebar .Menu-option-expanded > div > div > div,
+.Sidebar-expanded .Menu-option > div > div > div,
+.Sidebar-expanded .Menu-option-expanded > div > div > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.Sidebar .Menu-option svg,
+.Sidebar .Menu-option-expanded svg,
+.Sidebar-expanded .Menu-option svg,
+.Sidebar-expanded .Menu-option-expanded svg {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+#Menu-option-logo {
+  display: flex;
+  padding: 8px;
+
+  gap: 12px;
+  background: #FFF;
+  text-decoration: none;
+  background-color: #FFF;
+  /* border: 1.1px solid #F2F2F7; */
+  width: 48px;
+  height: 48px;
+  /* box-shadow: 0px 4.3857598304748535px 8.771519660949707px 0px #32324702; */
+  justify-content: flex-start;
+  /* box-shadow: 0px 4.3857598304748535px 4.3857598304748535px 0px #00000014; */
+  padding: 4px;
+}
+
+.Sidebar,
+.Sidebar-expanded .Menu-option span {
+  color: #626262;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 510;
+  line-height: normal;
+}
+
+.Sidebar a.Menu-option.active {
+  background: #F5EAEC;
+
+
+}
+
+.Sidebar .Menu-option:hover {
+  background: rgba(211, 211, 224, 0.1);
+}
+
+.Sidebar .Menu-option.active path {
+  fill: #fff;
+}
+
+.Sidebar .Menu-option.active span {
+  color: #fff;
+
+}
+
+.View {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ViewContent {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.TopHeader {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 52px;
+  background: #fff;
+  padding: 8px 16px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #e0e0e0;
+  gap: 0;
+}
+
+.TopHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.TopHeaderLogo {
+  height: 28px;
+  width: auto;
+}
+
+.TopHeaderServicesBtn {
+  background: none;
+  border: none;
+  color: #1a1a1a;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  line-height: 1;
+}
+/* The ⊞ unicode glyph carries extra space below its baseline which
+   makes it visually sit lower than the icons in the other topbar
+   buttons. Translate the inner span up a couple px to optically
+   center it without shifting the button frame. */
+.TopHeaderServicesBtn > span { transform: translateY(-4px); }
+
+.TopHeaderServicesBtn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.TopHeaderServicesDropdown {
+  /* Pinned to the viewport, never in flow — so opening the dropdown
+     can't shift or grow the topbar. */
+  position: fixed;
+  top: 60px;
+  left: 12px;
+  width: 380px;
+  max-width: calc(100vw - 24px);
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  z-index: 999;
+  overflow: hidden;
+}
+
+/* On phones the dropdown spans the viewport width with even side
+   margins so the content has room to breathe. */
+@media (max-width: 540px) {
+  .TopHeaderServicesDropdown {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+.TopHeaderSearch {
+  display: flex;
+  align-items: center;
+  background: #f5f5f5;
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+  padding: 6px 12px;
+  min-width: 300px;
+  max-width: 500px;
+  flex: 1;
+  margin: 0 12px;
+  position: relative;
+}
+
+.TopHeaderSearchIcon {
+  font-size: 14px;
+  margin-right: 8px;
+  opacity: 0.7;
+}
+
+.TopHeaderSearchInput {
+  background: none;
+  border: none;
+  outline: none;
+  color: #1a1a1a;
+  font-family: Outfit;
+  font-size: 14px;
+  flex: 1;
+}
+
+.TopHeaderSearchInput::placeholder {
+  color: #8F8F8F;
+}
+
+.TopHeaderShortcut {
+  font-family: Outfit;
+  font-size: 12px;
+  color: #8F8F8F;
+  margin-left: 8px;
+}
+
+.TopHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+/* On narrow viewports, the standalone topbar search dominates the row and
+   pushes the user pill off-screen. Hide it — users can still get to search
+   via the ⊞ services button on the left, which has its own search input
+   inside its dropdown. The user/help cluster is what matters on mobile. */
+@media (max-width: 768px) {
+  .TopHeader > .TopHeaderSearch { display: none; }
+}
+
+/* Hamburger button: a 32×32 left-most control on the topbar. It toggles
+   the sidebar on mobile (drawer mode) and the expanded/collapsed state
+   on desktop. Shown on all sizes since it's also a useful desktop affordance
+   for collapsing the sidebar. */
+.TopHeaderHamburger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  margin-right: 4px;
+  color: #4B5563;
+  transition: background-color .12s ease;
+}
+.TopHeaderHamburger:hover { background: rgba(0, 0, 0, 0.06); }
+.TopHeaderHamburger:focus-visible {
+  outline: 2px solid #93C5FD;
+  outline-offset: 2px;
+}
+.TopHeaderHamburgerBars {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 18px;
+}
+.TopHeaderHamburgerBars > span {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+/* Mobile-only backdrop behind the drawer. Hidden on desktop. */
+.SidebarBackdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .42);
+  z-index: 998;
+  animation: th-backdrop-fade .15s ease-out;
+}
+@keyframes th-backdrop-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* MOBILE LAYOUT
+   - Collapsed sidebar (.Sidebar with mini icons) is hidden. The hamburger
+     replaces it as the entry point.
+   - Expanded sidebar slides in as an overlay drawer with a backdrop, so it
+     doesn't push the content sideways and disappears on outside tap.
+   - The route-change effect in HomeView auto-closes the drawer after a
+     navigation so the user lands on the page, not a half-covered drawer. */
+@media (max-width: 768px) {
+  .Sidebar { display: none; }
+
+  .Sidebar-expanded {
+    position: fixed;
+    top: 0; bottom: 0; left: 0;
+    width: 78vw;
+    max-width: 280px;
+    z-index: 999;
+    box-shadow: 4px 0 24px rgba(15, 23, 42, .25);
+    animation: th-drawer-in .18s cubic-bezier(.4, 0, .2, 1);
+  }
+  @keyframes th-drawer-in {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(0); }
+  }
+
+  .SidebarBackdrop { display: block; }
+}
+
+.TopHeaderSearchClear {
+  background: none;
+  border: none;
+  color: #8a9bb5;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+}
+
+.TopHeaderSearchClear:hover {
+  color: #fff;
+}
+
+.TopHeaderSearchOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 998;
+}
+
+.TopHeaderSearchDropdown {
+  /* Pinned to the viewport, not flowing inside the topbar — guarantees
+     the topbar's height never grows when the dropdown opens, regardless
+     of screen size or how tall the panel content gets. */
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  max-width: calc(100vw - 24px);
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  z-index: 999;
+  max-height: 480px;
+  overflow: hidden;
+  display: flex;
+}
+
+@media (max-width: 900px) {
+  .TopHeaderSearchDropdown {
+    left: 12px;
+    right: 12px;
+    transform: none;
+    width: auto;
+    max-width: none;
+  }
+}
+
+.TopHeaderSearchSidebar {
+  width: 160px;
+  border-right: 1px solid #f0f0f0;
+  padding: 16px 0;
+  flex-shrink: 0;
+}
+
+.TopHeaderSearchSidebarItem {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  font-family: Outfit;
+  font-size: 13px;
+  color: #71727A;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.TopHeaderSearchSidebarItem:hover {
+  color: #1a1a1a;
+  background: #f9f9f9;
+}
+
+.TopHeaderSearchSidebarItemActive {
+  color: #F09925;
+  border-left-color: #F09925;
+  font-weight: 500;
+}
+
+.TopHeaderSearchResults {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.TopHeaderSearchResultsTitle {
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 12px 0;
+}
+
+.TopHeaderSearchResult {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: #f9f9f9;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 8px;
+}
+
+.TopHeaderSearchResult:hover {
+  background: #f0f0f0;
+  border-color: #d5d5d5;
+}
+
+.TopHeaderSearchResultIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #F09925;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.TopHeaderSearchResultIcon div,
+.TopHeaderSearchResultIcon span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.TopHeaderSearchResultIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.TopHeaderSearchResultInfo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.TopHeaderSearchResultName {
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #F09925;
+}
+
+.TopHeaderSearchResultDesc {
+  font-family: Outfit;
+  font-size: 12px;
+  color: #71727A;
+  margin-top: 2px;
+}
+
+.TopHeaderSearchEmpty {
+  font-family: Outfit;
+  font-size: 14px;
+  color: #71727A;
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.tableActions {
+  display: flex;
+  width: 100%;
+  align-items: flex-end;
+}
+
+.Topbar {
+  position: fixed;
+  height: 80px;
+  background: white;
+  border-bottom: 1px #aaa solid;
+  width: 100%;
+  z-index: 1;
+}
+
+.Sidebar-expanded a.Menu-option-expanded,
+a.Menu-option {
+  display: flex;
+  flex-direction: row;
+  color: #626262;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: normal;
+  justify-content: flex-start;
+  text-decoration: none;
+  align-items: center;
+  padding: 2px;
+
+}
+
+.Sidebar-expanded a.Menu-option-expanded {
+  min-height: 48px;
+}
+
+.Sidebar-expanded a.Menu-option {
+  background-color: #F8F9FE;
+  border-radius: 10px;
+  padding: 5px 2px;
+  min-height: 48px;
+}

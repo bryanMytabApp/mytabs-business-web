@@ -1,0 +1,340 @@
+/* Mobile Date Time Picker - Light Mode Styles */
+
+.container {
+  max-width: 100%;
+  width: 100%;
+  padding: 16px;
+  background: #FCFCFC;
+  border-radius: 16px;
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Calendar Styles */
+.calendar {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 12px;
+  border-bottom: 1px solid #E5E7EB;
+  background: #FAFAFA;
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #374151;
+}
+
+.navButton:hover {
+  background: #F3F4F6;
+  border-color: #D1D5DB;
+}
+
+.navButton:active {
+  background: #E5E7EB;
+}
+
+.monthYear {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  font-family: 'Outfit', sans-serif;
+}
+
+.dayHeaders {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 12px 8px 8px;
+  background: #FFFFFF;
+}
+
+.dayHeader {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: #9CA3AF;
+  padding: 4px 0;
+  font-family: 'Outfit', sans-serif;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  padding: 8px;
+  background: #FFFFFF;
+}
+
+.emptyCell {
+  aspect-ratio: 1;
+}
+
+.dayCell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Outfit', sans-serif;
+}
+
+.dayCell:hover:not(.disabled):not(.selected) {
+  background: #F3F4F6;
+}
+
+.dayCell.selected {
+  background: #00AAD6;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.dayCell.today:not(.selected) {
+  color: #00AAD6;
+  font-weight: 600;
+  border: 2px solid #00AAD6;
+}
+
+.dayCell.disabled {
+  color: #D1D5DB;
+  cursor: not-allowed;
+}
+
+/* Time Section Styles */
+.timeSection {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.timeSectionHeader {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+  font-family: 'Outfit', sans-serif;
+}
+
+.timePickersRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Time Picker Styles */
+.timePicker {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.timeLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6B7280;
+  margin-bottom: 10px;
+  font-family: 'Outfit', sans-serif;
+}
+
+.timeInputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.spinnerContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.spinnerButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #9CA3AF;
+  transition: color 0.15s ease;
+  padding: 0;
+}
+
+.spinnerButton:hover {
+  color: #00AAD6;
+}
+
+.spinnerButton .material-icons {
+  font-size: 20px;
+}
+
+.timeInput {
+  width: 40px;
+  height: 36px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  outline: none;
+  font-family: 'Outfit', sans-serif;
+  transition: border-color 0.15s ease;
+}
+
+.timeInput:focus {
+  border-color: #00AAD6;
+  box-shadow: 0 0 0 2px rgba(0, 170, 214, 0.1);
+}
+
+.timeSeparator {
+  font-size: 20px;
+  font-weight: 600;
+  color: #9CA3AF;
+  padding: 0 2px;
+}
+
+.ampmButton {
+  margin-left: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Outfit', sans-serif;
+}
+
+.ampmButton:hover {
+  background: #F3F4F6;
+  border-color: #D1D5DB;
+}
+
+.ampmButton:active {
+  background: #00AAD6;
+  color: #FFFFFF;
+  border-color: #00AAD6;
+}
+
+/* Summary Section Styles */
+.summarySection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #F3F4F6;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.summaryText {
+  flex: 1;
+}
+
+.summaryLabel {
+  font-size: 12px;
+  color: #9CA3AF;
+  margin: 0 0 4px 0;
+  font-family: 'Outfit', sans-serif;
+}
+
+.summaryValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+}
+
+.confirmButton {
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: #00AAD6;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Outfit', sans-serif;
+}
+
+.confirmButton:hover:not(:disabled) {
+  background: #0095BD;
+}
+
+.confirmButton:active:not(:disabled) {
+  background: #0080A3;
+}
+
+.confirmButton:disabled {
+  background: #D1D5DB;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments for very small screens */
+@media (max-width: 360px) {
+  .container {
+    padding: 12px;
+  }
+
+  .timePickersRow {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .timeInput {
+    width: 36px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .ampmButton {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .summarySection {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .confirmButton {
+    width: 100%;
+  }
+}

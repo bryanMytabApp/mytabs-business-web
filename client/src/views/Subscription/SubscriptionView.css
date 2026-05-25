@@ -1,0 +1,228 @@
+.Subscription-view {
+  display: flex;
+  background: url("../../assets/subsImage.png") no-repeat center center fixed;
+  background-size: cover;
+  min-width: 1440px;
+  height: 900px;
+  top: 900px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 100vh;
+  overflow: auto;
+  width: 100%;
+}
+
+
+
+
+.Subscription-icon {
+  position: absolute;
+  top: 10px;
+  left: 20px;
+}
+
+.Subscription-header-text {
+  display: flex;
+  flex-direction: column;
+  font-family: Outfit;
+  font-weight: 700;
+  height: 250px;
+  line-height: 72px;
+  gap: 10px;
+}
+
+.Subscription-main {
+  background-color: red;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.Subcrition-main {
+  display: flex;
+  flex-direction: row;
+  min-width: 1440px;
+  overflow: hidden;
+  padding-right: 200px;
+}
+
+.Subscription-options {
+
+  display: flex;
+  flex-direction: row;
+  width: 800px;
+  height: 400px;
+  background: linear-gradient(102.1deg, rgba(255, 255, 255, 0.24) 6.16%, rgba(255, 255, 255, 0.015) 86.42%),
+    linear-gradient(0deg, rgba(253, 253, 253, 0.3), rgba(253, 253, 253, 0.3));
+  border-radius: 25px;
+  padding: 0px 40px;
+}
+
+.Subscription-options-success {
+
+  display: flex;
+  flex-direction: row;
+  width: 350px;
+  height: 350px;
+  background: linear-gradient(102.1deg, rgba(255, 255, 255, 0.24) 6.16%, rgba(255, 255, 255, 0.015) 86.42%),
+    linear-gradient(0deg, rgba(253, 253, 253, 0.3), rgba(253, 253, 253, 0.3));
+  border-radius: 25px;
+  padding: 0px 40px;
+}
+.Subscription-options-rates {
+
+  display: flex;
+  flex-direction: column;
+  width: 750px;
+  height: 750px;
+  background: linear-gradient(102.1deg, rgba(255, 255, 255, 0.24) 6.16%, rgba(255, 255, 255, 0.015) 86.42%),
+    linear-gradient(0deg, rgba(253, 253, 253, 0.3), rgba(253, 253, 253, 0.3));
+  border-radius: 25px;
+  flex: 1 1 1;
+  justify-content: space-between;
+}
+
+.subscription-options-block{
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.subscription-option-plans{
+  width: 100%;
+}
+.selected-subscription-item {
+  flex: 1;
+  background-color: var(--primary-blue-color);
+  width: 319px;
+  height: 388px;
+  border-radius: 25px;
+  display: flex;
+  flex-direction: column;
+  margin-top: -20px;
+
+}
+
+.Subscription-footer {
+  display: flex;
+  flex-direction: row;
+  font-family: Outfit;
+  font-weight: 500;
+  font-size: 16px;
+  justify-content: space-around;
+  line-height: 72px;
+  gap: 10px;
+  background: linear-gradient(0deg, rgba(253, 253, 253, 0.3), rgba(253, 253, 253, 0.9));
+  border-bottom-left-radius: 25px;
+  border-bottom-right-radius: 25px;
+}
+
+.unselected-subscription-item {
+  display: flex;
+  flex: 1;
+  justify-content: space-around;
+  align-items: center;
+  flex-direction: column;
+}
+
+.subscription-item-header {
+  background-color: #CFF4FC;
+  border-top-left-radius: 25px;
+  border-top-right-radius: 25px;
+  height: 48px;
+  color: #2E7F9C;
+  font-family: Outfit;
+  font-weight: 700;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.subscription-item-header span {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: Outfit;
+}
+
+.selected-subscription-block {
+  flex-direction: column;
+  display: flex;
+  flex: 1;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 0 20px;
+}
+
+.selected-subscription-item-title {
+  font-weight: 700;
+  font-family: Outfit;
+  font-size: 36px;
+  color: white;
+
+}
+
+.unselected-subscription-item-title {
+  font-weight: 700;
+  font-family: Outfit;
+  font-size: 46px;
+}
+
+.unselected-subscription-item-subtitle {
+  font-weight: 700;
+  font-family: Outfit;
+  font-size: 28px;
+  display: flex;
+  justify-self: flex-start;
+}
+
+.selected-subscription-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+
+}
+
+.unselected-subscription-list {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.subscription-bullet {
+  background-color: rgba(0, 180, 220, 0.9);
+  position: relative;
+  border-radius: 25px;
+  height: 20px;
+  width: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row;
+  flex: 1 1 1;
+
+}
+/* Inside SubscriptionView.css or another relevant CSS file */
+.fullscreen-container {
+
+  position: fixed;
+  top: 25vh;
+  left: 25vw;
+  width: 20vw;
+  height: 50vh;
+  border-radius: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* background-color: rgba(0, 0, 0, 0.5); */
+  z-index: 1000;
+}
+#mytabsStripe {
+
+  width: 20;
+}

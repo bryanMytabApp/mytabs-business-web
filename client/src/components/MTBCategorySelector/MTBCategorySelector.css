@@ -1,0 +1,16 @@
+.mtb-category-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 20px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 60vh;
+}
+
+.scroll-wrapper {
+  overflow: hidden;
+  height: 100%;
+  margin-bottom: 200px;
+}

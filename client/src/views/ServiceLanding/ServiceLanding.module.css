@@ -1,0 +1,223 @@
+.view {
+  background: url("../../assets/subsImage.png") repeat center center fixed;
+  width: 100%;
+  min-height: 96%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 2%;
+}
+
+.container {
+  width: 960px;
+  max-width: 95%;
+  padding-bottom: 40px;
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-family: Outfit;
+  font-size: 14px;
+  color: #71727A;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-bottom: 16px;
+}
+
+.backBtn:hover {
+  color: #1a1a1a;
+}
+
+/* Two-column grid */
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+/* Left column — info & features */
+.leftCol {
+  min-width: 0;
+}
+
+/* Right column — sticky CTA */
+.rightCol {
+  position: sticky;
+  top: 24px;
+}
+
+/* Hero */
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.heroIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+}
+
+.heroTitle {
+  font-family: Outfit;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.heroTagline {
+  font-family: Outfit;
+  font-size: 13px;
+  color: #71727A;
+  margin: 4px 0 0 0;
+}
+
+/* Description */
+.description {
+  font-family: Outfit;
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.65;
+  margin: 0 0 20px 0;
+}
+
+/* Features card */
+.featuresSection {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.featuresTitle {
+  font-family: Outfit;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 12px 0;
+}
+
+.featuresList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: Outfit;
+  font-size: 13px;
+  color: #1a1a1a;
+  padding: 7px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.featureItem:last-child {
+  border-bottom: none;
+}
+
+.featureCheck {
+  color: #2E7D32;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* CTA card (right column) */
+.ctaCard {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 24px 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.ctaCardTitle {
+  font-family: Outfit;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 10px 0;
+}
+
+.ctaCardDesc {
+  font-family: Outfit;
+  font-size: 14px;
+  color: #3a3a3a;
+  line-height: 1.55;
+  margin: 0 0 16px 0;
+}
+
+.ctaPricing {
+  font-family: Outfit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #F09925;
+  margin-bottom: 16px;
+}
+
+.ctaButton {
+  display: inline-block;
+  padding: 12px 28px;
+  background: #F09925;
+  color: #fff;
+  border: 2px solid #d9871e;
+  border-radius: 50px;
+  font-family: Outfit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.ctaButton:hover {
+  background: #d9871e;
+}
+
+.ctaButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.checkoutError {
+  font-family: Outfit;
+  font-size: 13px;
+  color: #d32f2f;
+  background: #fdecea;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 0 0 12px 0;
+  line-height: 1.45;
+}
+
+/* Stack on narrow screens */
+@media (max-width: 700px) {
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+
+  .rightCol {
+    position: static;
+  }
+}

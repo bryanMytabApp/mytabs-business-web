@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#FF5D00" />
+  <meta name="description" content="Tabs - Opening your experience" />
+  <title>Tabs</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #FFFFFF;
+      color: #1A1A2E;
+    }
+
+    .jump-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px 16px;
+      text-align: center;
+    }
+
+    .jump-logo {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 24px;
+    }
+
+    .jump-brand {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1A1A2E;
+      margin-bottom: 32px;
+      letter-spacing: -0.5px;
+    }
+
+    /* Loading indicator */
+    .jump-loader {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .jump-loader-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #FF5D00;
+      animation: jump-bounce 1.4s infinite ease-in-out both;
+    }
+
+    .jump-loader-dot:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    .jump-loader-dot:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+
+    .jump-loader-dot:nth-child(3) {
+      animation-delay: 0s;
+    }
+
+    @keyframes jump-bounce {
+      0%, 80%, 100% {
+        transform: scale(0.6);
+        opacity: 0.4;
+      }
+      40% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .jump-status {
+      font-size: 14px;
+      color: #6B7280;
+      margin-top: 8px;
+    }
+
+    /* Entity info (shown after resolution) */
+    .jump-entity {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .jump-entity-name {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1A1A2E;
+      word-break: break-word;
+    }
+
+    .jump-entity-description {
+      font-size: 14px;
+      color: #6B7280;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    /* Action buttons */
+    .jump-actions {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-top: 32px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .jump-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 220px;
+      min-height: 44px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.1s ease, opacity 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .jump-btn:active {
+      transform: scale(0.97);
+    }
+
+    .jump-btn-primary {
+      background: #FF5D00;
+      color: #FFFFFF;
+    }
+
+    .jump-btn-secondary {
+      background: #F3F4F6;
+      color: #1A1A2E;
+    }
+
+    .jump-btn-appstore {
+      background: #000000;
+      color: #FFFFFF;
+    }
+
+    .jump-btn-playstore {
+      background: #1A73E8;
+      color: #FFFFFF;
+    }
+
+    /* Error state */
+    .jump-error {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      margin-top: 24px;
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .jump-error-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1A1A2E;
+    }
+
+    .jump-error-message {
+      font-size: 14px;
+      color: #6B7280;
+      line-height: 1.5;
+    }
+
+    /* Responsive adjustments */
+    @media (min-width: 768px) {
+      .jump-logo {
+        width: 80px;
+        height: 80px;
+      }
+
+      .jump-brand {
+        font-size: 28px;
+      }
+
+      .jump-entity-name {
+        font-size: 24px;
+      }
+    }
+
+    /* Ensure touch targets on mobile */
+    @media (max-width: 767px) {
+      .jump-btn {
+        min-height: 48px;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="jump-container">
+    <!-- Brand Logo -->
+    <svg class="jump-logo" viewBox="0 0 41 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Tabs logo">
+      <path d="M40.2409 14.9778C39.1571 16.0617 34.9835 13.6456 30.9189 9.58103C26.8543 5.51643 24.4383 1.34289 25.5221 0.25906C26.6059 -0.824766 30.7795 1.59126 34.8441 5.65587C38.9087 9.72047 41.3247 13.8941 40.2409 14.9778Z" fill="#FDA800"/>
+      <path d="M0.5 40.0002L9.33143 27.2437L13.2565 31.1688L0.5 40.0002Z" fill="#D9DBE8"/>
+      <path d="M30.919 9.58076C26.8544 5.51616 24.4384 1.34262 25.5222 0.258789C21.5929 4.18812 22.4387 9.9318 26.5033 13.9964C30.5679 18.061 36.0668 19.1517 39.9953 15.2231L39.9335 15.1586C38.5133 15.6755 34.6728 13.3345 30.919 9.58076Z" fill="#FF5D00"/>
+      <path d="M27.3878 21.9436L31.9942 17.3372C30.0611 16.8084 28.1628 15.656 26.5037 13.9969C24.844 12.3372 23.7325 10.3979 23.2523 8.41699L18.5577 13.111L14.7284 16.9403C15.2093 18.922 16.5033 20.6781 18.163 22.3371C19.822 23.9968 21.6267 25.243 23.5598 25.7717L27.3878 21.9436Z" fill="#FDA800"/>
+      <path d="M24.9703 30.6528C25.1549 28.9639 24.844 27.1766 24.0405 25.2906L23.5597 25.7721C21.6266 25.2427 19.8219 23.9965 18.1629 22.3375C16.5031 20.6785 15.2091 18.9217 14.7282 16.9407L15.2188 16.4502L15.1972 16.428C13.2996 15.6148 11.5018 15.3005 9.80319 15.4864C6.64682 15.8305 4.76716 19.0924 6.05912 21.9934C7.04234 24.1999 8.85463 26.7671 11.2721 29.1845C13.6887 31.6012 16.2567 33.4142 18.4632 34.3967C21.3636 35.6887 24.6255 33.8091 24.9703 30.6528Z" fill="#FF5D00"/>
+    </svg>
+
+    <!-- Brand Name -->
+    <div class="jump-brand">Tabs</div>
+
+    <!-- Loading State -->
+    <div id="jump-loading">
+      <div class="jump-loader">
+        <div class="jump-loader-dot"></div>
+        <div class="jump-loader-dot"></div>
+        <div class="jump-loader-dot"></div>
+      </div>
+      <div class="jump-status">Opening your experience...</div>
+    </div>
+
+    <!-- Entity Info (populated after resolution) -->
+    <div class="jump-entity" id="jump-entity">
+      <div class="jump-entity-name" id="jump-entity-name"></div>
+      <div class="jump-entity-description" id="jump-entity-description"></div>
+    </div>
+
+    <!-- Action Buttons (shown after deep link timeout or on desktop) -->
+    <div class="jump-actions" id="jump-actions"></div>
+
+    <!-- Error State -->
+    <div class="jump-error" id="jump-error">
+      <div class="jump-error-title" id="jump-error-title"></div>
+      <div class="jump-error-message" id="jump-error-message"></div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      'use strict';
+
+      // Platform detection
+      var ua = navigator.userAgent || '';
+      var platform = {
+        isIOS: /iPhone|iPad|iPod/.test(ua),
+        isAndroid: /Android/.test(ua),
+        isMobile: /iPhone|iPad|iPod|Android/.test(ua)
+      };
+
+      // Expose platform info for use by resolution logic (task 13.2)
+      window.__jumpPage = {
+        platform: platform,
+        getPathInfo: getPathInfo
+      };
+
+      // Parse the current URL path to determine entity type and code
+      function getPathInfo() {
+        var path = window.location.pathname;
+        var prefixMap = {
+          '/b/': 'business',
+          '/m/': 'menu',
+          '/e/': 'event',
+          '/o/': 'organization'
+        };
+
+        var entityType = null;
+        var code = null;
+
+        var prefixes = Object.keys(prefixMap);
+        for (var i = 0; i < prefixes.length; i++) {
+          if (path.indexOf(prefixes[i]) === 0) {
+            entityType = prefixMap[prefixes[i]];
+            code = path.substring(prefixes[i].length);
+            break;
+          }
+        }
+
+        return {
+          entityType: entityType,
+          code: code,
+          path: path
+        };
+      }
+
+      // UI helper functions exposed for task 13.2
+      window.__jumpPage.showEntity = function(name, description) {
+        var el = document.getElementById('jump-entity');
+        var nameEl = document.getElementById('jump-entity-name');
+        var descEl = document.getElementById('jump-entity-description');
+        if (name) {
+          nameEl.textContent = name;
+          descEl.textContent = description || '';
+          el.style.display = 'flex';
+        }
+      };
+
+      window.__jumpPage.hideLoading = function() {
+        var el = document.getElementById('jump-loading');
+        if (el) el.style.display = 'none';
+      };
+
+      window.__jumpPage.showActions = function(buttons) {
+        var container = document.getElementById('jump-actions');
+        container.innerHTML = '';
+        for (var i = 0; i < buttons.length; i++) {
+          var btn = buttons[i];
+          var a = document.createElement('a');
+          a.href = btn.href || '#';
+          a.className = 'jump-btn ' + (btn.className || 'jump-btn-primary');
+          a.textContent = btn.label;
+          if (btn.href) a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          container.appendChild(a);
+        }
+        container.style.display = 'flex';
+      };
+
+      window.__jumpPage.showError = function(title, message) {
+        window.__jumpPage.hideLoading();
+        var errorEl = document.getElementById('jump-error');
+        document.getElementById('jump-error-title').textContent = title;
+        document.getElementById('jump-error-message').textContent = message;
+        errorEl.style.display = 'flex';
+      };
+
+    })();
+  </script>
+
+  <script>
+    (function() {
+      'use strict';
+
+      var APP_STORE_URL = 'https://apps.apple.com/app/tabs/id000000000';
+      var PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.tabs.app';
+      var TABS_HOMEPAGE = 'https://keeptabs.app';
+      var DEEP_LINK_TIMEOUT = 2000;
+      var DEEP_LINK_DELAY = 300;
+      var API_TIMEOUT = 5000;
+
+      var jp = window.__jumpPage;
+      var platform = jp.platform;
+
+      // --- Utility: fetch with timeout ---
+      function fetchWithTimeout(url, timeout) {
+        return new Promise(function(resolve, reject) {
+          var controller;
+          var timeoutId;
+
+          // Use AbortController if available, otherwise fallback
+          if (typeof AbortController !== 'undefined') {
+            controller = new AbortController();
+            timeoutId = setTimeout(function() {
+              controller.abort();
+              reject(new Error('Request timeout'));
+            }, timeout);
+
+            fetch(url, { signal: controller.signal })
+              .then(function(response) {
+                clearTimeout(timeoutId);
+                resolve(response);
+              })
+              .catch(function(err) {
+                clearTimeout(timeoutId);
+                reject(err);
+              });
+          } else {
+            // Fallback for older browsers without AbortController
+            var done = false;
+            timeoutId = setTimeout(function() {
+              if (!done) {
+                done = true;
+                reject(new Error('Request timeout'));
+              }
+            }, timeout);
+
+            fetch(url)
+              .then(function(response) {
+                if (!done) {
+                  done = true;
+                  clearTimeout(timeoutId);
+                  resolve(response);
+                }
+              })
+              .catch(function(err) {
+                if (!done) {
+                  done = true;
+                  clearTimeout(timeoutId);
+                  reject(err);
+                }
+              });
+          }
+        });
+      }
+
+      // --- Detect legacy UUID URL ---
+      function isLegacyUuidPath(path) {
+        // Matches /business/{uuid} where uuid is 8-4-4-4-12 hex
+        var uuidPattern = /^\/business\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+        var match = path.match(uuidPattern);
+        return match ? match[1] : null;
+      }
+
+      // --- Deep linking logic ---
+      function attemptDeepLink(data) {
+        var deepLink = data.deepLink;
+        var entityType = data.type;
+        var entityId = data.businessId || data.eventId || data.menuCode;
+
+        // Store deferred deep link target in localStorage
+        try {
+          localStorage.setItem('tabs_deferred_deeplink', JSON.stringify({
+            type: entityType,
+            id: entityId,
+            deepLink: deepLink,
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          // localStorage may be unavailable in private browsing
+        }
+
+        if (platform.isIOS) {
+          attemptIOSDeepLink(data);
+        } else if (platform.isAndroid) {
+          attemptAndroidDeepLink(data);
+        } else {
+          showDesktopView(data);
+        }
+      }
+
+      function attemptIOSDeepLink(data) {
+        var entityType = data.type;
+        var entityId = data.businessId || data.eventId || data.menuCode;
+
+        // Step 1: Attempt Universal Link
+        var universalLink = 'https://keeptabs.app/app/' + entityType + '/' + entityId;
+        window.location = universalLink;
+
+        // Step 2: After 2000ms, try custom scheme fallback
+        setTimeout(function() {
+          // If we're still on the page, Universal Link didn't work
+          var customScheme = 'myapp://' + entityType + '/' + entityId;
+          window.location = customScheme;
+
+          // Step 3: After another 500ms, show App Store button
+          setTimeout(function() {
+            jp.hideLoading();
+            jp.showActions([
+              { label: 'Download on App Store', href: APP_STORE_URL, className: 'jump-btn-appstore' }
+            ]);
+          }, 500);
+        }, DEEP_LINK_TIMEOUT);
+      }
+
+      function attemptAndroidDeepLink(data) {
+        var entityType = data.type;
+        var entityId = data.businessId || data.eventId || data.menuCode;
+
+        // Use Intent URL - Android handles fallback natively
+        var intentUrl = 'intent://' + entityType + '/' + entityId +
+          '#Intent;scheme=myapp;package=com.tabs.app;S.browser_fallback_url=' +
+          encodeURIComponent(PLAY_STORE_URL) + ';end';
+
+        window.location = intentUrl;
+
+        // Fallback in case Intent URL doesn't work on some browsers
+        setTimeout(function() {
+          jp.hideLoading();
+          jp.showActions([
+            { label: 'Get it on Google Play', href: PLAY_STORE_URL, className: 'jump-btn-playstore' }
+          ]);
+        }, DEEP_LINK_TIMEOUT);
+      }
+
+      function showDesktopView(data) {
+        jp.hideLoading();
+
+        var name = data.name || data.eventName || data.businessName || data.menuLabel || '';
+        var description = '';
+
+        // Build description from available data
+        if (data.eventName && data.eventDate) {
+          description = 'Event: ' + data.eventName + ' on ' + new Date(data.eventDate).toLocaleDateString();
+        } else if (data.menuLabel) {
+          description = 'Menu: ' + data.menuLabel;
+        }
+
+        // Truncate description to 200 chars
+        if (description.length > 200) {
+          description = description.substring(0, 197) + '...';
+        }
+
+        jp.showEntity(name, description);
+        jp.showActions([
+          { label: 'Download on App Store', href: APP_STORE_URL, className: 'jump-btn-appstore' },
+          { label: 'Get it on Google Play', href: PLAY_STORE_URL, className: 'jump-btn-playstore' }
+        ]);
+      }
+
+      // --- Error state handlers (Task 13.3) ---
+      function showContentUnavailable() {
+        jp.hideLoading();
+        jp.showError('Content Unavailable', 'This content is no longer available.');
+        jp.showActions([
+          { label: 'Go to Tabs Homepage', href: TABS_HOMEPAGE, className: 'jump-btn-primary' }
+        ]);
+      }
+
+      function showTemporaryError() {
+        jp.hideLoading();
+        jp.showError('Temporary Error', 'Something went wrong. Please try again.');
+        var container = document.getElementById('jump-actions');
+        container.innerHTML = '';
+        var btn = document.createElement('button');
+        btn.className = 'jump-btn jump-btn-primary';
+        btn.textContent = 'Try Again';
+        btn.onclick = function() { window.location.reload(); };
+        container.appendChild(btn);
+        container.style.display = 'flex';
+      }
+
+      function showQrOutdated() {
+        jp.hideLoading();
+        jp.showError('QR Code Outdated', 'This QR code is outdated and no longer points to valid content. The business may have updated their information.');
+        jp.showActions([
+          { label: 'Go to Tabs Homepage', href: TABS_HOMEPAGE, className: 'jump-btn-primary' }
+        ]);
+      }
+
+      function showEventInactive(data) {
+        jp.hideLoading();
+        var businessLink = TABS_HOMEPAGE;
+        if (data.businessId) {
+          businessLink = 'https://keeptabs.app/app/business/' + data.businessId;
+        }
+        jp.showError('Event Ended', 'This event is no longer active.');
+        jp.showActions([
+          { label: 'View Business Page', href: businessLink, className: 'jump-btn-primary' }
+        ]);
+      }
+
+      function showMenuUnavailable(data) {
+        jp.hideLoading();
+        var businessLink = TABS_HOMEPAGE;
+        if (data.businessId) {
+          businessLink = 'https://keeptabs.app/app/business/' + data.businessId;
+        }
+        jp.showError('Menu Not Available', 'This menu is not currently available.');
+        jp.showActions([
+          { label: 'View Business Profile', href: businessLink, className: 'jump-btn-primary' }
+        ]);
+      }
+
+      // --- Legacy UUID handling (Task 13.3) ---
+      function handleLegacyUuid(uuid) {
+        fetchWithTimeout('/api/resolve/business/' + uuid, API_TIMEOUT)
+          .then(function(response) {
+            if (response.status === 404) {
+              showQrOutdated();
+              return;
+            }
+            if (response.status === 503 || response.status >= 500) {
+              // DB error - attempt direct deep link as fallback
+              window.location = 'myapp://business/' + uuid;
+              return;
+            }
+            return response.json();
+          })
+          .then(function(data) {
+            if (!data) return;
+            // Redirect to canonical public-code URL (client-side 301-style redirect)
+            if (data.businessCode) {
+              window.location.replace('https://keeptabs.app/b/' + data.businessCode);
+            } else if (data.publicCode) {
+              window.location.replace('https://keeptabs.app/b/' + data.publicCode);
+            }
+          })
+          .catch(function() {
+            // Network error - attempt direct deep link as fallback
+            window.location = 'myapp://business/' + uuid;
+          });
+      }
+
+      // --- Main resolution flow ---
+      function handleResolution(pathInfo) {
+        var type = pathInfo.entityType;
+        var code = pathInfo.code;
+
+        // Map entity type to URL path prefix
+        var prefixMap = {
+          'business': 'b',
+          'menu': 'm',
+          'event': 'e',
+          'organization': 'o'
+        };
+
+        var prefix = prefixMap[type];
+        if (!prefix || !code) {
+          showContentUnavailable();
+          return;
+        }
+
+        fetchWithTimeout('/api/resolve/' + prefix + '/' + code, API_TIMEOUT)
+          .then(function(response) {
+            if (response.status === 404) {
+              showContentUnavailable();
+              return null;
+            }
+            if (response.status === 503 || response.status >= 500) {
+              showTemporaryError();
+              return null;
+            }
+            return response.json();
+          })
+          .then(function(data) {
+            if (!data) return;
+
+            // Check for ended/deleted events (Task 13.3)
+            if (data.type === 'event' && data.isActive === false) {
+              showEventInactive(data);
+              return;
+            }
+
+            // Check for unconfigured menu URL (Task 13.3)
+            if (data.type === 'menu' && !data.menuUrl) {
+              showMenuUnavailable(data);
+              return;
+            }
+
+            // Display entity name
+            var displayName = data.name || data.eventName || data.businessName || data.menuLabel || '';
+            jp.showEntity(displayName, '');
+
+            // Attempt deep link after 300ms delay
+            setTimeout(function() {
+              attemptDeepLink(data);
+            }, DEEP_LINK_DELAY);
+          })
+          .catch(function() {
+            showTemporaryError();
+          });
+      }
+
+      // --- Page load entry point ---
+      function init() {
+        var path = window.location.pathname;
+
+        // Check for legacy UUID URL first (Task 13.3)
+        var legacyUuid = isLegacyUuidPath(path);
+        if (legacyUuid) {
+          handleLegacyUuid(legacyUuid);
+          return;
+        }
+
+        // Parse path for standard QR code URLs
+        var pathInfo = jp.getPathInfo();
+
+        if (!pathInfo.entityType || !pathInfo.code) {
+          showContentUnavailable();
+          return;
+        }
+
+        handleResolution(pathInfo);
+      }
+
+      // Start resolution on page load
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+
+    })();
+  </script>
+</body>
+</html>

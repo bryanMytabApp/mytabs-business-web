@@ -1,0 +1,478 @@
+.view {
+  background: url("../../assets/subsImage.png") repeat center center fixed;
+  width: 100%;
+  height: 96%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding-top: 2%;
+  overflow-y: auto;
+}
+
+.contentContainer {
+  width: 95%;
+  padding-bottom: 40px;
+}
+
+/* Back button */
+.backButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #71727A;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.backButton:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Header row: title + actions dropdown */
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerTitle {
+  color: #F09925;
+  font-size: 22px;
+  font-family: Outfit;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Actions dropdown */
+.actionsWrapper {
+  position: relative;
+}
+
+.actionsButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #F09925;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.actionsButton:hover {
+  background: #d9871e;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.addAccountButton {
+  padding: 8px 16px;
+  background: #F09925;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addAccountButton:hover {
+  background: #d9871e;
+}
+
+.actionsMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  min-width: 200px;
+  z-index: 100;
+  padding: 4px 0;
+}
+
+.actionsMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  font-family: Outfit;
+  font-size: 14px;
+  color: #1a1a1a;
+  cursor: pointer;
+  text-align: left;
+}
+
+.actionsMenuItem:hover {
+  background: #f5f5f5;
+}
+
+.actionsMenuItemDanger {
+  color: #D32F2F;
+}
+
+/* Description text */
+.descriptionText {
+  font-family: Outfit;
+  font-size: 14px;
+  color: #71727A;
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+/* Main panel card */
+.panel {
+  background: #FFFFFF;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Panels container */
+.panelsRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Toolbar: search + view toggle */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.searchContainer {
+  display: flex;
+  align-items: center;
+  background: #f9f9f9;
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+  padding: 6px 10px;
+  min-width: 320px;
+  flex: 1;
+  max-width: 480px;
+}
+
+.searchContainer span {
+  color: #8F8F8F;
+  display: flex;
+  align-items: center;
+  margin-right: 6px;
+}
+
+.searchInput {
+  border: none;
+  outline: none;
+  font-family: Outfit;
+  font-size: 13px;
+  background: transparent;
+  width: 100%;
+  color: #1a1a1a;
+}
+
+.searchInput::placeholder {
+  color: #8F8F8F;
+}
+
+.viewToggle {
+  display: flex;
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.toggleButton {
+  padding: 6px 16px;
+  font-family: Outfit;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  background: #fff;
+  color: #71727A;
+  transition: background 0.15s, color 0.15s;
+}
+
+.toggleButton:first-child {
+  border-right: 1px solid #d5d5d5;
+}
+
+.toggleButtonActive {
+  background: #F09925;
+  color: #fff;
+}
+
+/* Column headers */
+.columnHeaders {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+  font-family: Outfit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #71727A;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Tree view */
+.treeContainer {
+  padding: 0;
+}
+
+.treeNode {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.1s;
+  gap: 8px;
+}
+
+.treeNode:hover {
+  background: #f9f9f9;
+}
+
+.treeNodeRoot {
+  background: #fefefe;
+}
+
+.treeNodeChild {
+  padding-left: 48px;
+  position: relative;
+}
+
+.treeNodeChild::before {
+  content: "";
+  position: absolute;
+  left: 32px;
+  top: 0;
+  bottom: 50%;
+  width: 1px;
+  background: #d5d5d5;
+}
+
+.treeNodeChild::after {
+  content: "";
+  position: absolute;
+  left: 32px;
+  top: 50%;
+  width: 10px;
+  height: 1px;
+  background: #d5d5d5;
+}
+
+.connectorLine {
+  position: absolute;
+  left: 32px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #d5d5d5;
+}
+
+.treeCheckbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #F09925;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.expandButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  color: #71727A;
+  flex-shrink: 0;
+}
+
+.expandButton:hover {
+  color: #1a1a1a;
+}
+
+.nodeIcon {
+  color: #F09925;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.nodeChildIcon {
+  color: #71727A;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.nodeInfo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.nodeName {
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nodeId {
+  font-family: Outfit;
+  font-size: 12px;
+  color: #8F8F8F;
+  margin-top: 2px;
+}
+
+.payerBadge {
+  display: inline-block;
+  font-family: Outfit;
+  font-size: 11px;
+  font-weight: 500;
+  background: #E3F2FD;
+  color: #1565C0;
+  padding: 1px 8px;
+  border-radius: 4px;
+}
+
+.statusBadge {
+  display: inline-block;
+  font-family: Outfit;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 8px;
+  border-radius: 4px;
+}
+
+.statusActive {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.statusInactive {
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+.nodeDate {
+  font-family: Outfit;
+  font-size: 13px;
+  color: #71727A;
+  flex-shrink: 0;
+  min-width: 140px;
+  text-align: right;
+}
+
+/* List / table view */
+.listTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: Outfit;
+}
+
+.listTable th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #71727A;
+  text-transform: uppercase;
+  padding: 10px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+  letter-spacing: 0.3px;
+}
+
+.listTable td {
+  font-size: 14px;
+  color: #1a1a1a;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.listTable tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.taxChip {
+  display: inline-block;
+  font-family: Outfit;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.taxInherited {
+  background: #E3F2FD;
+  color: #1565C0;
+}
+
+.taxOverride {
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+/* Empty state */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  text-align: center;
+  font-family: Outfit;
+  color: #71727A;
+  font-size: 14px;
+}
+
+/* Click-away overlay for dropdown */
+.dropdownOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99;
+}

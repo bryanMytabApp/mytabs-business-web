@@ -1,0 +1,37 @@
+Completed 1.0 MiB/31.3 MiB (1.4 MiB/s) with 3 file(s) remaining
+Completed 2.0 MiB/31.3 MiB (1.1 MiB/s) with 3 file(s) remaining
+Completed 3.0 MiB/31.3 MiB (1.6 MiB/s) with 3 file(s) remaining
+Completed 4.0 MiB/31.3 MiB (2.1 MiB/s) with 3 file(s) remaining
+Completed 5.0 MiB/31.3 MiB (2.4 MiB/s) with 3 file(s) remaining
+Completed 6.0 MiB/31.3 MiB (1.4 MiB/s) with 3 file(s) remaining
+Completed 6.6 MiB/31.3 MiB (1.6 MiB/s) with 3 file(s) remaining
+Completed 7.6 MiB/31.3 MiB (1.8 MiB/s) with 3 file(s) remaining
+Completed 8.6 MiB/31.3 MiB (353.0 KiB/s) with 3 file(s) remaining
+Completed 9.4 MiB/31.3 MiB (348.8 KiB/s) with 3 file(s) remaining
+Completed 10.4 MiB/31.3 MiB (252.9 KiB/s) with 3 file(s) remaining
+Completed 11.4 MiB/31.3 MiB (273.2 KiB/s) with 3 file(s) remaining
+Completed 12.4 MiB/31.3 MiB (296.3 KiB/s) with 3 file(s) remaining
+Completed 13.4 MiB/31.3 MiB (307.6 KiB/s) with 3 file(s) remaining
+Completed 14.4 MiB/31.3 MiB (324.5 KiB/s) with 3 file(s) remaining
+Completed 15.4 MiB/31.3 MiB (323.9 KiB/s) with 3 file(s) remaining
+Completed 16.3 MiB/31.3 MiB (326.9 KiB/s) with 3 file(s) remaining
+Completed 17.3 MiB/31.3 MiB (279.9 KiB/s) with 3 file(s) remaining
+Completed 18.3 MiB/31.3 MiB (295.7 KiB/s) with 3 file(s) remaining
+Completed 19.3 MiB/31.3 MiB (302.5 KiB/s) with 3 file(s) remaining
+Completed 20.3 MiB/31.3 MiB (318.0 KiB/s) with 3 file(s) remaining
+Completed 21.3 MiB/31.3 MiB (321.2 KiB/s) with 3 file(s) remaining
+Completed 22.3 MiB/31.3 MiB (230.3 KiB/s) with 3 file(s) remaining
+Completed 23.3 MiB/31.3 MiB (217.4 KiB/s) with 3 file(s) remaining
+Completed 24.3 MiB/31.3 MiB (223.1 KiB/s) with 3 file(s) remaining
+Completed 25.3 MiB/31.3 MiB (213.3 KiB/s) with 3 file(s) remaining
+Completed 26.3 MiB/31.3 MiB (214.3 KiB/s) with 3 file(s) remaining
+Completed 27.3 MiB/31.3 MiB (215.2 KiB/s) with 3 file(s) remaining
+Completed 28.3 MiB/31.3 MiB (217.9 KiB/s) with 3 file(s) remaining
+Completed 29.3 MiB/31.3 MiB (205.7 KiB/s) with 3 file(s) remaining
+Completed 30.3 MiB/31.3 MiB (211.9 KiB/s) with 3 file(s) remaining
+Completed 31.3 MiB/31.3 MiB (218.2 KiB/s) with 3 file(s) remaining
+upload: build\static\js\main.f55b5f82.js.map to s3://mytabs-business-web-prod/static/js/main.f55b5f82.js.map
+Completed 31.3 MiB/31.3 MiB (218.2 KiB/s) with 2 file(s) remaining
+upload: build\static\media\comingsoonBackground.f5656b922702e1cb250c.jpeg to s3://mytabs-business-web-prod/static/media/comingsoonBackground.f5656b922702e1cb250c.jpeg
+Completed 31.3 MiB/31.3 MiB (218.2 KiB/s) with 1 file(s) remaining
+upload: build\static\js\main.f55b5f82.js to s3://mytabs-business-web-prod/static/js/main.f55b5f82.js
