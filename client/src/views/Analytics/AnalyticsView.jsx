@@ -2,9 +2,7 @@ import React, { useState, useEffect } from "react";
 import { getEventsByUserId } from "../../services/eventService";
 import { getBusiness } from "../../services/businessService";
 import { getBusinessAnalytics, getEventPTACount } from "../../services/analyticsService";
-import { getMyOrganizations } from "../../services/organizationService";
 import { parseJwt } from "../../utils/common";
-import { MTBLoading } from "../../components";
 import moment from "moment";
 
 const STATUS_CONFIG = {
@@ -62,7 +60,7 @@ const S = `
 `;
 
 const AnalyticsView = () => {
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState({ totalFollowers: 0, totalEvents: 0, totalPTA: 0, activeEvents: 0 });
   const [events, setEvents] = useState([]);
   const [businessInfo, setBusinessInfo] = useState(null);
@@ -78,9 +76,29 @@ const AnalyticsView = () => {
     if (!userId) { setLoading(false); return; }
     const load = async () => {
       try {
+        const savedBizId = sessionStorage.getItem("selectedBusinessId");
+
         // Fetch events FIRST (fast path — show page immediately)
         const eventsRes = await getEventsByUserId(userId);
-        const eventsData = (eventsRes.data || []).map((e, i) => ({ ...e, ptaCount: 0, color: EVENT_COLORS[i % EVENT_COLORS.length] }));
+        const allEvents = eventsRes.data || [];
+
+        // Determine primary business ID for untagged event ownership
+        let primaryBizId = null;
+        try {
+          const primaryRes = await getBusiness(userId);
+          primaryBizId = primaryRes?.data?._id || null;
+        } catch (e) { /* ignore */ }
+
+        // Filter events by selected business
+        const filteredEvents = savedBizId
+          ? allEvents.filter(e => {
+              if (e.businessId === savedBizId) return true;
+              if (!e.businessId && savedBizId === primaryBizId) return true;
+              return false;
+            })
+          : allEvents;
+
+        const eventsData = filteredEvents.map((e, i) => ({ ...e, ptaCount: 0, color: EVENT_COLORS[i % EVENT_COLORS.length] }));
         setEvents(eventsData);
 
         // Calculate initial analytics without PTA
@@ -90,7 +108,7 @@ const AnalyticsView = () => {
         setLoading(false); // Show page now
 
         // Load business info + PTA in background (non-blocking)
-        getBusiness(userId).then(bizRes => {
+        getBusiness(userId, savedBizId || undefined).then(bizRes => {
           if (bizRes?.data) {
             setBusinessInfo(bizRes.data);
             setAnalytics(prev => ({ ...prev, totalFollowers: bizRes.data.followersCount || 0 }));

@@ -4,19 +4,11 @@ import {useDropzone} from "react-dropzone";
 
 import fileIcon from "../../assets/file.svg";
 import trashIcon from "../../assets/trashIcon.svg";
-import editIcon from "../../assets/editIcon.svg";
+
 import dragNdropIcon from "../../assets/components/dragNdrop.svg";
 import {floodFill} from "../../utils/imageUtils";
 import "./MTBDropZone.css";
-import warning from "../../assets/warning.svg";
-import success from "../../assets/success.svg";
-import info from "../../assets/info.svg";
 
-const helperIcon = {
-  warning: warning,
-  success: success,
-  info: info,
-};
 const baseStyle = {
   flex: 1,
   display: "flex",
@@ -81,7 +73,7 @@ export default function MTBDropZone({
   uploadedImage,
   helper = {type: "", text: ""},
 }) {
-  const [isFileUploaded, setIsFileUploaded] = useState(false);
+  const [, setIsFileUploaded] = useState(false);
   const [key, setKey] = useState(0);
   const acceptObj =
     fileType === "image"

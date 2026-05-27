@@ -16,14 +16,10 @@ import {
   getOrganization,
   getOrganizationBusinesses,
   getOrganizationMembers,
-  unlinkBusiness,
   deleteOrganization,
-  removeMember,
-  changeMemberRole,
 } from "../../services/organizationService";
 import { createMultipleClasses } from "../../utils/common";
 import { toast } from "react-toastify";
-import { MTBLoading } from "../../components";
 import AddMemberModal from "./AddMemberModal";
 import TaxOverrideModal from "./TaxOverrideModal";
 import CreateBusinessModal from "./CreateBusinessModal";
@@ -35,8 +31,8 @@ const OrganizationDashboard = () => {
 
   const [org, setOrg] = useState(null);
   const [businesses, setBusinesses] = useState([]);
-  const [members, setMembers] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setMembers] = useState([]);
+  const [, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState("member");
 
   // UI state
@@ -100,6 +96,7 @@ const OrganizationDashboard = () => {
 
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const refreshBusinesses = async () => {

@@ -4,7 +4,6 @@ import { useNavigate} from "react-router-dom";
 import { getToken } from "../services/authService";
 import { getCustomerSubscription } from "../services/paymentService";
 import { getMyOrganizations } from "../services/organizationService";
-import { parseJwt } from "../utils/common";
 import { isValidReturnUrl, buildAuthenticatedReturnUrl } from "../utils/authUtils";
 import { registerSession } from "../services/sessionService";
 import http from "../utils/axios/http";

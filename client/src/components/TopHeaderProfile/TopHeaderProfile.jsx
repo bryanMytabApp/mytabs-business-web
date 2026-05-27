@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import { useNavigate } from "react-router-dom";
 
 import { parseJwt } from "../../utils/common";
@@ -52,6 +53,11 @@ export default function TopHeaderProfile({ onSignOut }) {
   const [user, setUser] = useState(null);
   const [business, setBusiness] = useState(null);
   const [org, setOrg] = useState(null);            // { id, name, role }
+  const [allBusinesses, setAllBusinesses] = useState([]); // For business switcher
+  const [selectedBusinessId, setSelectedBusinessId] = useState(sessionStorage.getItem("selectedBusinessId") || null);
+  const [switchingBusiness, setSwitchingBusiness] = useState(false); // Edit mode for business
+  const [pendingBusinessId, setPendingBusinessId] = useState(null); // Pending selection before confirm
+  const [bizSearch, setBizSearch] = useState(""); // Typeahead search text
   const [loading, setLoading] = useState(true);
   const wrapRef = useRef(null);
 
@@ -99,6 +105,44 @@ export default function TopHeaderProfile({ onSignOut }) {
             if (cancelled) return;
             const members = memRes?.data?.members || memRes?.data || [];
             const businesses = bizListRes?.data?.businesses || bizListRes?.data || [];
+
+            // Build the full business list for the switcher
+            const bizList = [];
+            if (resolvedOrg.role === 'owner') {
+              // Fetch the owner's actual business _id (not userId)
+              let ownerBizId = userId;
+              try {
+                const ownerBizRes = await getBusiness(userId);
+                const ownerBiz = ownerBizRes?.data || ownerBizRes;
+                if (ownerBiz?._id) ownerBizId = ownerBiz._id;
+              } catch (e) { /* fallback to userId */ }
+              bizList.push({ linkedBusinessId: ownerBizId, name: resolvedOrg.name, isPayer: true });
+            }
+            bizList.push(...businesses.filter(b => (b.linkedBusinessId || b._id) !== userId));
+            setAllBusinesses(bizList);
+
+            // Default selection if none saved
+            const savedBiz = sessionStorage.getItem("selectedBusinessId");
+            console.log("[TopHeaderProfile] savedBiz:", savedBiz, "bizList:", bizList.map(b => ({ id: b.linkedBusinessId, name: b.name })));
+            if (savedBiz && bizList.some(b => (b.linkedBusinessId || b._id) === savedBiz)) {
+              setSelectedBusinessId(savedBiz);
+              // Sync displayed business name with the selected business
+              const selectedBiz = bizList.find(b => (b.linkedBusinessId || b._id) === savedBiz);
+              if (selectedBiz) resolvedBiz = { name: selectedBiz.name || "" };
+            } else if (bizList.length > 0) {
+              // Only set default if nothing is saved — never overwrite an existing value
+              if (!savedBiz) {
+                console.log("[TopHeaderProfile] No savedBiz, defaulting to first:", bizList[0].linkedBusinessId);
+                const defaultId = bizList[0].linkedBusinessId || bizList[0]._id;
+                setSelectedBusinessId(defaultId);
+                sessionStorage.setItem("selectedBusinessId", defaultId);
+              } else {
+                // savedBiz exists but doesn't match list — keep it, don't overwrite
+                console.log("[TopHeaderProfile] savedBiz not in list, keeping as-is:", savedBiz);
+                setSelectedBusinessId(savedBiz);
+              }
+              resolvedBiz = { name: bizList[0].name || "" };
+            }
 
             const me = members.find((m) => m.userId === userId);
             if (me?.businessId) {
@@ -186,6 +230,16 @@ export default function TopHeaderProfile({ onSignOut }) {
     }
   };
 
+  const handleBusinessSwitch = (bizId) => {
+    setSelectedBusinessId(bizId);
+    sessionStorage.setItem("selectedBusinessId", bizId);
+    // Update displayed business name
+    const biz = allBusinesses.find(b => (b.linkedBusinessId || b._id) === bizId);
+    if (biz) setBusiness({ name: biz.name || biz.businessName || "" });
+    // Navigate to the dashboard home — avoids staying on a page that belongs to the old business
+    window.location.href = "/admin/home";
+  };
+
   const goTo = (hash) => {
     setOpen(false);
     const target = "/admin/configuration";
@@ -250,7 +304,25 @@ export default function TopHeaderProfile({ onSignOut }) {
             {business?.name && (
               <>
                 <dt>Business</dt>
-                <dd title={business.name}>{business.name}</dd>
+                <dd title={business.name}>
+                  {allBusinesses.length > 1 ? (
+                    switchingBusiness ? (
+                      <span style={{ fontSize: 12, color: '#4F46E5', fontWeight: 600 }}>Switching...</span>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span
+                            onClick={() => setSwitchingBusiness(true)}
+                            style={{ fontWeight: 500, color: '#4F46E5', cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' }}
+                            title="Click to switch business"
+                          >
+                            {business.name}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  ) : business.name}
+                </dd>
               </>
             )}
             {(org?.name || user?.organizationName) && (
@@ -295,6 +367,117 @@ export default function TopHeaderProfile({ onSignOut }) {
             Sign out
           </button>
         </div>
+      )}
+
+      {/* Business Switcher Modal */}
+      {switchingBusiness && ReactDOM.createPortal(
+        <div
+          onClick={() => { setSwitchingBusiness(false); setPendingBusinessId(null); setBizSearch(""); }}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', zIndex: 99999,
+            animation: 'th-prof-fade .15s ease-out',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 16, padding: 24, width: '90%',
+              maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+              fontFamily: "'Outfit', sans-serif",
+            }}
+          >
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Switch Business</div>
+            <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 16 }}>Select which business you want to manage</div>
+
+            <input
+              type="text"
+              value={bizSearch}
+              onChange={(e) => setBizSearch(e.target.value)}
+              placeholder="Search businesses..."
+              autoFocus
+              style={{
+                padding: '10px 14px', borderRadius: 8, border: '1.5px solid #E5E7EB',
+                fontSize: 14, fontFamily: "'Outfit', sans-serif", fontWeight: 500,
+                backgroundColor: '#F9FAFB', color: '#111827', width: '100%',
+                outline: 'none', marginBottom: 12, boxSizing: 'border-box',
+              }}
+              onFocus={(e) => { e.target.style.borderColor = '#4F46E5'; e.target.style.backgroundColor = '#fff'; }}
+              onBlur={(e) => { e.target.style.borderColor = '#E5E7EB'; e.target.style.backgroundColor = '#F9FAFB'; }}
+            />
+
+            <div style={{
+              maxHeight: 240, overflowY: 'auto', border: '1px solid #E5E7EB',
+              borderRadius: 8, marginBottom: 16,
+            }}>
+              {allBusinesses
+                .filter(biz => !bizSearch || (biz.name || '').toLowerCase().includes(bizSearch.toLowerCase()))
+                .map(biz => {
+                  const bizId = biz.linkedBusinessId || biz._id;
+                  const isActive = bizId === selectedBusinessId;
+                  const isPending = bizId === pendingBusinessId;
+                  return (
+                    <div
+                      key={bizId}
+                      onClick={() => setPendingBusinessId(bizId)}
+                      style={{
+                        padding: '10px 14px', fontSize: 14, fontWeight: isPending ? 700 : 500,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        backgroundColor: isPending ? '#EEF2FF' : 'transparent',
+                        color: isPending ? '#4F46E5' : '#111827',
+                        borderBottom: '1px solid #F3F4F6',
+                        transition: 'background-color 0.1s',
+                      }}
+                    >
+                      <span>{biz.name}{biz.isPayer ? ' (Primary)' : ''}</span>
+                      {isActive && !isPending && <span style={{ fontSize: 11, color: '#6B7280', fontWeight: 600 }}>Current</span>}
+                      {isPending && <span style={{ fontSize: 11, color: '#4F46E5', fontWeight: 700 }}>✓</span>}
+                    </div>
+                  );
+                })
+              }
+              {allBusinesses.filter(biz => !bizSearch || (biz.name || '').toLowerCase().includes(bizSearch.toLowerCase())).length === 0 && (
+                <div style={{ padding: '14px', fontSize: 13, color: '#9CA3AF', textAlign: 'center' }}>No businesses match your search</div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => { setSwitchingBusiness(false); setPendingBusinessId(null); setBizSearch(""); }}
+                style={{
+                  padding: '8px 18px', borderRadius: 8, border: '1px solid #E5E7EB',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  backgroundColor: '#fff', color: '#374151', fontFamily: "'Outfit', sans-serif",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!pendingBusinessId || pendingBusinessId === selectedBusinessId}
+                onClick={() => {
+                  if (pendingBusinessId && pendingBusinessId !== selectedBusinessId) {
+                    handleBusinessSwitch(pendingBusinessId);
+                  }
+                  setSwitchingBusiness(false);
+                  setPendingBusinessId(null);
+                  setBizSearch("");
+                }}
+                style={{
+                  padding: '8px 18px', borderRadius: 8, border: 'none',
+                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                  backgroundColor: (!pendingBusinessId || pendingBusinessId === selectedBusinessId) ? '#C7D2FE' : '#4F46E5',
+                  color: '#fff', fontFamily: "'Outfit', sans-serif",
+                }}
+              >
+                Confirm Switch
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

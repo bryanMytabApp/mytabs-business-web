@@ -2,11 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import moment from "moment";
-import { getEvent, updateEvent, getPresignedUrlForEvent } from "../../services/eventService";
+import { getEvent } from "../../services/eventService";
 import { getMyOrganizations, getOrganizationBusinesses } from "../../services/organizationService";
 import { getEventPicture } from "../../utils/common";
-import { MTBLoading } from "../../components";
-import axios from "axios";
 import EventCreateNew from "./EventCreateNew";
 
 const parseJwt = (token) => {
@@ -23,7 +21,7 @@ const EventEditNew = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const [eventData, setEventData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
@@ -127,6 +125,7 @@ const EventEditNew = () => {
           showDates: ev.showDates || [],
           visibility: ev.visibility || "public",
           eventCode: ev.eventCode || "",
+          businessId: ev.businessId || "",
         };
 
         setEventData(formData);
@@ -138,6 +137,7 @@ const EventEditNew = () => {
       setLoading(false);
     };
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
   // Suspense fallback already covers chunk load. Skip the second spinner.

@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from "react";
+import React from "react";
 import MTBButton from "../MTBButton/MTBButton";
 import { createMultipleClasses } from "../../utils/common";
 import styles from "./MTBModalGeneric.module.css";

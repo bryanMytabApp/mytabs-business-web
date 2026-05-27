@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import styles from './MTBTicketsEditor.module.css'
 import selectIcon from "../../assets/atoms/selectIcon.svg";
 import selectIconActive from "../../assets/atoms/selectIconActive.svg";
-import { MTBSelector } from "../../components";
 import { toast } from "react-toastify";
 
 const baseTicket = {

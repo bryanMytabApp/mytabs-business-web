@@ -1,5 +1,3 @@
-import { getCookie } from './Tools.ts';
-
 /**
  * Extract user ID from JWT token stored in localStorage
  * @returns {string|null} User ID or null if not found

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getEventsByUserId } from '../../services/eventService';
+import { getBusiness } from '../../services/businessService';
 import { getCurrentUserId } from '../../utils/authUtils';
-import { MTBLoading } from '../../components';
 import moment from 'moment';
 
 const S = `
@@ -134,7 +134,7 @@ function TicketEventCard({ event, index }) {
 
 const MyTicketsView = () => {
   const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -142,13 +142,33 @@ const MyTicketsView = () => {
       try {
         const userId = getCurrentUserId();
         if (!userId) { setLoading(false); return; }
+
+        const savedBizId = sessionStorage.getItem("selectedBusinessId");
+
+        // Determine primary business for untagged events
+        let primaryBizId = null;
+        try {
+          const primaryRes = await getBusiness(userId);
+          primaryBizId = primaryRes?.data?._id || null;
+        } catch (e) { /* ignore */ }
+
         const res = await getEventsByUserId(userId);
         // Only show events that have Tabs tickets
         const withTickets = (res.data || []).filter(ev =>
           ev.tickets && ev.tickets.length > 0 &&
           ev.tickets.some(t => t.option === 'Tabs Tickets' || t.option === 'Tickets with Tabs')
         );
-        setEvents(withTickets);
+
+        // Filter by selected business
+        const bizFiltered = savedBizId
+          ? withTickets.filter(ev => {
+              if (ev.businessId === savedBizId) return true;
+              if (!ev.businessId && savedBizId === primaryBizId) return true;
+              return false;
+            })
+          : withTickets;
+
+        setEvents(bizFiltered);
       } catch (e) { console.error("Tickets load error:", e); }
       setLoading(false);
     };

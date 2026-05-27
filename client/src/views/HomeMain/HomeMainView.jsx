@@ -98,7 +98,6 @@ function EventRow({ event, index, color, onClick }) {
   // Determine event status
   const isLive = now >= startDate && (!endDate || now <= endDate);
   const isPast = endDate ? now > endDate : now > startDate;
-  const isUpcoming = now < startDate;
   
   // Calculate days until event
   const daysUntil = Math.ceil((startDate - now) / (1000 * 60 * 60 * 24));
@@ -166,7 +165,7 @@ function EventRow({ event, index, color, onClick }) {
 
 const HomeMainView = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [businessName, setBusinessName] = useState("");
   const [businessData, setBusinessData] = useState(null);
   const [metrics, setMetrics] = useState({ totalEvents: 0, activeEvents: 0, followers: 0, totalPTA: 0 });
@@ -190,6 +189,7 @@ const HomeMainView = () => {
     return () => clearInterval(t);
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (userId) fetchDashboardData(); }, [userId]);
 
   const handleSaveGoals = async () => {
@@ -247,8 +247,10 @@ const HomeMainView = () => {
       console.log("📊 Dashboard: fetching data for userId:", userId);
 
       // Fetch business + events in parallel for speed
+      const savedBizId = sessionStorage.getItem("selectedBusinessId");
+      console.log("📊 Dashboard: using selectedBusinessId from sessionStorage:", savedBizId);
       const [businessRes, eventsRes] = await Promise.all([
-        getBusiness(userId).catch((err) => { console.error("❌ Dashboard: getBusiness failed:", err); return null; }),
+        getBusiness(userId, savedBizId || undefined).catch((err) => { console.error("❌ Dashboard: getBusiness failed:", err); return null; }),
         getEventsByUserId(userId).catch(() => ({ data: [] })),
       ]);
 
@@ -280,6 +282,24 @@ const HomeMainView = () => {
       }
 
       const events = eventsRes.data || [];
+      // Filter events to only those belonging to the selected business.
+      // Events without a businessId are "untagged" and belong to the owner's
+      // PRIMARY business (the one with userId as partition key, not linked businesses).
+      // We determine the primary biz by fetching without a businessId param.
+      let primaryBizId = null;
+      try {
+        const primaryRes = await getBusiness(userId);
+        primaryBizId = primaryRes?.data?._id || null;
+      } catch (e) { /* ignore */ }
+
+      const filteredEvents = savedBizId
+        ? events.filter(e => {
+            if (e.businessId === savedBizId) return true;
+            // Untagged events only belong to the primary business
+            if (!e.businessId && savedBizId === primaryBizId) return true;
+            return false;
+          })
+        : events;
       const now = new Date();
       // Older events use the `date` field; newer ones (created via the v2
       // wizard) use `startDate`. Fall back through both so events from
@@ -290,7 +310,7 @@ const HomeMainView = () => {
         const d = raw ? new Date(raw) : null;
         return d && !isNaN(d) ? d : null;
       };
-      const allUpcoming = events
+      const allUpcoming = filteredEvents
         .filter((e) => {
           const start = eventStart(e);
           return start && start >= now;
@@ -300,7 +320,7 @@ const HomeMainView = () => {
 
       // Set metrics and show page immediately (don't wait for PTA)
       let followersCount = resolvedBusiness?.followersCount || 0;
-      setMetrics({ totalEvents: events.length, activeEvents: allUpcoming.length, followers: followersCount, totalPTA: 0 });
+      setMetrics({ totalEvents: filteredEvents.length, activeEvents: allUpcoming.length, followers: followersCount, totalPTA: 0 });
       setUpcomingEvents(upcomingForDisplay.map(e => ({ ...e, ptaCount: 0 })));
       setLoading(false);
 

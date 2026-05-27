@@ -1,7 +1,7 @@
+/* eslint-disable no-unused-vars */
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { createServiceCheckout } from "../../services/entitlementService";
 import styles from "./MarketIntelligence.module.css";
 
 const FEATURES = [
@@ -22,12 +22,6 @@ const GOALS = [
   { pct: "−50%", label: "Response Time" },
 ];
 
-const ADDONS = [
-  { key: "analytics", name: "Advanced Analytics & AI", price: "+$299/mo" },
-  { key: "alumni", name: "Alumni Engagement Suite", price: "+$199/mo" },
-  { key: "mobile", name: "Mobile Command Center", price: "+$149/mo" },
-];
-
 const PRICES = {
   annual: { base: 1299, note: "per month, billed annually", save: "Save $3,600/yr" },
   monthly: { base: 1599, note: "per month", save: null },
@@ -37,31 +31,13 @@ const ADDON_PRICES = { analytics: 299, alumni: 199, mobile: 149 };
 
 const MarketIntelligence = () => {
   const navigate = useNavigate();
-  const [plan, setPlan] = useState("annual");
-  const [addons, setAddons] = useState({ analytics: false, alumni: false, mobile: false });
+  const [plan] = useState("annual");
+  const [addons] = useState({ analytics: false, alumni: false, mobile: false });
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
 
-  const toggle = (k) => setAddons((a) => ({ ...a, [k]: !a[k] }));
   const base = PRICES[plan].base;
   const extra = Object.entries(addons).reduce((s, [k, v]) => s + (v ? ADDON_PRICES[k] : 0), 0);
-  const total = base + extra;
-
-  const handleSubscribe = async () => {
-    setCheckoutLoading(true);
-    setCheckoutError(null);
-    try {
-      const { checkoutUrl } = await createServiceCheckout("market-intelligence");
-      window.location.href = checkoutUrl;
-    } catch (err) {
-      const message =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        "Something went wrong. Please try again.";
-      setCheckoutError(message);
-      setCheckoutLoading(false);
-    }
-  };
 
   return (
     <div className={styles.view}>

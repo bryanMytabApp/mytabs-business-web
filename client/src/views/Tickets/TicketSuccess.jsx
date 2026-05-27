@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import styles from './TicketSuccess.module.css';
 
 const TicketSuccess = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const sessionId = searchParams.get('session_id');
   const [countdown, setCountdown] = useState(10);
 

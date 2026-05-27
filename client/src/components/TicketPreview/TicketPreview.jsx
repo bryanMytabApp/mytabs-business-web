@@ -26,6 +26,7 @@ const TicketPreview = ({
   });
   
   // Calculate tax when component mounts or ticket/address changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const calculateTicketTax = async () => {
       // Only calculate for Tabs Tickets with a valid price
@@ -131,6 +132,7 @@ const TicketPreview = ({
     };
 
     calculateTicketTax();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticket?.option, ticket?.price, addressOption, businessData, eventInfo]);
   
   // EMERGENCY DEBUG - Show ticket info
@@ -207,24 +209,6 @@ const TicketPreview = ({
         return location;
       }
       return 'Event Location';
-    }
-  };
-
-  // Format event date for display
-  const formatEventDate = (dateString) => {
-    if (!dateString) return 'Event Date & Time';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit'
-      });
-    } catch (error) {
-      return 'Event Date & Time';
     }
   };
 

@@ -1,5 +1,4 @@
 import React, {createContext, useEffect, useState} from "react";
-import {toast} from "react-toastify";
 
 
 import {MTBLoading} from "../components";
@@ -7,7 +6,7 @@ import {MTBLoading} from "../components";
 const UserDataContext = createContext(null);
 
 const UserDataProvider = ({children}) => {
-  const [user, setUser] = useState({});
+  const [user] = useState({});
   const [isLoading, setIsLoading] = useState(true);
     useEffect(() => {
     const timeoutId = setTimeout(() => {

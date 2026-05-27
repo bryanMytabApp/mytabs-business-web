@@ -2,17 +2,12 @@ import React, { useEffect, useState, useRef } from "react";
 import styles from './EventCreate.module.css'
 import {
   IconButton,
-  Divider,
   Modal,
   Box,
   useMediaQuery
 } from '@mui/material/'
 import {toast} from "react-toastify";
-import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
-import { DesktopTimePicker } from '@mui/x-date-pickers/DesktopTimePicker';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import moment from 'moment'
@@ -20,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 import selectIcon from "../../assets/atoms/selectIcon.svg";
 import selectIconActive from "../../assets/atoms/selectIconActive.svg";
 import tabsTicketsHeader from "../../assets/Tabs-tickets-header-hoz.png";
-import { MTBDropZone, MTBSelector, TicketPreview, MobileDateTimePicker } from "../../components";
+import { MTBDropZone, TicketPreview, MobileDateTimePicker } from "../../components";
 import { State, City } from 'country-state-city';
 import { createEvent, getPresignedUrlForEvent, getEventsByUserId } from "../../services/eventService";
 import { getBusiness } from "../../services/businessService";
@@ -59,25 +54,6 @@ const eventTypes = [
     comingSoon: true,
   },
 ]
-
-const ticketingOptions = [
-  { 
-    value: 0, 
-    name: "External link",
-  },
-  { 
-    value: 1, 
-    name: "Free",
-  },
-  { 
-    value: 2, 
-    name: "RSVP",
-  },
-  {
-    value: 3,
-    name: "Tabs Tickets",
-  },
-];
 
 // Ticket type options based on ticketing method
 const getTicketTypeOptions = (ticketOption) => {
@@ -154,7 +130,7 @@ const EventCreate = () => {
   
   const [selectedItem, setSelectedItem] = useState("0")  // Pre-select "Event"
   const [states, setStates] = useState([])
-  const [cities, setCities] = useState([])
+  const [, setCities] = useState([])
   const [step, setStep] = useState(0)
   const [uploadedImage, setUploadedImage] = useState(null)
   const [creationInProccess, setCreationInProccess] = useState(false)
@@ -417,6 +393,7 @@ const EventCreate = () => {
     let selectedState = states.find(state => state.name === item.state)
     let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
     setCities(availableCities)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.state])
 
   // Initialize Google Places Autocomplete
@@ -568,24 +545,6 @@ const EventCreate = () => {
     ticketsCopy[ticketSelectedIndex] = selectedTicketCopy
     setTickets(ticketsCopy)
   }
-
-  // Helper functions to check ticket option limits
-  const canAddExternalLink = () => {
-    const externalLinkCount = tickets.filter(ticket => ticket.option === 'External link').length;
-    const currentTicketOption = tickets[ticketSelectedIndex]?.option;
-    return currentTicketOption === 'External link' || externalLinkCount < 3;
-  };
-
-  const canAddNoTicketing = () => {
-    const noTicketingCount = tickets.filter(ticket => ticket.option === 'Free').length;
-    const currentTicketOption = tickets[ticketSelectedIndex]?.option;
-    return currentTicketOption === 'Free' || noTicketingCount < 1;
-  };
-
-  const getFieldErrorStyle = (fieldName) => {
-    const hasError = fieldErrors[ticketSelectedIndex] && fieldErrors[ticketSelectedIndex][fieldName];
-    return hasError ? { border: '2px solid #DC3545', borderRadius: '4px' } : {};
-  };
 
   const getContainerErrorStyle = (fieldName) => {
     const hasError = fieldErrors[ticketSelectedIndex] && fieldErrors[ticketSelectedIndex][fieldName];
@@ -1607,7 +1566,6 @@ const EventCreate = () => {
                             }
                           }}
                           value={item.startDate}
-                          minDate={moment()}
                           onChange={(newValue) => {
                             // Set the date for both start and end
                             const newStart = moment(newValue).hour(item.startDate ? moment(item.startDate).hour() : 12).minute(item.startDate ? moment(item.startDate).minute() : 0);
@@ -2815,6 +2773,7 @@ const EventCreate = () => {
               <iframe
                 id="test-purchase-iframe"
                 src={testPurchaseUrl}
+                title="Test purchase preview"
                 style={{
                   width: '100%',
                   height: '100%',

@@ -3,7 +3,6 @@ import { Box, Tabs, Tab, Skeleton, useMediaQuery } from '@mui/material';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
 import SettingsNav from './components/SettingsNav';
 import useSettingsVisibility from './hooks/useSettingsVisibility';
-import subsImage from '../../assets/subsImage.png';
 
 // Lazy-loaded section components
 const ProfileSection = lazy(() => import('./sections/ProfileSection'));

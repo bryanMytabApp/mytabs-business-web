@@ -36,11 +36,9 @@ const radioStyle = (isSelected) => ({
 const PrivacySection = () => {
   const { state } = useSettings();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [, setSaving] = useState(false);
   const [privacyTab, setPrivacyTab] = useState(0);
   const [profileVisibility, setProfileVisibility] = useState('public');
-  const [activityStatus, setActivityStatus] = useState(true);
-  const [emailVisibility, setEmailVisibility] = useState(false);
   const [showLocation, setShowLocation] = useState(true);
 
   // Business visibility (org owner feature)

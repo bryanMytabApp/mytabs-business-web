@@ -67,6 +67,7 @@ const CreateOrganization = () => {
         }
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businesses, requestData.fromRequest]);
 
   const fetchBusinesses = async () => {

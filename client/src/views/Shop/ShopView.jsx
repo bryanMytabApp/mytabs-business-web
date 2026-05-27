@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import { MTBComingSoon, MTBLoading } from "../../components";
+import { MTBComingSoon } from "../../components";
 import { getMyServices } from "../../services/entitlementService";
 
 const ShopView = () => {
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setIsLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const navigate = useNavigate();
 

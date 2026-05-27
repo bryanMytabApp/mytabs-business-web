@@ -290,31 +290,6 @@ const OrganizationSection = () => {
       }
     };
 
-    const setOrgFromBusiness = (business) => {
-      setOrgData({
-        id: business._id,
-        name: business.businessName || business.name || 'My Business',
-        createdAt: business.createdAt ? new Date(business.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A',
-        memberCount: business.teamMembers?.length || 1,
-        activeBusiness: 1,
-        plan: 'custom',
-        interval: 'monthly',
-        businessLimit: 1,
-        stripeSubscriptionId: null,
-        amount: null,
-      });
-      setNameValue(business.businessName || business.name || '');
-      setHasOrg(true);
-      // Use team members from business if available
-      if (business.teamMembers) {
-        setMembers(business.teamMembers.map(m => ({
-          userId: m.userId || m._id,
-          username: m.email || m.username || m.name,
-          role: m.role || 'member',
-        })));
-      }
-    };
-
     fetchOrgData();
   }, [state.user?.userId]);
 

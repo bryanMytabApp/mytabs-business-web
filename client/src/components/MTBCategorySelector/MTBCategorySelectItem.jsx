@@ -1,8 +1,7 @@
-import React, {useEffect, useState} from "react";
+import React from "react";
 import selectIcon from "../../assets/atoms/selectIcon.svg";
 import selectIconActive from "../../assets/atoms/selectIconActive.svg";
 import Icon from "@mdi/react";
-import circusIcon from "../../assets/categories/circus.svg";
 import {
   mdiGlassCocktail,
   mdiAccountOutline,

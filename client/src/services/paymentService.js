@@ -2,7 +2,7 @@ import http from "../utils/axios/http"
 
 export const createCheckoutSession = async (sessionData) => {
   try {
-    const {data, ...res} = await http.post("payments/checkout-session", sessionData, {
+    const {data} = await http.post("payments/checkout-session", sessionData, {
       headers: {
         "Content-Type": "application/json",
       },

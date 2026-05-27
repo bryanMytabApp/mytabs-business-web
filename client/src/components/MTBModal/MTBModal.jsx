@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from "react";
+import React, {useState} from "react";
 import "./MTBModal.css";
 import MTBButton from "../MTBButton/MTBButton";
 import MTBInput from "../MTBInput/MTBInput";
@@ -34,7 +34,6 @@ const MTBModal = ({
   isOther,
   onSubCategoriesChange,
 }) => {
-  const [selectedSubCategories, setSelectedSubCategories] = useState([]);
   const iconMap = {
     Club: mdiGlassCocktail,
     Bar: mdiGlassMug,

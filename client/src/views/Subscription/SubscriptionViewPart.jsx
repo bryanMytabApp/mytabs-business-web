@@ -1,6 +1,5 @@
 import React, {useEffect, useState} from "react";
 import {useNavigate, useLocation} from "react-router-dom";
-import logo from "../../assets/logo.png";
 import backArrow from "../../assets/backArrow.svg";
 import lockIcon from "../../assets/lock.svg";
 import {useStripe} from "@stripe/react-stripe-js";
@@ -22,7 +21,7 @@ const SubscriptionViewPart = () => {
   const stripe = useStripe();
   const location = useLocation();
   const navigate = useNavigate();
-  const {plan, price, paymentArray, isUpdating} = location.state || { plan: "Basic", price: 0, paymentArray: [], isUpdating: false };
+  const {plan, paymentArray, isUpdating} = location.state || { plan: "Basic", price: 0, paymentArray: [], isUpdating: false };
 
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [isLoading, setIsLoading] = useState(false);

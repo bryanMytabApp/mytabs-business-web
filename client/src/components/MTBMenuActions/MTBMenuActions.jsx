@@ -43,8 +43,6 @@ const MTBMenuActions = ({ row, callback}) => {
     'Delete',
   ];
 
-  const handleGoBack = () => navigation("/admin/home")
-  
   const ITEM_HEIGHT = 48;
 
 

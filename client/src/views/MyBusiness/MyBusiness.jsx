@@ -4,10 +4,8 @@ import { Box, Typography, Button, IconButton, Tooltip, CircularProgress, Select,
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CloseIcon from '@mui/icons-material/Close';
 import { toast } from "react-toastify";
-import { MTBSelector } from "../../components";
 import { getUserById } from "../../services/userService";
 import { State, City } from 'country-state-city';
-import { processImage } from "../../components/MTBDropZone/MTBDropZone";
 import { getBusinessPicture } from "../../utils/common";
 import { getBusiness, getPresignedUrlForBusiness, getPresignedUrlForGalleryPhoto, getPresignedUrlForMenu, updateBusiness } from "../../services/businessService";
 import { getOrganizationBusinesses, getMyOrganizations } from "../../services/organizationService";
@@ -176,20 +174,12 @@ const UploadDialog = ({ open, onClose, onConfirm, type = 'photo' }) => {
   );
 };
 
-const GalleryTab = ({ item, photoGallery, onLabelChange, onPhotoUpload, onRemovePhoto }) => {
+const GalleryTab = ({ item, photoGallery, onLabelChange, onPhotoUpload, onRemovePhoto, readOnly }) => {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [gridCols, setGridCols] = useState(3);
   const galleries = ['gallery1', 'gallery2', 'gallery3', 'gallery4'];
-
-  // Build category list with labels
-  const categoryList = galleries.map((galleryId, idx) => ({
-    id: galleryId,
-    idx,
-    label: item[`photoGalleryLabel${idx + 1}`] || `Gallery ${idx + 1}`,
-    photos: photoGallery[galleryId] || [],
-  })).filter(c => c.photos.length > 0 || c.label !== `Gallery ${c.idx + 1}`);
 
   // Flatten all photos with category info
   const allPhotos = galleries.flatMap((galleryId, idx) => {
@@ -229,9 +219,9 @@ const GalleryTab = ({ item, photoGallery, onLabelChange, onPhotoUpload, onRemove
               </Box>
             ))}
           </Box>
-          <Button onClick={() => setUploadOpen(true)} size="small" sx={{ textTransform: 'none', backgroundColor: '#F09925', color: '#fff', borderRadius: '8px', px: 2, fontWeight: 600, whiteSpace: 'nowrap', '&:hover': { backgroundColor: '#e08820' } }}>
+          {!readOnly && <Button onClick={() => setUploadOpen(true)} size="small" sx={{ textTransform: 'none', backgroundColor: '#F09925', color: '#fff', borderRadius: '8px', px: 2, fontWeight: 600, whiteSpace: 'nowrap', '&:hover': { backgroundColor: '#e08820' } }}>
             + Add Photos
-          </Button>
+          </Button>}
         </Box>
       </Box>
 
@@ -262,6 +252,9 @@ const GalleryTab = ({ item, photoGallery, onLabelChange, onPhotoUpload, onRemove
       {activeCategory !== 'all' && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
           <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#374151' }}>Category name:</Typography>
+          {readOnly ? (
+            <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#111827' }}>{item[`photoGalleryLabel${galleries.indexOf(activeCategory) + 1}`] || activeCategory}</Typography>
+          ) : (
           <input
             type="text"
             value={item[`photoGalleryLabel${galleries.indexOf(activeCategory) + 1}`] || ''}
@@ -269,6 +262,7 @@ const GalleryTab = ({ item, photoGallery, onLabelChange, onPhotoUpload, onRemove
             placeholder="Enter category name..."
             style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '14px', fontFamily: 'Outfit, sans-serif', backgroundColor: '#fff', outline: 'none', width: '250px' }}
           />
+          )}
         </Box>
       )}
 
@@ -289,14 +283,14 @@ const GalleryTab = ({ item, photoGallery, onLabelChange, onPhotoUpload, onRemove
               <Box className="photo-overlay" sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(transparent 50%, rgba(0,0,0,0.6))', opacity: 0, transition: 'opacity 0.2s', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', p: 1.5 }}>
                 <Typography sx={{ color: '#fff', fontSize: '12px', fontWeight: 500 }}>{photo.label}</Typography>
               </Box>
-              <IconButton
+              {!readOnly && <IconButton
                 className="photo-overlay"
                 size="small"
                 onClick={() => onRemovePhoto(photo.galleryId, photo.photoIdx)}
                 sx={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(239,68,68,0.9)', color: '#fff', width: 26, height: 26, opacity: 0, transition: 'opacity 0.2s', '&:hover': { backgroundColor: '#dc2626', opacity: 1 } }}
               >
                 <span style={{ fontSize: '14px', fontWeight: 'bold' }}>×</span>
-              </IconButton>
+              </IconButton>}
             </Box>
           ))}
         </Box>
@@ -318,7 +312,7 @@ const GalleryTab = ({ item, photoGallery, onLabelChange, onPhotoUpload, onRemove
   );
 };
 
-const MenusTab = ({ item, onLabelChange, onMenuUpload, onRemoveMenu }) => {
+const MenusTab = ({ item, onLabelChange, onMenuUpload, onRemoveMenu, readOnly }) => {
   const [search, setSearch] = useState('');
   const [activeSlot, setActiveSlot] = useState('all');
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -364,9 +358,9 @@ const MenusTab = ({ item, onLabelChange, onMenuUpload, onRemoveMenu }) => {
               </Box>
             ))}
           </Box>
-          <Button onClick={() => setUploadOpen(true)} size="small" sx={{ textTransform: 'none', backgroundColor: '#F09925', color: '#fff', borderRadius: '8px', px: 2, fontWeight: 600, whiteSpace: 'nowrap', '&:hover': { backgroundColor: '#e08820' } }}>
+          {!readOnly && <Button onClick={() => setUploadOpen(true)} size="small" sx={{ textTransform: 'none', backgroundColor: '#F09925', color: '#fff', borderRadius: '8px', px: 2, fontWeight: 600, whiteSpace: 'nowrap', '&:hover': { backgroundColor: '#e08820' } }}>
             + Upload Menu
-          </Button>
+          </Button>}
         </Box>
       </Box>
 
@@ -397,6 +391,9 @@ const MenusTab = ({ item, onLabelChange, onMenuUpload, onRemoveMenu }) => {
       {activeSlot !== 'all' && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
           <Typography sx={{ fontSize: '13px', fontWeight: 500, color: '#374151' }}>Menu name:</Typography>
+          {readOnly ? (
+            <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#111827' }}>{item[`menuLabel${activeSlot}`] || `Menu ${activeSlot}`}</Typography>
+          ) : (
           <input
             type="text"
             value={item[`menuLabel${activeSlot}`] || ''}
@@ -404,6 +401,7 @@ const MenusTab = ({ item, onLabelChange, onMenuUpload, onRemoveMenu }) => {
             placeholder="Enter menu name..."
             style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '14px', fontFamily: 'Outfit, sans-serif', backgroundColor: '#fff', outline: 'none', width: '250px' }}
           />
+          )}
         </Box>
       )}
 
@@ -424,14 +422,14 @@ const MenusTab = ({ item, onLabelChange, onMenuUpload, onRemoveMenu }) => {
               <Box className="menu-overlay" sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(transparent 50%, rgba(0,0,0,0.6))', opacity: 0, transition: 'opacity 0.2s', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', p: 1.5 }}>
                 <Typography sx={{ color: '#fff', fontSize: '12px', fontWeight: 500 }}>{menu.label}</Typography>
               </Box>
-              <IconButton
+              {!readOnly && <IconButton
                 className="menu-overlay"
                 size="small"
                 onClick={() => onRemoveMenu(menu.num)}
                 sx={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(239,68,68,0.9)', color: '#fff', width: 26, height: 26, opacity: 0, transition: 'opacity 0.2s', '&:hover': { backgroundColor: '#dc2626', opacity: 1 } }}
               >
                 <span style={{ fontSize: '14px', fontWeight: 'bold' }}>×</span>
-              </IconButton>
+              </IconButton>}
             </Box>
           ))}
         </Box>
@@ -466,10 +464,11 @@ const MyBusiness = () => {
   const [selectedCategoryType, setSelectedCategoryType] = useState('');
   const [originalPhotoGallery, setOriginalPhotoGallery] = useState({});
   const [uploadedImage, setUploadedImage] = useState(null);
-  const [allBusinesses, setAllBusinesses] = useState([]);
+  const [, setAllBusinesses] = useState([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState(routeBusinessId || sessionStorage.getItem("selectedBusinessId") || null);
   const [codeCopied, setCodeCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState('owner'); // 'owner' | 'admin' | 'member'
   const [photoGallery, setPhotoGallery] = useState({ gallery1: [], gallery2: [], gallery3: [], gallery4: [] });
   const [menuFiles, setMenuFiles] = useState({ menu1: null, menu2: null, menu3: null, menu4: null });
 
@@ -492,19 +491,23 @@ const MyBusiness = () => {
   };
 
   // Listen for hash changes (browser back/forward)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const handleHashChange = () => {
       setActiveTab(getTabFromHash());
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Set initial hash if not present
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!location.hash) {
       navigation(`#${tabNames[0]}`, { replace: true });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const inputref = useRef(null);
@@ -524,9 +527,17 @@ const MyBusiness = () => {
 
   const init = (targetBusinessId) => {
     setLoading(true);
+    setItem({ type: 'Entity/Individual' }); // Reset to prevent flash of previous business
     
     // Run all API calls in parallel instead of sequentially
-    const businessPromise = getBusiness(userId, targetBusinessId || undefined);
+    // Try with businessId first; if it returns empty (team member accessing
+    // a business they don't own), fall back to letting the Lambda resolve via access table.
+    const businessPromise = getBusiness(userId, targetBusinessId || undefined)
+      .then(res => {
+        if (res?.data && res.data._id) return res;
+        // Fallback: let Lambda resolve through User_Business_Access
+        return getBusiness(userId);
+      });
     const orgPromise = getMyOrganizations().catch(() => ({ data: { organizations: [] } }));
     const userPromise = getUserById(userId).catch(() => ({ data: {} }));
 
@@ -536,6 +547,12 @@ const MyBusiness = () => {
       setItem(biz);
       setOriginalItem(JSON.parse(JSON.stringify(biz)));
       setSelectedBusinessId(biz._id);
+      // Set user role — if accessRole is returned by Lambda, use it; otherwise owner
+      if (biz.accessRole) {
+        setUserRole(biz.accessRole);
+      } else if (biz.userId === userId) {
+        setUserRole('owner');
+      }
       if (biz.categories && Array.isArray(biz.categories) && biz.categories.length > 0) {
         setSubcategories(biz.categories);
         setOriginalSubcategories([...biz.categories]);
@@ -572,10 +589,17 @@ const MyBusiness = () => {
         const orgId = orgs[0].organizationId || orgs[0].id || orgs[0]._id;
         const orgName = orgs[0].name || 'Organization';
         const orgRole = orgs[0].role || 'member';
-        getOrganizationBusinesses(orgId).then(bizRes => {
+        getOrganizationBusinesses(orgId).then(async (bizRes) => {
           const businesses = bizRes?.data?.businesses || bizRes?.data || [];
           const allBiz = [];
-          if (orgRole === 'owner') allBiz.push({ linkedBusinessId: orgId, name: orgName, isPayer: true });
+          if (orgRole === 'owner') {
+            // Use the actual business _id from the already-resolved business
+            // instead of making another getBusiness call that could flash Urban HTX
+            const ownerBizId = targetBusinessId && targetBusinessId !== userId
+              ? (await getBusiness(userId).then(r => r?.data?._id).catch(() => userId))
+              : (targetBusinessId || userId);
+            allBiz.push({ linkedBusinessId: ownerBizId, name: orgName, isPayer: true });
+          }
           allBiz.push(...businesses.filter(b => b.linkedBusinessId !== orgId));
           setAllBusinesses(allBiz);
         }).catch(() => {});
@@ -595,6 +619,7 @@ const MyBusiness = () => {
     });
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const token = localStorage.getItem("idToken");
     if (!token) { navigation("/login"); return; }
@@ -602,13 +627,15 @@ const MyBusiness = () => {
     if (!userId) { navigation("/login"); return; }
     setStates(State.getStatesOfCountry(countryCode));
 
-    // If no route param, try to resolve the business
+    // If no route param, use the global business context from sessionStorage
     if (!routeBusinessId) {
-      // First try without businessId — backend checks User_Business_Access table
-      init();
+      const savedBiz = sessionStorage.getItem("selectedBusinessId");
+      // Always pass the savedBiz — if null, getBusiness returns the primary (owner's) business
+      init(savedBiz);
     } else {
       init(routeBusinessId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -865,19 +892,6 @@ const MyBusiness = () => {
 
         {/* Tabs */}
         <div className="ev-filter-bar">
-          {allBusinesses.length > 1 && (
-            <select
-              value={selectedBusinessId || ''}
-              onChange={(e) => { sessionStorage.setItem("selectedBusinessId", e.target.value); window.location.href = `/admin/my-business/${e.target.value}`; }}
-              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #E0E0E0', fontSize: '14px', fontFamily: 'Outfit, sans-serif', cursor: 'pointer', backgroundColor: '#fff', minWidth: '180px' }}
-            >
-              {allBusinesses.map(biz => (
-                <option key={biz.linkedBusinessId} value={biz.linkedBusinessId}>
-                  {biz.name}{biz.isPayer ? ' (Organization)' : ''}
-                </option>
-              ))}
-            </select>
-          )}
           <div className="ev-tabs">
             {['Profile', 'Gallery', 'Menus'].map((label, i) => (
               <button key={label} className={`ev-tab${activeTab === i ? ' on' : ''}`} onClick={() => handleTabChange(i)}>{label}</button>
@@ -901,8 +915,7 @@ const MyBusiness = () => {
               <Box sx={{ backgroundColor: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
                 <Box sx={{ width: '100%', height: { xs: '120px', md: '160px' }, borderRadius: '12px', overflow: 'hidden', backgroundColor: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {(() => {
-                    const isPrimary = !selectedBusinessId || !allBusinesses.length || allBusinesses.find(b => b.isPayer)?.linkedBusinessId === selectedBusinessId;
-                    const logoSrc = uploadedImage || (isPrimary ? getBusinessPicture(userId, 'medium', item.iconUpdatedAt) : null);
+                    const logoSrc = uploadedImage || (item._id ? getBusinessPicture(item.userId || userId, 'medium', item.iconUpdatedAt) : null);
                     return logoSrc ? (
                       <img src={logoSrc} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
@@ -955,6 +968,7 @@ const MyBusiness = () => {
 
             {/* Right Panel - Business Profile Form */}
             <Box sx={{ flex: 1 }}>
+              {(userRole === 'owner' || userRole === 'admin') ? (
               <SettingsCard
                 title="Business Information"
                 subtitle="Update your business details"
@@ -1214,12 +1228,46 @@ const MyBusiness = () => {
                   </Box>
                 </Box>
               </SettingsCard>
+              ) : (
+              /* Read-only view for members */
+              <Box sx={{ backgroundColor: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                <Typography sx={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '4px', fontFamily: 'Outfit' }}>Business Information</Typography>
+                <Typography sx={{ fontSize: '13px', color: '#6B7280', marginBottom: '20px', fontFamily: 'Outfit' }}>You have view-only access to this business</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: '16px' }}>
+                  {[
+                    { label: 'Business Name', value: item.name },
+                    { label: 'Designation', value: item.designation },
+                    { label: 'Business Type', value: item.type },
+                    { label: 'Phone Number', value: item.phoneNumber },
+                    { label: 'Website', value: item.website },
+                    { label: 'Address', value: item.address1 },
+                    { label: 'City', value: item.city },
+                    { label: 'State', value: item.state },
+                    { label: 'Zip Code', value: item.zipCode },
+                  ].map(field => (
+                    <Box key={field.label}>
+                      <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', marginBottom: '4px', fontFamily: 'Outfit' }}>{field.label}</Typography>
+                      <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#111827', fontFamily: 'Outfit', padding: '8px 0', borderBottom: '1px solid #F3F4F6' }}>{field.value || '—'}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+                {item.description && (
+                  <Box sx={{ marginTop: '16px' }}>
+                    <Typography sx={{ fontSize: '12px', fontWeight: 600, color: '#6B7280', marginBottom: '4px', fontFamily: 'Outfit' }}>Description</Typography>
+                    <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#111827', fontFamily: 'Outfit', lineHeight: 1.6 }}>{item.description}</Typography>
+                  </Box>
+                )}
+              </Box>
+              )}
             </Box>
           </Box>
         )}
 
         {/* Tab 1: Gallery */}
         {activeTab === 1 && (
+          userRole === 'member' ? (
+            <GalleryTab item={item} photoGallery={photoGallery} readOnly />
+          ) : (
           <GalleryTab
             item={item}
             photoGallery={photoGallery}
@@ -1227,15 +1275,20 @@ const MyBusiness = () => {
             onPhotoUpload={handlePhotoUpload}
             onRemovePhoto={removePhoto}
           />
+          )
         )}
 
         {/* Tab 2: Menus */}
         {activeTab === 2 && (
+          userRole === 'member' ? (
+            <MenusTab item={item} readOnly />
+          ) : (
           <MenusTab item={item} onLabelChange={(menuNum, value) => handleItemChange(`menuLabel${menuNum}`, value)} onMenuUpload={handleMenuUpload} onRemoveMenu={(menuNum) => handleItemChange(`menuUrl${menuNum}`, null)} />
+          )
         )}
 
-        {/* Floating Save Bar - appears on any tab when dirty */}
-        {isDirty && activeTab !== 0 && (
+        {/* Floating Save Bar - appears on any tab when dirty (only for owner/admin) */}
+        {isDirty && activeTab !== 0 && (userRole === 'owner' || userRole === 'admin') && (
           <Box sx={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 2, zIndex: 1000, border: '1px solid #E5E7EB' }}>
             <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#F59E0B' }} />
             <Typography sx={{ fontSize: '14px', color: '#374151', fontWeight: 500 }}>You have unsaved changes</Typography>

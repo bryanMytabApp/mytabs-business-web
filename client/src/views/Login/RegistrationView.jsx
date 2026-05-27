@@ -4,7 +4,6 @@ import "./LoginView.css";
 import {
   MTBButton,
   MTBInput,
-  MTBSelector,
   MTBInputValidator,
   MTBCategorySelector,
 } from "../../components";
@@ -12,7 +11,6 @@ import MTBDropZone from "../../components/MTBDropZone/MTBDropZone";
 import {toast} from "react-toastify";
 import {useNavigate} from "react-router-dom";
 import {signUp} from "../../services/authService";
-import {parsePhoneNumberFromString} from "libphonenumber-js";
 import chevronIcon from "../../assets/atoms/chevron.svg";
 import {getUserExistance} from "../../services/userService";
 import categoriesJS from "../../utils/data/categories";
@@ -22,7 +20,6 @@ import axios from "axios";
 import { State, City } from 'country-state-city';
 import styles from '../MyBusiness/MyBusiness.module.css';
 
-let subCategoryList;
 const countryCode = 'US';
 
 export const debounce = (func, wait) => {
@@ -67,20 +64,17 @@ export default function RegistrationView() {
 
   const [filteredSubCategories, setFilteredSubCategories] = useState([]);
 
-  const [inputTouched, setInputTouched] = useState({zipCode: false, city: false});
-  const [imageFile, setImageFile] = useState();
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
   const [part, setPart] = useState(0);
   const [states, setStates] = useState([])
-  const [cities, setCities] = useState([])
+  const [, setCities] = useState([])
   
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
 
   const filterSubCategorySetter = () => {
-    subCategoryList = categoriesJS;
     setFilteredSubCategories(categoriesJS);
   };
   const firstHeaderText = [
@@ -90,15 +84,8 @@ export default function RegistrationView() {
   ];
   const secondHeaderText = "Where are you located?";
 
-  const cityList = [
-    {value: 0, name: "Austin", color: "#fff"},
-    {value: 1, name: "Dallas", color: "#fff"},
-    {value: 2, name: "Houston", color: "#fff"},
-    {value: 3, name: "Los Angeles", color: "#fff"},
-    {value: 3, name: "New Orleans", color: "#fff"},
-  ];
-
   const myRef = useRef(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     filterSubCategorySetter();
   }, [part]);
@@ -115,6 +102,7 @@ export default function RegistrationView() {
     let selectedState = states.find(state => state.name === formData.state)
     let availableCities = City.getCitiesOfState(countryCode, selectedState.isoCode)
     setCities(availableCities)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.state])
 
   // Initialize Google Places Autocomplete for address input
@@ -216,7 +204,7 @@ export default function RegistrationView() {
     let newState = {
       ...validationState,
       hasUppercase: /[A-Z]/.test(password),
-      hasSymbol: /[@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?/!]+/.test(password),
+      hasSymbol: /[@#$%^&*()_+\-=[\]{};':"\\|,.<>/?/!]+/.test(password),
       hasAtLeastNumCharacters: /.{11,}/.test(password),
       hasLowercase: /[a-z]/.test(password),
       hasNumber: /[0-9]/.test(password),
@@ -225,8 +213,10 @@ export default function RegistrationView() {
     setValidationState(newState);
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     validatePassword(formData.password);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.password]);
 
   const checkExistenceDebounced = debounce(async (name, value, setErrors) => {
@@ -244,7 +234,7 @@ export default function RegistrationView() {
         let nameText = name.charAt(0).toUpperCase() + name.slice(1);
         setErrors((prevErrors) => ({
           ...prevErrors,
-          [name]: `${name == "phoneNumber" ? "Phone" : nameText} already exists.`,
+          [name]: `${name === "phoneNumber" ? "Phone" : nameText} already exists.`,
         }));
       } else {
         // Clear the error if user doesn't exist
@@ -259,7 +249,7 @@ export default function RegistrationView() {
         let nameText = name.charAt(0).toUpperCase() + name.slice(1);
         setErrors((prevErrors) => ({
           ...prevErrors,
-          [name]: `${name == "phoneNumber" ? "Phone" : nameText} already exists.`,
+          [name]: `${name === "phoneNumber" ? "Phone" : nameText} already exists.`,
         }));
       }
       // Otherwise, silently fail (network errors, etc. shouldn't block registration)
@@ -285,6 +275,7 @@ export default function RegistrationView() {
     }));
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleInputChange = useCallback((value, name) => {
     if(name === "username" || name === "email") {
       const noSpaceValue = value.replace(/\s+/g, '');
@@ -333,6 +324,7 @@ export default function RegistrationView() {
     if (["email", "username", "phoneNumber"].includes(name)) {
       checkExistenceDebounced(name, value, setErrors);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const returnBack = () => {
@@ -341,7 +333,7 @@ export default function RegistrationView() {
 
   const handleBlur = (name) => {
     let error = errors["name"];
-    if (name === "city" || name == "zipCode" || name == "uploadImage") error = "";
+    if (name === "city" || name === "zipCode" || name === "uploadImage") error = "";
     setErrors((prevErrors) => ({...prevErrors, [name]: error}));
   };
 
@@ -508,7 +500,6 @@ export default function RegistrationView() {
     e.preventDefault();
     const phoneNumberInput = formData.phoneNumber.replace(/[^0-9]/g, "");
     let phoneNumberWithPlus = `+1${phoneNumberInput}`;
-    const phoneNumber = parsePhoneNumberFromString(phoneNumberInput);
 
     let signUpPayload = {
       ...formData,
@@ -566,18 +557,6 @@ export default function RegistrationView() {
     navigate("/subscription");
   };
   
-
-  const isFormFilled = () => {
-    const requiredFieldsFilled = Object.values(formData).every((value) => {
-      if (typeof value === "string") {
-        return value.trim() !== "";
-      }
-      return value !== undefined;
-    });
-    const locationFilled = formData.zipCode.trim() !== "" || formData.city.trim() !== "";
-    const imageUploaded = imageFile !== undefined;
-    return requiredFieldsFilled && locationFilled && imageUploaded;
-  };
 
   document.title = "My Tabs - Registration";
 

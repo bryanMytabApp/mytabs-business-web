@@ -18,7 +18,6 @@ export default function LoginView() {
     handleMfaCodeChange,
     handleMfaVerify,
     handleShowBackupCode,
-    handleBackToMfa,
     handleBackupCodeChange,
     handleBackupCodeVerify,
     handleReturnToSignIn,

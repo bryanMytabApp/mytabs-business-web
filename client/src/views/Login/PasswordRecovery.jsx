@@ -28,7 +28,7 @@ export default function PasswordRecovery() {
   });
 
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [part, setPart] = useState(0);
 
   const firstHeaderText = [
@@ -40,6 +40,7 @@ export default function PasswordRecovery() {
 
   useEffect(() => {
     validatePassword(formData.password);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.password]);
 
   useEffect(() => {
@@ -54,7 +55,7 @@ export default function PasswordRecovery() {
     let newState = {
       ...validationState,
       hasUppercase: /[A-Z]/.test(password),
-      hasSymbol: /[@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?/!]+/.test(password),
+      hasSymbol: /[@#$%^&*()_+\-=[\]{};':"\\|,.<>/?/!]+/.test(password),
       hasAtLeastNumCharacters: /.{11,}/.test(password),
       hasLowercase: /[a-z]/.test(password),
       hasNumber: /[0-9]/.test(password),
@@ -65,6 +66,7 @@ export default function PasswordRecovery() {
 
   useEffect(() => {
     validatePassword(formData.password);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.password]);
 
 
@@ -85,7 +87,7 @@ export default function PasswordRecovery() {
 
   const handleBlur = (name) => {
     let error = errors["name"];
-    if (name === "city" || name == "verificationCode" || name == "uploadImage") error = "";
+    if (name === "city" || name === "verificationCode" || name === "uploadImage") error = "";
     setErrors((prevErrors) => ({...prevErrors, [name]: error}));
   };
 
@@ -164,7 +166,7 @@ export default function PasswordRecovery() {
 
   const handleConfirmPassword = async () => {
     try {
-      let res = await confirmResetPassword(formData);
+      await confirmResetPassword(formData);
       await handleNextPart();
     } catch (error) {
       setErrors((prevErrors) => ({

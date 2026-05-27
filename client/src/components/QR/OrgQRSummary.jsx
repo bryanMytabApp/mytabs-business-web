@@ -4,7 +4,6 @@ import {
   Typography,
   Paper,
   Chip,
-  Divider,
 } from "@mui/material";
 import BusinessIcon from "@mui/icons-material/Business";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";

@@ -35,19 +35,6 @@ import { parseJwt } from '../../../utils/common';
 import { useStripe } from '@stripe/react-stripe-js';
 import { toast } from 'react-toastify';
 
-// Fallback mock data
-const mockInvoices = [
-  { id: '1', date: 'Apr 8, 2026', amount: '$49.00', status: 'paid' },
-  { id: '2', date: 'Mar 8, 2026', amount: '$49.00', status: 'paid' },
-  { id: '3', date: 'Feb 8, 2026', amount: '$49.00', status: 'paid' },
-  { id: '4', date: 'Jan 8, 2026', amount: '$49.00', status: 'paid' },
-];
-
-const mockPaymentMethods = [
-  { id: '1', brand: 'Visa', last4: '4242', expiry: '12/2026', isDefault: true },
-  { id: '2', brand: 'Mastercard', last4: '8888', expiry: '03/2025', isDefault: false },
-];
-
 // Plan metadata (features/descriptions) — prices come from Stripe via API
 const PLAN_META = {
   1: {

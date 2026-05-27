@@ -19,11 +19,6 @@ const SubscriptionSuccess = () => {
     Plus: ["10 ad spaces", "Dedicated ad spaces", "Basic tier features included"],
     Premium: ["25 ad spaces", "Tour/Season space included", "Plus tier features included"],
   };
-  const handleSelectPlan = (plan, price) => {
-    setSelectedPlan(plan);
-    setSelectedPrice(price);
-    navigation("/subpart", {state: {plan: plan, price: price}});
-  };
 
   useEffect(() => {
     try {
@@ -45,12 +40,13 @@ const SubscriptionSuccess = () => {
       setSelectedPrice(0);
       setSelectedBenefits(planBenefits["Premium"]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <div style={{flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh"}}>
       <div className='Subscription-view'>
         <div className='Subscription-icon'>
-          <img src={logo} />
+          <img src={logo} alt="" />
         </div>
         <div className='Subcription-main'>
           <div className='Subscription-header-text'>

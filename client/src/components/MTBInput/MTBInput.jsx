@@ -44,7 +44,7 @@ export default function MTBInput({
   };
 
   return (
-    <div className={type == "category" ? "MTB-category-input" : classes.filter(Boolean).join(" ")}>
+    <div className={type === "category" ? "MTB-category-input" : classes.filter(Boolean).join(" ")}>
       {children}
       <div
         className={type !== "category" ? "input-container" : "input-container-category"}

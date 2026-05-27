@@ -1,6 +1,4 @@
-import {mdiGlassCocktail, mdiAccount} from "@mdi/js";
-
-export default [
+const categories = [
     {
         "name": "Other",
         "subcategories": [],
@@ -337,4 +335,6 @@ export default [
         "subcategories": [],
         "text": ""
     }
-]
+];
+
+export default categories;

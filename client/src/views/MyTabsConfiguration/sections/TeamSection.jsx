@@ -22,7 +22,6 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import SettingsCard from '../components/SettingsCard';
 import { useSettings } from '../context/SettingsContext';
-import { getBusiness } from '../../../services/businessService';
 import {
   getMyOrganizations,
   getOrganizationMembers,
@@ -95,6 +94,7 @@ const TeamSection = () => {
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteError, setInviteError] = useState('');
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const fetchTeam = async () => {
       try {
@@ -144,6 +144,7 @@ const TeamSection = () => {
       }
     };
     fetchTeam();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.user?.userId]);
 
   const isOwnerOrAdmin = userRole === 'owner' || userRole === 'admin';

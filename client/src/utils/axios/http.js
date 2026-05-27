@@ -1,7 +1,6 @@
 import axios from "axios";
 import configJSON from "../../config.json"
 import { CognitoUser, CognitoRefreshToken, CognitoUserPool } from 'amazon-cognito-identity-js';
-import { redirect} from "react-router-dom";
 const config = configJSON;
 
 const CUP = new CognitoUserPool(config.userPoolData)

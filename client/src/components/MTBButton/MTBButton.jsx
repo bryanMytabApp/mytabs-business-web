@@ -30,13 +30,6 @@ export default function MTBButton({
     borderRadius: 100,
   };
 
-  const imageDefaultStyles = {
-    height: 72,
-    width: 72,
-    backgroundColor: "#F5EAEC",
-    marginRight: 10,
-    borderRadius: 100,
-  };
 
   return image ? (
     <button

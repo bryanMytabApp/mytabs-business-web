@@ -8,11 +8,10 @@ import { getMyOrganizations } from "../../services/organizationService";
 import { getMyServices } from "../../services/entitlementService";
 import { createMultipleClasses } from "../../utils/common";
 import { toast } from "react-toastify";
-import { MTBLoading } from "../../components";
 
 const OrganizationList = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasOrg, setHasOrg] = useState(false);
+  const [, setIsLoading] = useState(true);
+  const [, setHasOrg] = useState(false);
   const [hasEntitlement, setHasEntitlement] = useState(false);
   const navigate = useNavigate();
 

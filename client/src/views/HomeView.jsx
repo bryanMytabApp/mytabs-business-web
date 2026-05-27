@@ -1,5 +1,5 @@
-import React, {useEffect, useRef, useState, useMemo} from "react";
-import {Outlet, redirect, NavLink, useLocation, Link, useNavigate} from "react-router-dom";
+import React, {useEffect, useRef, useState} from "react";
+import {Outlet, redirect, NavLink, useLocation, useNavigate} from "react-router-dom";
 import {ReactSVG} from "react-svg";
 import {getMyServices} from "../services/entitlementService";
 import "./HomeView.css";
@@ -16,7 +16,6 @@ import analyticsActiveIcon from "../assets/menu/analyticsActive.svg";
 import analyticsInactiveIcon from "../assets/menu/analyticsInactive.svg";
 import myTicketsActiveIcon from "../assets/menu/ticketActive.svg";
 import myTicketsInactiveIcon from "../assets/menu/ticketInactive.svg";
-import teamActiveIcon from "../assets/menu/teamActive.svg";
 import teamInactiveIcon from "../assets/menu/teamInactive.svg";
 import upgradesAddonsActiveIcon from "../assets/menu/upgradesAddonsActive.svg";
 import upgradesAddonsInactiveIcon from "../assets/menu/upgradesAddonsInactive.svg";
@@ -111,7 +110,6 @@ const options = [
   }, 
 ];
 
-const state = {user: ""};
 export const LoaderHome = () => {
   const isLoggedIn = getCookie("token") !== null;
 
@@ -137,7 +135,7 @@ export default function HomeView() {
   const [headerSearchOpen, setHeaderSearchOpen] = useState(false);
   const [servicesSearch, setServicesSearch] = useState("");
   const [headerServices, setHeaderServices] = useState([]);
-  const [servicesLoading, setServicesLoading] = useState(true);
+  const [, setServicesLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Local UI metadata for each service (icons, descriptions, paths, etc.)
@@ -155,6 +153,7 @@ export default function HomeView() {
   };
 
   // Fetch entitlements from the API on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     let cancelled = false;
     const fetchServices = async () => {
@@ -203,6 +202,7 @@ export default function HomeView() {
     };
     fetchServices();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const searchResults = headerSearch.trim()

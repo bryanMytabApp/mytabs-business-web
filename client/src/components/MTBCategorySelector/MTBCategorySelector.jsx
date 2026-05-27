@@ -7,7 +7,7 @@ import {toast} from "react-toastify";
 const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) => {
   const [openModal, setOpenModal] = useState(false);
   const [currentCategory, setCurrentCategory] = useState("");
-  const [currentIconName, setCurrentIconName] = useState("mdiAccount");
+  const [currentIconName] = useState("mdiAccount");
   const [testCategories, setTestCategories] = useState([]);
 
   useEffect(() => {
@@ -15,6 +15,7 @@ const MTBCategorySelector = ({onChange = () => {}, data, filteredCategories}) =>
       const _testCategories = JSON.parse(JSON.stringify(testCategories));
       onChange(_testCategories);
     } 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentCategory, testCategories.length]);
 
   const handleCategoryClick = (category) => {

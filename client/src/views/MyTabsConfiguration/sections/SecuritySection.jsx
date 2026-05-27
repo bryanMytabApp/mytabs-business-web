@@ -13,7 +13,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  CircularProgress,
 } from '@mui/material';
 import SettingsCard from '../components/SettingsCard';
 import { useSettings } from '../context/SettingsContext';

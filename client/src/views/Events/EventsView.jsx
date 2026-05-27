@@ -2,11 +2,11 @@ import React, { useEffect, useState } from "react";
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import { getEventsByUserId } from "../../services/eventService";
+import { getBusiness } from "../../services/businessService";
 import { getCustomerSubscription, getSystemSubscriptions } from "../../services/paymentService";
 import { getOrganizationBusinesses, getMyOrganizations } from "../../services/organizationService";
 import { getEventPicture } from "../../utils/common";
 import { toast } from "react-toastify";
-import { MTBLoading } from "../../components";
 
 const PLAN_LIMITS = { 1: 3, 2: 10, 3: 25 };
 
@@ -39,7 +39,15 @@ const getEventStatus = (event) => {
   const now = moment();
   const start = toMoment(event.startDate);
   const end = toMoment(event.endDate);
-  if (end && end.isBefore(now)) return "completed";
+  // An event is only completed if its end time has fully passed.
+  // If end date is the same day as start but before start time (data issue),
+  // fall back to checking if start has passed.
+  if (end && end.isValid() && end.isAfter(start)) {
+    if (end.isBefore(now)) return "completed";
+  } else if (start && start.isValid()) {
+    // No valid end or end <= start: use start + 1 day as implicit end
+    if (moment(start).add(1, 'day').isBefore(now)) return "completed";
+  }
   if (start && start.isAfter(now)) return "planning";
   return "active";
 };
@@ -49,12 +57,11 @@ const kpiHealth = (p, alert = 70) => p >= 90 ? "green" : p >= alert ? "gold" : "
 const healthColor = (h) => ({ green: "var(--green)", gold: "var(--gold)", red: "var(--red)" }[h] || "var(--blue)");
 const statusColor = (s) => ({ active: "chip-blue", planning: "chip-teal", completed: "chip-green", cancelled: "chip-red", draft: "chip-gold" }[s] || "chip-blue");
 const statusLabel = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "Active";
-const daysUntil = (d) => d ? Math.ceil((new Date(d) - new Date()) / 86400000) : null;
-const fmt = (n, type) => {
-  if (type === "currency") return `$${n >= 1000 ? (n / 1000).toFixed(1) + "k" : n}`;
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
-  if (n >= 1000) return (n / 1000).toFixed(1) + "k";
-  return n.toString();
+const daysUntil = (d) => {
+  if (!d) return null;
+  const eventDay = moment(new Date(d)).startOf('day');
+  const today = moment().startOf('day');
+  return eventDay.diff(today, 'days');
 };
 
 const S = `
@@ -113,73 +120,45 @@ const EventsView = () => {
   const [items, setItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentLevel, setCurrentLevel] = useState(1);
+  const [, setIsLoading] = useState(true);
+  const [, setCurrentLevel] = useState(1);
   const [maxAds, setMaxAds] = useState(Infinity);  // Start at Infinity so the limit warning never fires before subscription loads
-  const [allBusinesses, setAllBusinesses] = useState([]);
+  const [, setAllBusinesses] = useState([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState(sessionStorage.getItem("selectedBusinessId") || null);
-  const [currentUserId, setCurrentUserId] = useState(null);
+  const [primaryBizId, setPrimaryBizId] = useState(null);
   const navigate = useNavigate();
-
-  // Helper to get the userId for events API from a business selection
-  // The dropdown stores linkedBusinessId (business _id), but events API needs userId (owner's userId)
-  const getEventUserIdForBusiness = (bizId, businesses) => {
-    if (!bizId) return null;
-    const biz = businesses.find(b => b.linkedBusinessId === bizId);
-    // If business has userId field, use it; otherwise fall back to linkedBusinessId (for org owner's own business)
-    return biz?.userId || biz?.linkedBusinessId || bizId;
-  };
-
-  // Persist selection to sessionStorage and filter events for the new business.
-  // All events live under the org owner's userId in DynamoDB — the businessId
-  // field on each event tells us which business it belongs to. So we always
-  // fetch with the current user's ID and filter client-side by businessId.
-  const handleBusinessChange = (bizId) => {
-    setSelectedBusinessId(bizId);
-    sessionStorage.setItem("selectedBusinessId", bizId);
-
-    // Refetch all events for the current user, then filter will happen
-    // in the render via the `filtered` variable below.
-    getEventsByUserId(currentUserId).then(res => {
-      setItems(res.data || []);
-    }).catch(e => console.error("Events refetch error:", e));
-  };
 
   useEffect(() => {
     const load = async () => {
       const token = localStorage.getItem("idToken");
       const userId = parseJwt(token);
       if (!userId) { setIsLoading(false); return; }
-      setCurrentUserId(userId);
 
-      // Determine which business to load events for. The events lambda
-      // already knows how to map a team member's userId to the business
-      // they have access to (via User_Business_Access), so for the simple
-      // single-business case we just pass our own userId. For org owners
-      // who can switch between linked businesses we still resolve the
-      // selected business owner's userId below.
       const savedBiz = sessionStorage.getItem("selectedBusinessId");
 
-      // Fast path: fetch events immediately using the caller's userId.
-      // The lambda walks the access table for team members and returns
-      // only events from the business they have access to. For org owners
-      // this returns events under their own ownership (which is what the
-      // default selection should show until they pick a different one).
+      // Fetch events
+      let eventsData = [];
       try {
         const res = await getEventsByUserId(userId);
-        setItems((res.data || []).slice(0, 25));
-        setIsLoading(false); // Show page immediately
+        eventsData = (res.data || []).slice(0, 25);
       } catch (e) {
         console.error("Events error:", e);
-        setIsLoading(false);
       }
 
-      // Don't set selectedBusinessId yet — wait for the org/business list
-      // to load so we can default to the FIRST business in the list rather
-      // than the userId (which may not correspond to the first dropdown item).
-      // If there's a savedBiz from a prior session we'll validate it below.
+      // Determine primary business for untagged event ownership
+      let primaryBizId = null;
+      try {
+        const primaryRes = await getBusiness(userId);
+        primaryBizId = primaryRes?.data?._id || null;
+      } catch (e) { /* ignore */ }
 
-      // Load business selector + subscription in background (non-blocking).
+      // Set items and selected business TOGETHER to avoid flash
+      setItems(eventsData);
+      if (savedBiz) setSelectedBusinessId(savedBiz);
+      if (primaryBizId) setPrimaryBizId(primaryBizId);
+      setIsLoading(false);
+
+      // Load business list + subscription in background (non-blocking).
       Promise.all([
         getMyOrganizations().catch(() => null),
         getSystemSubscriptions().catch(() => null),
@@ -194,8 +173,16 @@ const EventsView = () => {
             const bizRes = await getOrganizationBusinesses(orgId).catch(() => null);
             const businesses = bizRes?.data?.businesses || bizRes?.data || [];
             const allBiz = [];
-            // For org owner, add their own business with userId = their userId
-            if (orgRole === 'owner') allBiz.push({ linkedBusinessId: userId, userId: userId, name: orgName, isPayer: true });
+            // For org owner, use the actual business _id (not userId)
+            if (orgRole === 'owner') {
+              let ownerBizId = userId;
+              try {
+                const ownerBizRes = await getBusiness(userId);
+                const ownerBiz = ownerBizRes?.data || ownerBizRes;
+                if (ownerBiz?._id) ownerBizId = ownerBiz._id;
+              } catch (e) { /* fallback to userId */ }
+              allBiz.push({ linkedBusinessId: ownerBizId, userId: userId, name: orgName, isPayer: true });
+            }
             allBiz.push(...businesses.filter(b => b.linkedBusinessId !== userId));
             setAllBusinesses(allBiz);
 
@@ -256,25 +243,24 @@ const EventsView = () => {
       toast.warn(`You can only have ${maxAds} ads on your current plan. Upgrade to create more!`);
       return;
     }
+    // Ensure the currently selected business is persisted before navigating
+    // so EventCreateNew picks up the correct businessId.
+    if (selectedBusinessId) {
+      sessionStorage.setItem("selectedBusinessId", selectedBusinessId);
+    }
     navigate("/admin/my-events/create");
   };
 
   const filtered = items
     .filter(ev => {
-      // When a specific business is selected (not the org owner's own),
-      // only show events tagged with that businessId. Events without a
-      // businessId are considered "unassigned" and show under the owner's
-      // primary business (first entry / isPayer).
-      if (selectedBusinessId && allBusinesses.length > 1) {
-        const ownerBiz = allBusinesses.find(b => b.isPayer);
-        const isOwnerSelected = ownerBiz && ownerBiz.linkedBusinessId === selectedBusinessId;
-        if (isOwnerSelected) {
-          // Owner's primary business: show events that either have no
-          // businessId or have businessId matching the owner's entry.
-          if (ev.businessId && ev.businessId !== selectedBusinessId) return false;
+      // Filter events by the selected business from the global context.
+      if (selectedBusinessId) {
+        if (ev.businessId === selectedBusinessId) {
+          // Event explicitly tagged with this business — include
+        } else if (!ev.businessId && selectedBusinessId === primaryBizId) {
+          // Untagged event + primary business selected — include
         } else {
-          // Linked business: only show events explicitly tagged with it.
-          if (ev.businessId !== selectedBusinessId) return false;
+          return false;
         }
       }
 
@@ -330,19 +316,6 @@ const EventsView = () => {
           {/* Filter bar */}
           <div className="ev-filter-bar">
             <input className="ev-search" placeholder="Search events..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-            {allBusinesses.length > 1 && (
-              <select
-                value={selectedBusinessId || ''}
-                onChange={(e) => handleBusinessChange(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #E0E0E0', fontSize: '14px', fontFamily: 'Outfit, sans-serif', cursor: 'pointer', backgroundColor: '#fff', minWidth: '180px' }}
-              >
-                {allBusinesses.map(biz => (
-                  <option key={biz.linkedBusinessId} value={biz.linkedBusinessId}>
-                    {biz.name}{biz.isPayer ? ' (Organization)' : ''}
-                  </option>
-                ))}
-              </select>
-            )}
             <div className="ev-tabs">
               {["all", "draft", "planning", "completed"].map(t => (
                 <button key={t} className={`ev-tab${filter === t ? " on" : ""}`} onClick={() => setFilter(t)}>
@@ -358,9 +331,6 @@ const EventsView = () => {
             {filtered.map(ev => {
               const status = getEventStatus(ev);
               const kpis = ev.kpis || [];
-              const allP = kpis.map(k => pct(parseFloat(k.cur || k.current) || 0, parseFloat(k.target) || 1));
-              const avgP = allP.length ? Math.round(allP.reduce((a, b) => a + b, 0) / allP.length) : 0;
-              const health = kpiHealth(avgP, 65);
               const d = daysUntil(ev.startDate);
               const venue = ev.venue || "";
               const cat = ev.category || ev.cat || "";
@@ -405,7 +375,8 @@ const EventsView = () => {
                   <div className="ev-card-bottom">
                     <span className="ev-card-date">
                       {ev.startDate ? (toMoment(ev.startDate)?.format("MMM D, YYYY") || "No date") : "No date"}
-                      {d !== null && d > 0 ? ` \u00B7 ${d}d away` : d === 0 ? " \u00B7 Today" : ""}
+                      {d === 0 ? " \u00B7 Today" : d === 1 ? " \u00B7 Tomorrow" : d !== null && d > 1 ? ` \u00B7 ${d}d away` : ""}
+                      {ev.startDate ? ` @ ${toMoment(ev.startDate)?.format("h:mm A") || ""}` : ""}
                     </span>
                     {kpis.length > 0 && <span className="ev-card-link">{kpis.length} KPIs tracked →</span>}
                   </div>

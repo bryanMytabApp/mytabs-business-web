@@ -2,10 +2,8 @@ import React from "react";
 import "./SubscriptionView.css";
 import checkIcon from "../../assets/atoms/check.svg";
 import {MTBButton} from "../../components";
-import {useNavigate} from "react-router-dom";
 
 const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomText, isSuccess=false}) => {
-  const navigation = useNavigate();
   const spanLineStyle = {
     display: "flex",
     flexDirection: "row",
@@ -15,15 +13,6 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
     marginTop: "12px",
   };
 
- 
-  const handleSelect = () => {
-    if ( !isSuccess ) {
-      
-      navigation("/subpart", {state: {plan, price}});
-    } else {
-      navigation("/admin")
-    }
-  };
   return (
     <>
       {isSelected ? (
@@ -53,7 +42,6 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
             onClick={onClick}
             style={{
               borderRadius: "16px",
-              width: "100%",
               flex: 1,
               backgroundColor: "#F18026",
               fontFamily: "Outfit",
@@ -110,7 +98,6 @@ const SubscriptionItem = ({isSelected, price, plan, benefits, onClick, bottomTex
             onClick={onClick}
             style={{
               borderRadius: "16px",
-              width: "100%",
               flex: 1,
               backgroundColor: isSuccess ? "#F09925" : "#231D4F",
               fontFamily: "Outfit",

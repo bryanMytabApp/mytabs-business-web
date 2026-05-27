@@ -23,18 +23,3 @@ export const getEvent = (userId, eventId) => {
 export const getPresignedUrlForEvent = (data) => {
   return http.post(`/event/presigned-url`, data)
 };
-
-
-function enhanceError(error) {
-  if (error.response && typeof error.response.data === "string") {
-    try {
-      const parsedData = JSON.parse(error.response.data);
-      if (parsedData.error) {
-        error.enhancedMessage = parsedData.error;
-      }
-    } catch (parseError) {
-      console.error("Error parsing error response data:", parseError);
-    }
-  }
-  return error;
-}

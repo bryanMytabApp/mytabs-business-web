@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useStripe } from '@stripe/react-stripe-js';
 import styles from './TicketPurchase.module.css';
 import axios from 'axios';
@@ -24,12 +24,14 @@ const TicketPurchase = () => {
 
   useEffect(() => {
     fetchEvent();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
   useEffect(() => {
     if (selectedTicket && quantity > 0) {
       calculateFees();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTicket, quantity]);
 
   const fetchEvent = async () => {
