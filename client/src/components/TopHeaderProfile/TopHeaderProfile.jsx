@@ -60,6 +60,7 @@ export default function TopHeaderProfile({ onSignOut }) {
   const [bizSearch, setBizSearch] = useState(""); // Typeahead search text
   const [loading, setLoading] = useState(true);
   const wrapRef = useRef(null);
+  const btnRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -192,7 +193,11 @@ export default function TopHeaderProfile({ onSignOut }) {
   useEffect(() => {
     if (!open) return;
     const onDoc = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+      // Check both the trigger area and the portaled menu
+      if (wrapRef.current && wrapRef.current.contains(e.target)) return;
+      const menu = document.querySelector('.th-profile-menu');
+      if (menu && menu.contains(e.target)) return;
+      setOpen(false);
     };
     const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", onDoc);
@@ -278,6 +283,7 @@ export default function TopHeaderProfile({ onSignOut }) {
 
       <button
         type="button"
+        ref={btnRef}
         className={`th-profile-btn${open ? " th-profile-btn-open" : ""}`}
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
@@ -290,8 +296,12 @@ export default function TopHeaderProfile({ onSignOut }) {
         </svg>
       </button>
 
-      {open && (
-        <div className="th-profile-menu" role="menu">
+      {open && ReactDOM.createPortal(
+        <div className="th-profile-menu" role="menu" style={{
+          position: 'fixed',
+          top: btnRef.current ? btnRef.current.getBoundingClientRect().bottom + 8 : 60,
+          right: Math.max(8, window.innerWidth - (btnRef.current ? btnRef.current.getBoundingClientRect().right : window.innerWidth)),
+        }}>
           <div className="th-profile-head">
             <div className="th-avatar th-avatar-lg" aria-hidden="true">{initials}</div>
             <div className="th-profile-id">
@@ -366,8 +376,8 @@ export default function TopHeaderProfile({ onSignOut }) {
           >
             Sign out
           </button>
-        </div>
-      )}
+        </div>,
+      document.body)}
 
       {/* Business Switcher Modal */}
       {switchingBusiness && ReactDOM.createPortal(

@@ -112,6 +112,12 @@ var TabsHelp = (() => {
       <header class="th-head">
         <div class="th-title">${escapeHtml(state.opts.brand)}</div>
         <div class="th-head-actions">
+          <button class="th-pin" type="button" data-th-pin aria-label="Pin panel" title="Pin to side">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path d="M12 2L12 10M8 10H16L14 16H10L8 10Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 16V22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
           <a class="th-open-full" data-th-open-full target="_blank" rel="noopener noreferrer" hidden title="Open full guide" aria-label="Open full guide in a new tab">
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
               <path d="M14 4h6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -164,6 +170,42 @@ var TabsHelp = (() => {
           panel.style.height = `calc(100vh - ${state.opts.panelTopOffset}px)`;
         }
         root.querySelector(".th-close").addEventListener("click", () => setOpen(state, false));
+        // Pin button — toggles between overlay and docked sidebar
+        const pinBtn = root.querySelector("[data-th-pin]");
+        if (pinBtn) {
+          // Restore pin state from localStorage
+          const savedPin = localStorage.getItem("tabsHelp_pinned") === "true";
+          if (savedPin) {
+            state.pinned = true;
+            pinBtn.setAttribute("data-active", "");
+            pinBtn.setAttribute("title", "Unpin panel");
+            document.body.setAttribute("data-help-pinned", "");
+            document.body.style.marginRight = state.opts.panelWidth + "px";
+            panel.style.boxShadow = "none";
+            panel.style.borderLeft = "1px solid #E5E7EB";
+          }
+          pinBtn.addEventListener("click", () => {
+            state.pinned = !state.pinned;
+            localStorage.setItem("tabsHelp_pinned", state.pinned ? "true" : "false");
+            if (state.pinned) {
+              pinBtn.setAttribute("data-active", "");
+              pinBtn.setAttribute("title", "Unpin panel");
+              document.body.setAttribute("data-help-pinned", "");
+              document.body.style.marginRight = state.opts.panelWidth + "px";
+              panel.style.position = "fixed";
+              panel.style.boxShadow = "none";
+              panel.style.borderLeft = "1px solid #E5E7EB";
+            } else {
+              pinBtn.removeAttribute("data-active");
+              pinBtn.setAttribute("title", "Pin to side");
+              document.body.removeAttribute("data-help-pinned");
+              document.body.style.marginRight = "";
+              panel.style.position = "fixed";
+              panel.style.boxShadow = "-8px 0 32px rgba(0,0,0,.18)";
+              panel.style.borderLeft = "none";
+            }
+          });
+        }
         document.addEventListener("keydown", state._escListener = (e) => {
           if (e.key === "Escape" && state.panelOpen) setOpen(state, false);
         });
@@ -190,11 +232,21 @@ var TabsHelp = (() => {
           state.panelEl.setAttribute("data-open", "");
           state.panelEl.setAttribute("aria-hidden", "false");
           if (state.btnEl) state.btnEl.setAttribute("data-open", "");
+          // Re-apply pin margin if pinned
+          if (state.pinned) {
+            document.body.setAttribute("data-help-pinned", "");
+            document.body.style.marginRight = state.opts.panelWidth + "px";
+          }
           renderPanel(state);
         } else {
           state.panelEl.removeAttribute("data-open");
           state.panelEl.setAttribute("aria-hidden", "true");
           if (state.btnEl) state.btnEl.removeAttribute("data-open");
+          // When closing, remove the margin but keep pin state remembered
+          if (state.pinned) {
+            document.body.removeAttribute("data-help-pinned");
+            document.body.style.marginRight = "";
+          }
         }
       }
       function updateOpenFullLink(state) {
@@ -556,7 +608,7 @@ var TabsHelp = (() => {
     border: 1px solid #CBD5E1; /* slate-300 outline */
     cursor: pointer; padding: 0;
     display: flex; align-items: center; justify-content: center;
-    z-index: 2147483646;
+    z-index: 999998;
     transition: color .12s ease, border-color .12s ease, background-color .12s ease, box-shadow .12s ease, transform .12s ease;
     font-family: system-ui, -apple-system, sans-serif;
   }
@@ -583,7 +635,7 @@ var TabsHelp = (() => {
     transform: translateX(100%);
     transition: transform .25s cubic-bezier(.4,0,.2,1);
     display: flex; flex-direction: column;
-    z-index: 2147483647;
+    z-index: 999999;
     font-family: 'Nunito', system-ui, -apple-system, sans-serif;
     font-size: 14px; line-height: 1.5;
   }
@@ -609,6 +661,14 @@ var TabsHelp = (() => {
     width: 32px; height: 32px; border-radius: 8px;
   }
   .th-close:hover { background: #F3F4F6; color: #111827; }
+  .th-pin {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px;
+    background: transparent; border: none; cursor: pointer;
+    color: #6B7280; transition: color .12s ease, background-color .12s ease;
+  }
+  .th-pin:hover { color: #2563EB; background: #F3F4F6; }
+  .th-pin[data-active] { color: #2563EB; background: #EFF6FF; }
 
   .th-body { flex: 1 1 auto; overflow-y: auto; padding: 18px; min-height: 0; }
   .th-chat-dock {

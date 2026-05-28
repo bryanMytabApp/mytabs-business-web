@@ -90,18 +90,19 @@
   font-size: 14px;
 }
 
-/* Dropdown menu. */
+/* Dropdown menu — rendered via portal at document.body level so it
+   always appears above the help panel's shadow DOM. */
 .th-profile-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  position: fixed;
+  top: 60px;
+  right: 8px;
   min-width: 280px;
   background: #fff;
   border: 1px solid #E5E7EB;
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, .12);
   padding: 10px;
-  z-index: 1000;
+  z-index: 2147483647;
   animation: th-prof-fade .12s ease-out;
 }
 @keyframes th-prof-fade {

@@ -212,6 +212,19 @@
   gap: 0;
 }
 
+/* When the help panel is pinned, the SDK adds margin-right to the body which
+   shrinks the entire layout. The top header should stay full-width so the
+   user profile stays at the far-right edge, flush with the panel border.
+   We undo the body margin effect on .HomeView and .View, then re-apply it
+   only to .ViewContent so the scrollable content area shrinks but the
+   top header stays full-width. */
+body[data-help-pinned] .HomeView {
+  margin-right: -420px;
+}
+body[data-help-pinned] .ViewContent {
+  margin-right: 420px;
+}
+
 .TopHeaderLeft {
   display: flex;
   align-items: center;

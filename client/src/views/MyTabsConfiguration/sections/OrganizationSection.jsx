@@ -196,7 +196,34 @@ const OrganizationSection = () => {
 
   // Copy code feedback state
   const [codeCopied, setCodeCopied] = useState(null);
-  const [orgTab, setOrgTab] = useState(0); // stores the code that was just copied
+
+  // Organization inner tab names for hash-based help context
+  const orgTabNames = ['overview', 'subscription', 'businesses', 'members'];
+
+  // Initialize orgTab from URL hash suffix (e.g. #organization/subscription)
+  const getOrgTabFromHash = () => {
+    const hash = window.location.hash.replace('#', '');
+    // Check for organization/subtab pattern
+    const match = hash.match(/^organization\/(.+)$/);
+    if (match) {
+      const idx = orgTabNames.indexOf(match[1]);
+      return idx >= 0 ? idx : 0;
+    }
+    return 0;
+  };
+  const [orgTab, setOrgTab] = useState(getOrgTabFromHash);
+
+  // Update URL hash when org tab changes so help SDK picks up the context
+  const handleOrgTabChange = (e, newTab) => {
+    setOrgTab(newTab);
+    // Update hash to organization/subtab for help context
+    const subHash = orgTabNames[newTab];
+    window.history.replaceState(null, '', `#organization/${subHash}`);
+    // Notify help SDK of route change
+    if (window.tabsHelp && typeof window.tabsHelp.setRoute === 'function') {
+      window.tabsHelp.setRoute(window.location.pathname + `#organization/${subHash}`);
+    }
+  };
 
   useEffect(() => {
     const fetchOrgData = async () => {
@@ -697,7 +724,7 @@ const OrganizationSection = () => {
       {/* Tabs */}
       <Tabs
         value={orgTab}
-        onChange={(e, v) => setOrgTab(v)}
+        onChange={handleOrgTabChange}
         sx={{
           mb: 2,
           '& .MuiTab-root': { textTransform: 'none', fontSize: '14px', fontWeight: 500, minWidth: 'auto', padding: '8px 16px' },
