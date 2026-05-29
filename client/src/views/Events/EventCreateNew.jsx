@@ -1480,10 +1480,29 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
   const isShows = form.adType === "shows";
   const steps = isShows ? SS : SE;
   const u = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const next = () => setStep(s => s + 1);
-  const back = () => setStep(s => s - 1);
-  const goTo = n => setStep(n);
-  const reset = () => { setForm(INIT); setStep(1); setDone(false); };
+
+  // Hash slugs for help context — maps step number to a URL hash fragment
+  const stepHashMap = isShows
+    ? { 1: "setup", 2: "show-dates", 3: "media", 4: "ticketing", 5: "kpis-alerts", 6: "review" }
+    : { 1: "setup", 2: "media", 3: "ticketing", 4: "kpis-alerts", 5: "review" };
+
+  // Update URL hash and notify help SDK when step changes
+  const updateHelpHash = (stepNum) => {
+    const hash = stepHashMap[stepNum] || "setup";
+    window.history.replaceState(null, "", `#${hash}`);
+    if (window.tabsHelp && typeof window.tabsHelp.setRoute === "function") {
+      window.tabsHelp.setRoute(window.location.pathname + `#${hash}`);
+    }
+  };
+
+  const next = () => setStep(s => { const n = s + 1; updateHelpHash(n); return n; });
+  const back = () => setStep(s => { const n = s - 1; updateHelpHash(n); return n; });
+  const goTo = n => { updateHelpHash(n); setStep(n); };
+  const reset = () => { setForm(INIT); setStep(1); setDone(false); updateHelpHash(1); };
+
+  // Set initial hash on mount
+  useEffect(() => { updateHelpHash(step); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Delete event handler
   const handleDeleteEvent = async () => {
@@ -1537,17 +1556,24 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
       // Attach the selected business so events are correctly associated.
       // businessId comes from the component state (synced with sessionStorage
       // and validated against the org's business list on mount).
-      const selectedBizId = selectedBusinessId || userId;
-      payload.businessId = selectedBizId;
+      // When no business is explicitly selected, fetch the user's primary business
+      // to get the correct _id (don't send userId as businessId — they're different).
+      const selectedBizId = selectedBusinessId || null;
       try {
-        const bizRes = await getBusiness(userId, selectedBizId !== userId ? selectedBizId : undefined);
+        const bizRes = await getBusiness(userId, selectedBizId || undefined);
         const biz = bizRes?.data || bizRes;
+        if (biz?._id) {
+          payload.businessId = selectedBizId || biz._id;
+        }
         if (biz?.businessCode) {
           payload.businessCode = biz.businessCode;
         }
       } catch (e) {
-        // Non-critical — event still saves without businessCode.
-        console.warn("Could not resolve businessCode:", e);
+        // Non-critical — lambda will resolve businessId if not provided.
+        console.warn("Could not resolve business:", e);
+        if (selectedBizId) {
+          payload.businessId = selectedBizId;
+        }
       }
 
       // Map tickets to API format
