@@ -1,11 +1,19 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import logo from "../../assets/logo.png";
 import "./LoginView.css";
 import useLogin from "../../hooks/useLogin.js";
-import {MTBButton, MTBInput} from "../../components/";
+import {MTBButton, MTBInput, SocialLoginButtons} from "../../components/";
+import SSOLogin from "../../components/SSOLogin/SSOLogin";
 import { APP_VERSION } from "../../config/version";
+import { getCustomerSubscription } from "../../services/paymentService";
+import { getMyOrganizations } from "../../services/organizationService";
+import { registerSession } from "../../services/sessionService";
 
 export default function LoginView() {
+  const navigate = useNavigate();
+  const [showSSO, setShowSSO] = useState(false);
   const {
     username,
     password,
@@ -28,6 +36,52 @@ export default function LoginView() {
     handleSignUp } = useLogin();
 
   document.title = "My Tabs - Log In";
+
+  /**
+   * Handle successful social login.
+   * Tokens are already stored in localStorage by webSocialAuth.js.
+   * Navigate to the appropriate page based on subscription/org status.
+   */
+  const handleSocialSuccess = useCallback(async (data) => {
+    toast.success("Welcome!");
+
+    // Extract userId from the response
+    const userId = data.userId || data.user?.id || data.user?.email;
+
+    // Register session (non-blocking)
+    if (userId) {
+      registerSession(userId).catch(() => {});
+    }
+
+    // Check subscription or org membership to determine navigation
+    try {
+      const subscriptionResponse = await getCustomerSubscription({ userId });
+      if (subscriptionResponse.data.hasSubscription && subscriptionResponse.data.priceId) {
+        navigate("/admin/home");
+        return;
+      }
+    } catch (e) { /* no subscription */ }
+
+    try {
+      const myOrgsRes = await getMyOrganizations();
+      const orgs = myOrgsRes?.data?.organizations || myOrgsRes?.data || [];
+      if (orgs.length > 0) {
+        navigate("/admin/home");
+        return;
+      }
+    } catch (e) { /* no org */ }
+
+    // No subscription and no org — go to subscription page
+    navigate("/subscription");
+  }, [navigate]);
+
+  /**
+   * Handle social login error — show a user-friendly toast message.
+   */
+  const handleSocialError = useCallback((error) => {
+    const message = error?.message || "Sign-in failed. Please try again.";
+    toast.error(message);
+  }, []);
 
   return (
     <div className='Login-view'>
@@ -180,6 +234,43 @@ export default function LoginView() {
               <div onClick={goToPasswordRecovery} className='Forgot-password'>
                 Forgot your password?
               </div>
+
+              <div className="social-login-divider">
+                <span>or</span>
+              </div>
+
+              <SocialLoginButtons
+                onSuccess={handleSocialSuccess}
+                onError={handleSocialError}
+                disabled={isLoading}
+              />
+
+              {/* Organization SSO section */}
+              {!showSSO && (
+                <div
+                  onClick={() => setShowSSO(true)}
+                  style={{
+                    textAlign: 'center',
+                    marginTop: '8px',
+                    cursor: 'pointer',
+                    fontFamily: 'Outfit, sans-serif',
+                    fontSize: '14px',
+                    color: '#5C6BC0',
+                  }}
+                >
+                  Sign in with your Organization
+                </div>
+              )}
+
+              {showSSO && (
+                <div style={{ marginTop: '8px' }}>
+                  <SSOLogin
+                    onSuccess={handleSocialSuccess}
+                    onError={handleSocialError}
+                    onBack={() => setShowSSO(false)}
+                  />
+                </div>
+              )}
             </>
           )}
         </form>

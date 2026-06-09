@@ -14,6 +14,7 @@ import MTBComingSoon from "./MTBComingSoon/MTBComingSoon";
 import TicketPreview from "./TicketPreview/TicketPreview";
 import { QRCodePanel, QRCodeGenerator } from "./QR";
 import MobileDateTimePicker from "./MobileDateTimePicker/MobileDateTimePicker";
+import SocialLoginButtons from "./SocialLoginButtons/SocialLoginButtons";
 
 export {
   MTBButton,
@@ -32,5 +33,6 @@ export {
   TicketPreview,
   QRCodePanel,
   QRCodeGenerator,
-  MobileDateTimePicker
+  MobileDateTimePicker,
+  SocialLoginButtons
 }

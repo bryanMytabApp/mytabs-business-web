@@ -218,6 +218,30 @@
   align-self: center;
 }
 
+.social-login-divider {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.social-login-divider::before,
+.social-login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: #D0D0D0;
+}
+
+.social-login-divider span {
+  padding: 0 12px;
+  color: #888;
+  font-family: Outfit, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
 .progress-bar {
   position: absolute;
   bottom: 79px;
@@ -514,6 +538,14 @@
   .or {
     margin: 8px 0;
     font-size: 14px;
+  }
+
+  .social-login-divider {
+    margin: 6px 0;
+  }
+
+  .social-login-divider span {
+    font-size: 13px;
   }
 
   /* Fix input width overflow on mobile */
