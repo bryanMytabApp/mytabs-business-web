@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import logo from "../../assets/logo.png";
 import "./LoginView.css";
 import useLogin from "../../hooks/useLogin.js";
-import {MTBButton, MTBInput, SocialLoginButtons} from "../../components/";
+import {MTBButton, MTBInput} from "../../components/";
 import SSOLogin from "../../components/SSOLogin/SSOLogin";
 import { APP_VERSION } from "../../config/version";
 import { getCustomerSubscription } from "../../services/paymentService";
@@ -234,16 +234,6 @@ export default function LoginView() {
               <div onClick={goToPasswordRecovery} className='Forgot-password'>
                 Forgot your password?
               </div>
-
-              <div className="social-login-divider">
-                <span>or</span>
-              </div>
-
-              <SocialLoginButtons
-                onSuccess={handleSocialSuccess}
-                onError={handleSocialError}
-                disabled={isLoading}
-              />
 
               {/* Organization SSO section */}
               {!showSSO && (

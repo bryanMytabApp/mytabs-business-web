@@ -554,13 +554,18 @@ const MyBusiness = () => {
         setUserRole('owner');
       }
       if (biz.categories && Array.isArray(biz.categories) && biz.categories.length > 0) {
-        setSubcategories(biz.categories);
-        setOriginalSubcategories([...biz.categories]);
-        const parentCat = categoriesJS.find(c => c.subcategories && c.subcategories.some(sub => biz.categories.includes(sub)));
+        // Normalize categories to strings — API may return objects with {name, subcategories, text}
+        const normalizedCategories = biz.categories.map(cat => {
+          if (typeof cat === 'string') return cat;
+          return cat.text || (cat.subcategories?.length ? cat.subcategories[0] : cat.name) || '';
+        }).filter(Boolean);
+        setSubcategories(normalizedCategories);
+        setOriginalSubcategories([...normalizedCategories]);
+        const parentCat = categoriesJS.find(c => c.subcategories && c.subcategories.some(sub => normalizedCategories.includes(sub)));
         if (parentCat) {
           setSelectedCategoryType(parentCat.name);
         } else {
-          const directMatch = categoriesJS.find(c => biz.categories.includes(c.name));
+          const directMatch = categoriesJS.find(c => normalizedCategories.includes(c.name));
           if (directMatch) setSelectedCategoryType(directMatch.name);
         }
       }

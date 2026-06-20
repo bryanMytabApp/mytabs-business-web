@@ -29,6 +29,7 @@ import {
   getCustomerPaymentMethods,
   getSystemSubscriptions,
   updateCustomerSubscription,
+  createCheckoutSession,
   createSetupSession,
 } from '../../../services/paymentService';
 import { parseJwt } from '../../../utils/common';
@@ -83,7 +84,7 @@ const BillingSection = () => {
   // Change Plan dialog state
   const [changePlanOpen, setChangePlanOpen] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState(null);
-  const [selectedBillingPeriod, setSelectedBillingPeriod] = useState('monthly');
+  const [selectedBillingPeriod, setSelectedBillingPeriod] = useState('yearly');
   const [currentLevel, setCurrentLevel] = useState(0);
   const [systemSubscriptions, setSystemSubscriptions] = useState([]);
   const [changingPlan, setChangingPlan] = useState(false);
@@ -222,7 +223,7 @@ const BillingSection = () => {
       const matchingSub = systemSubscriptions.find((s) => s.priceId === plan.priceId);
       if (matchingSub) {
         setCurrentLevel(matchingSub.level);
-        setSelectedBillingPeriod(matchingSub.sublevel || 'monthly');
+        setSelectedBillingPeriod(matchingSub.sublevel || 'yearly');
       }
     }
   }, [plan, systemSubscriptions, currentLevel]);
@@ -231,7 +232,7 @@ const BillingSection = () => {
     setSelectedLevel(currentLevel || 1);
     // Keep the current billing period selected when opening
     if (!selectedBillingPeriod) {
-      setSelectedBillingPeriod('monthly');
+      setSelectedBillingPeriod('yearly');
     }
     setChangePlanOpen(true);
   };
@@ -288,40 +289,61 @@ const BillingSection = () => {
         return;
       }
 
-      const sessionData = {
-        userId,
-        sublevel: selectedBillingPeriod,
-        level: selectedLevel,
-        newSubId: matchingSub._id,
-      };
+      // If user has no active subscription, go straight to Stripe Checkout
+      // instead of trying to update a non-existent subscription
+      const hasNoSubscription = !plan || plan.status === 'inactive' || plan.name === 'No Active Plan';
+      const isUpgrading = selectedLevel > currentLevel;
 
-      const response = await updateCustomerSubscription(sessionData);
+      if (hasNoSubscription || isUpgrading) {
+        // New subscription or upgrade — create a hosted Stripe Checkout session and redirect
+        const sessionData = {
+          userId,
+          subscriptionId: matchingSub._id,
+        };
 
-      if (
-        response.data &&
-        response.data.subscription &&
-        response.data.subscription.cancel_at_period_end
-      ) {
-        // Downgrade scheduled at end of current period
-        const downgradeDate = new Date(
-          response.data.subscription.current_period_end * 1000
-        ).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-        toast.success(`Downgrade to ${getPlanName(selectedLevel)} scheduled for ${downgradeDate}`);
-        setChangePlanOpen(false);
-      } else if (response.data && response.data.sessionId) {
-        // Upgrade — redirect to Stripe checkout
-        if (stripe) {
-          const result = await stripe.redirectToCheckout({ sessionId: response.data.sessionId });
-          if (result?.error) {
-            toast.error(result.error.message);
+        const response = await createCheckoutSession(sessionData);
+
+        if (response?.url) {
+          // Redirect to Stripe hosted checkout page
+          window.location.href = response.url;
+        } else if (response?.sessionId) {
+          if (stripe) {
+            const result = await stripe.redirectToCheckout({ sessionId: response.sessionId });
+            if (result?.error) {
+              toast.error(result.error.message);
+            }
+          } else {
+            toast.error('Payment system not available. Please try again.');
           }
         } else {
-          toast.error('Payment system not available. Please try again.');
+          toast.error('Failed to create checkout session. Please try again.');
         }
       } else {
-        toast.success('Subscription updated successfully!');
-        setChangePlanOpen(false);
-        window.location.reload();
+        // Downgrade — schedule change at end of current period
+        const sessionData = {
+          userId,
+          sublevel: selectedBillingPeriod,
+          level: selectedLevel,
+          newSubId: matchingSub._id,
+        };
+
+        const response = await updateCustomerSubscription(sessionData);
+
+        if (
+          response.data &&
+          response.data.subscription &&
+          response.data.subscription.cancel_at_period_end
+        ) {
+          const downgradeDate = new Date(
+            response.data.subscription.current_period_end * 1000
+          ).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+          toast.success(`Downgrade to ${getPlanName(selectedLevel)} scheduled for ${downgradeDate}`);
+          setChangePlanOpen(false);
+        } else {
+          toast.success('Subscription updated successfully!');
+          setChangePlanOpen(false);
+          window.location.reload();
+        }
       }
     } catch (err) {
       console.error('Failed to change plan:', err);
@@ -681,7 +703,7 @@ const BillingSection = () => {
       <Dialog
         open={changePlanOpen}
         onClose={() => !changingPlan && setChangePlanOpen(false)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
         PaperProps={{
           sx: {
@@ -702,7 +724,7 @@ const BillingSection = () => {
 
         <DialogContent sx={{ pt: 2 }}>
           {/* Plan Selection */}
-          <Box sx={{ display: 'flex', flexDirection: 'row', gap: '12px', mb: 3, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'row', gap: '12px', mb: 3, flexWrap: 'nowrap' }}>
             {(availableLevels.length > 0 ? availableLevels : [1, 2, 3]).map((level) => {
               const isCurrent = level === currentLevel;
               const isSelected = level === selectedLevel;
@@ -718,7 +740,7 @@ const BillingSection = () => {
                   onClick={() => !isCurrent && setSelectedLevel(level)}
                   sx={{
                     flex: '1 1 0',
-                    minWidth: '200px',
+                    minWidth: '0',
                     border: isSelected
                       ? '2px solid #4F46E5'
                       : isCurrent
