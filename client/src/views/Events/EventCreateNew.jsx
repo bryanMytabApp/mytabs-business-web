@@ -516,6 +516,12 @@ function P1({ f, u, next, steps, editMode, eventId, onDelete, previewEventCode, 
         u("addr", fullAddress);
         u("city", city);
         u("zip", `${state} ${zipCode}`.trim());
+
+        // Capture coordinates for weather monitoring
+        if (place.geometry && place.geometry.location) {
+          u("latitude", place.geometry.location.lat());
+          u("longitude", place.geometry.location.lng());
+        }
       });
     });
 
@@ -1373,6 +1379,7 @@ const parseJwt = (token) => {
 const INIT = {
   adType: "", name: "", cat: "Athletics", date: "", t1: "", t2: "",
   cap: "", desc: "", venue: "", loc: "biz", addr: "", city: "", zip: "",
+  latitude: null, longitude: null,
   media: "", mediaFile: null, tickType: "", extUrl: "", tickets: [],
   kpis: [], checkpoints: [90, 30, 14, 7], channels: null, showDates: [],
   visibility: "public",
@@ -1546,6 +1553,8 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
         address1: form.loc === "new" ? form.addr : "",
         zipCode: form.zip || "",
         venue: form.venue || "",
+        latitude: form.latitude || null,
+        longitude: form.longitude || null,
         visibility: form.visibility || "public",
         status: mode === "draft" ? "inactive" : "active",
         isActive: mode !== "draft",
@@ -1567,6 +1576,11 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
         }
         if (biz?.businessCode) {
           payload.businessCode = biz.businessCode;
+        }
+        // Use business coordinates when location is set to "Business address"
+        if (form.loc === "biz" && !payload.latitude) {
+          if (biz?.latitude) payload.latitude = biz.latitude;
+          if (biz?.longitude) payload.longitude = biz.longitude;
         }
       } catch (e) {
         // Non-critical — lambda will resolve businessId if not provided.
@@ -1633,7 +1647,9 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
           const presignedUrl = presignedRes.data;
           const base64Response = await fetch(form.media);
           const blob = await base64Response.blob();
-          await axios.put(presignedUrl, blob);
+          await axios.put(presignedUrl, blob, {
+            headers: { 'Content-Type': 'image/jpeg' }
+          });
           toast.success("Image uploaded successfully!");
         } catch (imgErr) {
           console.error("Image upload error:", imgErr);

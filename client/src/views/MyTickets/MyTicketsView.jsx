@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getEventsByUserId } from '../../services/eventService';
 import { getBusiness } from '../../services/businessService';
+import { getTicketsByEvent } from '../../services/ticketManagementService';
 import { getCurrentUserId } from '../../utils/authUtils';
 import moment from 'moment';
 
@@ -168,7 +169,37 @@ const MyTicketsView = () => {
             })
           : withTickets;
 
-        setEvents(bizFiltered);
+        // Fetch real-time ticket stats for each event from the tickets table
+        const eventsWithRealStats = await Promise.all(
+          bizFiltered.map(async (ev) => {
+            try {
+              const eventId = ev._id || ev.id;
+              const statsRes = await getTicketsByEvent(eventId);
+              const stats = statsRes?.stats || {};
+              const ticketTypes = stats.ticketTypes || [];
+
+              // Merge real sold counts into the event's tickets array
+              if (ticketTypes.length > 0 && ev.tickets) {
+                const updatedTickets = ev.tickets.map(t => {
+                  const realStat = ticketTypes.find(
+                    st => st.type?.toLowerCase() === (t.type || '').toLowerCase()
+                  );
+                  if (realStat) {
+                    return { ...t, sold: realStat.sold, ticketsSold: realStat.sold };
+                  }
+                  return t;
+                });
+                return { ...ev, tickets: updatedTickets };
+              }
+            } catch (e) {
+              // If stats fetch fails for this event, use existing data
+              console.warn(`Could not fetch ticket stats for event ${ev._id}:`, e.message);
+            }
+            return ev;
+          })
+        );
+
+        setEvents(eventsWithRealStats);
       } catch (e) { console.error("Tickets load error:", e); }
       setLoading(false);
     };
