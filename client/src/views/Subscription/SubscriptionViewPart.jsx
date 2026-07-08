@@ -86,28 +86,26 @@ const SubscriptionViewPart = () => {
         setIsLoading(false);
       }
     } else {
-      // New subscription — mount embedded checkout
+      // New subscription — redirect to Stripe hosted checkout page
       try {
         if (!userId) throw new Error("User not authenticated. Please log in again.");
         const sessionData = { userId, subscriptionId };
         console.log('[Checkout] Creating session:', sessionData);
         const response = await createCheckoutSession(sessionData);
-        if (!response.client_secret) throw new Error("No client secret returned from server");
 
-        const checkout = await stripe.initEmbeddedCheckout({ clientSecret: response.client_secret });
-        localStorage.setItem("checkoutResult", JSON.stringify({ price: planPrices[period].total, plan }));
-
-        // Clear previous checkout if any
-        const container = document.getElementById("checkout-container");
-        if (container) container.innerHTML = "";
-        checkout.mount("#checkout-container");
-        setCheckoutInstance(checkout);
-        setCheckoutMounted(true);
+        if (response?.url) {
+          // Redirect to Stripe hosted checkout page
+          window.location.href = response.url;
+        } else if (response?.sessionId) {
+          const result = await stripe.redirectToCheckout({ sessionId: response.sessionId });
+          if (result?.error) toast.error(result.error.message);
+        } else {
+          throw new Error("Failed to create checkout session. Please try again.");
+        }
       } catch (error) {
         console.error("Checkout error:", error);
         toast.error(error.message || "Failed to load payment form. Please try again.");
         setSelectedPeriod(null);
-        setCheckoutMounted(false);
       } finally {
         setIsLoading(false);
       }

@@ -32,6 +32,8 @@ import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import SettingsCard from '../components/SettingsCard';
 import { useSettings } from '../context/SettingsContext';
+import DomainVerification from '../../Organization/DomainVerification';
+import SSOConfigPanel from '../../Organization/SSOConfigPanel';
 import { getBusiness, getPresignedUrlForBusiness, updateBusiness } from '../../../services/businessService';
 import { getBusinessPicture } from '../../../utils/common';
 import {
@@ -198,7 +200,7 @@ const OrganizationSection = () => {
   const [codeCopied, setCodeCopied] = useState(null);
 
   // Organization inner tab names for hash-based help context
-  const orgTabNames = ['overview', 'subscription', 'businesses', 'members'];
+  const orgTabNames = ['overview', 'subscription', 'businesses', 'members', 'domains', 'sso'];
 
   // Initialize orgTab from URL hash suffix (e.g. #organization/subscription)
   const getOrgTabFromHash = () => {
@@ -736,6 +738,8 @@ const OrganizationSection = () => {
         <Tab label="Subscription" />
         <Tab label="Businesses" />
         <Tab label="Members" />
+        <Tab label="Domains" />
+        <Tab label="SSO" />
       </Tabs>
 
       {/* Tab 0: Organization Info */}
@@ -1460,6 +1464,16 @@ const OrganizationSection = () => {
         )}
       </SettingsCard>
       </>
+      )}
+
+      {/* Tab 4: Domains */}
+      {orgTab === 4 && (
+        <DomainVerification orgId={orgData.id} />
+      )}
+
+      {/* Tab 5: SSO Configuration */}
+      {orgTab === 5 && (
+        <SSOConfigPanel orgId={orgData.id} />
       )}
 
       {/* ===== Add Business Dialog ===== */}

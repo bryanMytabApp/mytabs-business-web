@@ -1,0 +1,422 @@
+/* SSO Configuration Section */
+.ssoSection {
+  background: #FFFFFF;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 24px;
+  margin-top: 20px;
+}
+
+.ssoHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.ssoTitle {
+  font-family: Outfit;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.ssoTitleIcon {
+  color: #F09925;
+}
+
+/* Toggle switch row */
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 16px;
+}
+
+.toggleLabel {
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.toggleDescription {
+  font-family: Outfit;
+  font-size: 12px;
+  color: #71727A;
+  margin-top: 2px;
+}
+
+.toggleSwitch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: #ccc;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border: none;
+  padding: 0;
+}
+
+.toggleSwitch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.toggleSwitchActive {
+  background: #4CAF50;
+}
+
+.toggleSwitchActive::after {
+  transform: translateX(20px);
+}
+
+/* Form group */
+.formGroup {
+  margin-bottom: 16px;
+}
+
+.formLabel {
+  display: block;
+  font-family: Outfit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+.formInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+  font-family: Outfit;
+  font-size: 14px;
+  color: #1a1a1a;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.formInput:focus {
+  border-color: #F09925;
+}
+
+.formInput::placeholder {
+  color: #8F8F8F;
+}
+
+/* SSO Type selector */
+.typeSelector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.typeOption {
+  flex: 1;
+  min-width: 160px;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  text-align: left;
+}
+
+.typeOption:hover {
+  border-color: #F09925;
+  background: #fef9f1;
+}
+
+.typeOptionActive {
+  border-color: #F09925;
+  background: #fef9f1;
+}
+
+.typeOptionTitle {
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 4px 0;
+}
+
+.typeOptionDesc {
+  font-family: Outfit;
+  font-size: 12px;
+  color: #71727A;
+  margin: 0;
+}
+
+/* Domains list */
+.domainsContainer {
+  margin-bottom: 16px;
+}
+
+.domainsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.domainChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #E3F2FD;
+  border-radius: 16px;
+  font-family: Outfit;
+  font-size: 13px;
+  color: #1565C0;
+}
+
+.domainRemove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #1565C0;
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.domainRemove:hover {
+  color: #D32F2F;
+}
+
+.addDomainRow {
+  display: flex;
+  gap: 8px;
+}
+
+.addDomainInput {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+  font-family: Outfit;
+  font-size: 13px;
+  color: #1a1a1a;
+  outline: none;
+}
+
+.addDomainInput:focus {
+  border-color: #F09925;
+}
+
+.addDomainButton {
+  padding: 8px 14px;
+  background: #F09925;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: Outfit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addDomainButton:hover {
+  background: #d9871e;
+}
+
+/* Provider-specific fields */
+.providerFields {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.providerFieldsTitle {
+  font-family: Outfit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Action buttons */
+.actionButtons {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.saveButton {
+  padding: 10px 24px;
+  background: #F09925;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.saveButton:hover {
+  background: #d9871e;
+}
+
+.saveButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.testButton {
+  padding: 10px 24px;
+  background: #fff;
+  color: #F09925;
+  border: 2px solid #F09925;
+  border-radius: 6px;
+  font-family: Outfit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.testButton:hover {
+  background: #fef9f1;
+}
+
+.testButton:disabled {
+  border-color: #ccc;
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Members table */
+.membersSection {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.membersTitle {
+  font-family: Outfit;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 12px 0;
+}
+
+.membersTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: Outfit;
+}
+
+.membersTable th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #71727A;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  background: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+  letter-spacing: 0.3px;
+}
+
+.membersTable td {
+  font-size: 13px;
+  color: #1a1a1a;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.membersTable tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.membersEmpty {
+  text-align: center;
+  padding: 24px;
+  font-family: Outfit;
+  font-size: 13px;
+  color: #71727A;
+}
+
+/* Test result */
+.testResult {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-family: Outfit;
+  font-size: 13px;
+}
+
+.testResultSuccess {
+  background: #E8F5E9;
+  color: #2E7D32;
+  border: 1px solid #C8E6C9;
+}
+
+.testResultError {
+  background: #FFEBEE;
+  color: #C62828;
+  border: 1px solid #FFCDD2;
+}
+
+/* Loading state */
+.loadingState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  font-family: Outfit;
+  font-size: 14px;
+  color: #71727A;
+}
+
+/* Secret field */
+.secretField {
+  position: relative;
+}
+
+.secretToggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #71727A;
+  font-size: 12px;
+  font-family: Outfit;
+}
+
+.secretToggle:hover {
+  color: #1a1a1a;
+}

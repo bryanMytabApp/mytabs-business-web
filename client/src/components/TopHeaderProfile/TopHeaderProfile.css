@@ -187,3 +187,72 @@
   .th-profile-name { display: none; }
   .th-profile-btn { padding-right: 6px; }
 }
+
+/* Support button active state */
+.th-help-btn-active {
+  color: #2563EB;
+  border-color: #2563EB;
+  background: rgba(37, 99, 235, .06);
+}
+
+/* Support dropdown menu — AWS-style */
+.th-support-menu {
+  position: fixed;
+  top: 60px;
+  right: 8px;
+  min-width: 240px;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, .12);
+  padding: 0;
+  z-index: 2147483647;
+  animation: th-prof-fade .12s ease-out;
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+}
+
+.th-support-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.th-support-ext {
+  color: #6B7280;
+  display: inline-flex;
+  align-items: center;
+  transition: color .12s;
+}
+.th-support-ext:hover { color: #2563EB; }
+
+.th-support-divider {
+  height: 1px;
+  background: #E5E7EB;
+  margin: 0;
+}
+
+.th-support-link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background-color .1s;
+}
+.th-support-link:hover { background: #F3F4F6; }
+
+.th-support-link-feedback {
+  color: #2563EB;
+  font-weight: 600;
+}
+.th-support-link-feedback:hover { background: #EFF6FF; }

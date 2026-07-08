@@ -548,7 +548,7 @@ export default function RegistrationView() {
       const base64Response = await fetch(uploadedImage);
       const blob = await base64Response.blob();
       try {
-        await axios.put(presignedUrl, blob)
+        await axios.put(presignedUrl, blob, { headers: { 'Content-Type': blob.type || 'image/png' } })
         toast.success("Image was successfully uploaded");
       } catch (error) {
         toast.error("Cannot upload image");

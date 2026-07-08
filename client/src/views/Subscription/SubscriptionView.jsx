@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getSystemSubscriptions } from "../../services/paymentService";
+import { getSystemSubscriptions, createCheckoutSession } from "../../services/paymentService";
+import { parseJwt } from "../../utils/common";
+import { toast } from "react-toastify";
 import logo from "../../assets/logo.png";
 
 const loadScript = (src) =>
@@ -42,10 +44,38 @@ const SubscriptionView = () => {
     fetchSubs();
   }, []);
 
-  const handleSelectPlan = (plan, price) => {
+  const handleSelectPlan = async (plan, price) => {
     const planMap = { Basic: 1, Plus: 2, Premium: 3 };
-    const subsFiltered = systemSubscriptions.filter((sub) => sub.level === planMap[plan]);
-    navigate("/subpart", { state: { plan, price, paymentArray: subsFiltered } });
+    const level = planMap[plan];
+    // Find the yearly subscription for this plan
+    const yearlySub = systemSubscriptions.find((sub) => sub.level === level && sub.sublevel === 'yearly');
+    
+    if (!yearlySub) {
+      // Fallback to subpart page if yearly sub not found
+      const subsFiltered = systemSubscriptions.filter((sub) => sub.level === level);
+      navigate("/subpart", { state: { plan, price, paymentArray: subsFiltered } });
+      return;
+    }
+
+    // Go directly to Stripe checkout
+    try {
+      const userId = parseJwt(localStorage.getItem('idToken')) || localStorage.getItem('username');
+      if (!userId) {
+        navigate("/login");
+        return;
+      }
+      const response = await createCheckoutSession({ userId, subscriptionId: yearlySub._id, cancelUrl: '/subscription' });
+      if (response?.url) {
+        window.location.href = response.url;
+      } else if (response?.sessionId) {
+        window.location.href = `https://checkout.stripe.com/pay/${response.sessionId}`;
+      } else {
+        toast.error('Failed to create checkout session. Please try again.');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast.error(error?.response?.data?.error || 'Failed to start checkout. Please try again.');
+    }
   };
 
   // ── Three.js: particles + 3D spinning phone
@@ -164,9 +194,9 @@ const SubscriptionView = () => {
   }, []);
 
   const plans = [
-    { id: "basic", name: "Basic", price: "Free", priceSub: "30 days, then $13.99/mo", featured: true, cta: "Start Free Trial", ctaStyle: "orange", badge: "Start free trial", realPrice: 13.99, features: ["3 ad spaces", "Quick Ad Tool", "Ticketing Options", "Business QR codes"] },
-    { id: "plus", name: "Plus", price: "$19.98", priceSub: "per month", featured: false, cta: "Purchase", ctaStyle: "dark", realPrice: 19.98, features: ["10 ad spaces", "Dedicated ad spaces", "Basic tier features included"] },
-    { id: "premium", name: "Premium", price: "$24.98", priceSub: "per month", featured: false, cta: "Purchase", ctaStyle: "dark", badge: "Most Value", realPrice: 24.98, features: ["25 ad spaces", "Tour/Season space included", "Plus tier features included"] },
+    { id: "premium", name: "Premium", price: "$18.98", priceSub: "per month, billed yearly", featured: true, cta: "Start Free Trial", ctaStyle: "orange", badge: "Best Value", realPrice: 227.76, billedNote: "$227.76/year", features: ["25 ad spaces", "Tour/Season space included", "Plus tier features included"] },
+    { id: "plus", name: "Plus", price: "$13.98", priceSub: "per month, billed yearly", featured: false, cta: "Purchase", ctaStyle: "dark", realPrice: 167.76, billedNote: "$167.76/year", features: ["10 ad spaces", "Dedicated ad spaces", "Basic tier features included"] },
+    { id: "basic", name: "Basic", price: "$7.99", priceSub: "per month, billed yearly", featured: false, lightBlue: true, cta: "Purchase", ctaStyle: "dark", badge: "Starter", realPrice: 95.88, billedNote: "$95.88/year", features: ["3 ad spaces", "Quick Ad Tool", "Ticketing Options", "Business QR codes"] },
   ];
 
   const dk = "#0d1b35";
@@ -203,15 +233,10 @@ const SubscriptionView = () => {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <img src={logo} alt="Tabs" style={{ height: 36 }} />
         </div>
-        <button onClick={() => navigate("/admin/home")} style={{ background: "#f97316", color: "white", border: "none", borderRadius: 10, padding: "9px 22px", fontWeight: 800, cursor: "pointer", fontSize: 14, boxShadow: "0 4px 16px rgba(249,115,22,.4)", fontFamily: "'Nunito',sans-serif" }}>Dashboard</button>
       </nav>
 
       {/* HERO */}
-      <section ref={heroRef} style={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", padding: "130px 8% 90px", maxWidth: 1300, margin: "0 auto" }}>
-        <div ref={taglineRef} style={{ opacity: 1, color: md, fontSize: 12, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 22, display: "flex", alignItems: "center", gap: 12, textShadow: sh }}>
-          <span style={{ width: 28, height: 2, background: "#f97316", borderRadius: 2, display: "inline-block" }} />
-          The Ad Platform Built for Local Business
-        </div>
+      <section ref={heroRef} style={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", padding: "80px 8% 90px", maxWidth: 1300, margin: "0 auto" }}>
         <h1 ref={headlineRef} style={{ opacity: 1, fontSize: "clamp(46px,7vw,96px)", fontWeight: 1000, lineHeight: 0.95, color: dk, marginBottom: 28, maxWidth: 640, textShadow: "0 2px 10px rgba(0,0,0,.18)" }}>
           Unlock<br /><span style={{ background: "linear-gradient(90deg,#0d4a8a,#f97316,#0d4a8a)", backgroundSize: "200%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", animation: "gradShift 5s ease infinite" }}>Ad Space.</span>
         </h1>
@@ -219,8 +244,7 @@ const SubscriptionView = () => {
           Pick a plan that fits your business — and start reaching local customers in minutes.
         </p>
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 80 }}>
-          <button className="hero-cta orange-btn" onClick={() => handleSelectPlan("Basic", 13.99)}>Start Free Trial →</button>
-          <button className="hero-cta ghost-btn" onClick={() => pricingRef.current?.scrollIntoView({ behavior: "smooth" })}>See Plans</button>
+          <button className="hero-cta orange-btn" onClick={() => pricingRef.current?.scrollIntoView({ behavior: "smooth" })}>See Plans</button>
         </div>
         <div style={{ display: "flex", gap: "clamp(20px,5vw,68px)", flexWrap: "wrap" }}>
           {[{ val: counts.advertisers, suffix: "+", label: "Active Advertisers" }, { val: counts.fill, suffix: "%", label: "Avg Fill Rate" }, { val: counts.speed || "< 3", suffix: " min", label: "Time to Go Live" }, { val: counts.rating, suffix: "★", label: "Avg Rating" }].map((s, i) => (
@@ -233,8 +257,8 @@ const SubscriptionView = () => {
       </section>
 
       {/* PRICING */}
-      <section ref={pricingRef} style={{ position: "relative", zIndex: 2, padding: "100px 24px 130px", maxWidth: 1160, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 70 }}>
+      <section ref={pricingRef} style={{ position: "relative", zIndex: 2, padding: "60px 24px 100px", maxWidth: 1160, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div className="pricing-eyebrow" style={{ color: "#f97316", fontSize: 11, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 16, textShadow: sh }}>Pricing Plans</div>
           <h2 className="pricing-headline" style={{ color: dk, fontSize: "clamp(28px,3.5vw,48px)", fontWeight: 1000, lineHeight: 1.1, marginBottom: 18, textShadow: "0 2px 8px rgba(0,0,0,.14)" }}>
             Pick your power level.
@@ -245,7 +269,7 @@ const SubscriptionView = () => {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 24, perspective: "1200px" }}>
           {plans.map((plan, i) => (
             <div key={plan.id} ref={el => cardsRef.current[i] = el} className="plan-card" onMouseEnter={() => setHoveredCard(plan.id)} onMouseLeave={() => setHoveredCard(null)}
-              style={{ opacity: 1, position: "relative", borderRadius: 28, overflow: "hidden", background: plan.featured ? "linear-gradient(148deg,#1fb8c8 0%,#0d8fa2 55%,#0a6e80 100%)" : "rgba(255,255,255,0.58)", backdropFilter: "blur(22px)", border: plan.featured ? "none" : hoveredCard === plan.id ? "1px solid rgba(255,255,255,0.95)" : "1px solid rgba(255,255,255,0.68)", boxShadow: plan.featured ? "0 30px 80px rgba(10,110,128,.42)" : hoveredCard === plan.id ? "0 22px 64px rgba(0,0,0,.17)" : "0 8px 30px rgba(0,0,0,.1)", marginTop: plan.featured ? -26 : 0, cursor: "pointer" }}>
+              style={{ opacity: 1, position: "relative", borderRadius: 28, overflow: "hidden", background: plan.featured ? "linear-gradient(148deg,#1fb8c8 0%,#0d8fa2 55%,#0a6e80 100%)" : plan.lightBlue ? "linear-gradient(148deg,#e0f4ff 0%,#b8e4f8 55%,#8dd4f0 100%)" : "rgba(255,255,255,0.58)", backdropFilter: "blur(22px)", border: plan.featured || plan.lightBlue ? "none" : hoveredCard === plan.id ? "1px solid rgba(255,255,255,0.95)" : "1px solid rgba(255,255,255,0.68)", boxShadow: plan.featured ? "0 30px 80px rgba(10,110,128,.42)" : plan.lightBlue ? "0 30px 80px rgba(100,180,230,.3)" : hoveredCard === plan.id ? "0 22px 64px rgba(0,0,0,.17)" : "0 8px 30px rgba(0,0,0,.1)", marginTop: plan.featured ? -26 : 0, cursor: "pointer" }}>
               {plan.featured && plan.badge && (<div style={{ background: "rgba(255,255,255,.17)", padding: "10px 24px", textAlign: "center", fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", color: "white", textTransform: "uppercase" }}>✦ {plan.badge}</div>)}
               {!plan.featured && plan.badge && (<div style={{ position: "absolute", top: 20, right: 20, background: "#f97316", color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", padding: "5px 14px", borderRadius: 20, textTransform: "uppercase" }}>{plan.badge}</div>)}
               <div style={{ padding: "40px 36px 38px" }}>
@@ -264,7 +288,7 @@ const SubscriptionView = () => {
                 </ul>
                 <button className={plan.ctaStyle === "orange" ? "orange-btn" : "dark-btn"} style={{ width: "100%", fontSize: 16 }} onClick={() => handleSelectPlan(plan.name, plan.realPrice)}>{plan.cta}</button>
                 <p style={{ color: plan.featured ? "rgba(255,255,255,.58)" : mu, fontSize: 11, textAlign: "center", marginTop: 16, lineHeight: 1.6, fontWeight: 600 }}>
-                  Free 30-day trial then {plan.price === "Free" ? "$13.99" : plan.price}/month.<br />First time members only. Terms apply.
+                  Free 30-day trial then {plan.billedNote || "$95.88/year"}.<br />First time members only. Terms apply.
                 </p>
               </div>
             </div>

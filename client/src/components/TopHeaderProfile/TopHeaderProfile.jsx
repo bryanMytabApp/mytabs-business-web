@@ -10,6 +10,7 @@ import {
   getOrganizationMembers,
   getOrganizationBusinesses,
 } from "../../services/organizationService";
+import FeedbackDialog from "../FeedbackDialog/FeedbackDialog";
 
 /**
  * TopHeaderProfile
@@ -50,6 +51,7 @@ import {
 export default function TopHeaderProfile({ onSignOut }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [business, setBusiness] = useState(null);
   const [org, setOrg] = useState(null);            // { id, name, role }
@@ -58,9 +60,12 @@ export default function TopHeaderProfile({ onSignOut }) {
   const [switchingBusiness, setSwitchingBusiness] = useState(false); // Edit mode for business
   const [pendingBusinessId, setPendingBusinessId] = useState(null); // Pending selection before confirm
   const [bizSearch, setBizSearch] = useState(""); // Typeahead search text
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const wrapRef = useRef(null);
   const btnRef = useRef(null);
+  const helpBtnRef = useRef(null);
+  const sendSuggestionsRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,22 +196,24 @@ export default function TopHeaderProfile({ onSignOut }) {
 
   // Close the dropdown when clicking outside or pressing Escape.
   useEffect(() => {
-    if (!open) return;
+    if (!open && !helpOpen) return;
     const onDoc = (e) => {
-      // Check both the trigger area and the portaled menu
       if (wrapRef.current && wrapRef.current.contains(e.target)) return;
       const menu = document.querySelector('.th-profile-menu');
       if (menu && menu.contains(e.target)) return;
+      const supportMenu = document.querySelector('.th-support-menu');
+      if (supportMenu && supportMenu.contains(e.target)) return;
       setOpen(false);
+      setHelpOpen(false);
     };
-    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    const onKey = (e) => { if (e.key === "Escape") { setOpen(false); setHelpOpen(false); } };
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, helpOpen]);
 
   const displayName = useMemo(() => {
     if (!user) return "Account";
@@ -265,6 +272,55 @@ export default function TopHeaderProfile({ onSignOut }) {
 
   return (
     <div className="th-topright" ref={wrapRef}>
+      {/* Support icon — headset icon with dropdown menu (AWS-style) */}
+      <button
+        type="button"
+        ref={helpBtnRef}
+        className={`th-help-btn${helpOpen ? " th-help-btn-active" : ""}`}
+        onClick={() => { setHelpOpen((o) => !o); setOpen(false); }}
+        aria-label="Support"
+        title="Support"
+        aria-haspopup="menu"
+        aria-expanded={helpOpen}
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 16v-2a6 6 0 0 0-12 0v2" />
+          <path d="M4 16a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2z" />
+          <path d="M20 16a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2z" />
+          <path d="M18 16v1a3 3 0 0 1-3 3h-2" />
+        </svg>
+      </button>
+
+      {helpOpen && ReactDOM.createPortal(
+        <div className="th-support-menu" role="menu" style={{
+          position: 'fixed',
+          top: helpBtnRef.current ? helpBtnRef.current.getBoundingClientRect().bottom + 8 : 60,
+          right: Math.max(8, window.innerWidth - (helpBtnRef.current ? helpBtnRef.current.getBoundingClientRect().right : window.innerWidth)),
+        }}>
+          <div className="th-support-header">
+            <span>Support</span>
+            <a href="https://help.keeptabs.app" target="_blank" rel="noopener noreferrer" className="th-support-ext" aria-label="Open support in new tab">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+          </div>
+          <div className="th-support-divider" />
+          <button type="button" className="th-support-link" role="menuitem" onClick={() => { setHelpOpen(false); window.open("mailto:support@keeptabs.app", "_blank"); }}>
+            Support Center
+          </button>
+          <div className="th-support-divider" />
+          <button type="button" className="th-support-link" role="menuitem" onClick={() => { setHelpOpen(false); handleHelpClick(); }}>
+            Documentation
+          </button>
+          <button type="button" className="th-support-link" role="menuitem" onClick={() => { setHelpOpen(false); navigate("/admin/configuration#billing"); }}>
+            Getting Started
+          </button>
+          <div className="th-support-divider" />
+          <button type="button" className="th-support-link th-support-link-feedback" role="menuitem" onClick={() => { setHelpOpen(false); setFeedbackOpen(true); }}>
+            Send feedback
+          </button>
+        </div>,
+      document.body)}
+
       {/* Help "?" — outline by default, fills blue when the panel is open.
           We detect "open" by inspecting the SDK state; safe to skip if missing. */}
       <button
@@ -285,7 +341,7 @@ export default function TopHeaderProfile({ onSignOut }) {
         type="button"
         ref={btnRef}
         className={`th-profile-btn${open ? " th-profile-btn-open" : ""}`}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => { setOpen((o) => !o); setHelpOpen(false); }}
         aria-haspopup="menu"
         aria-expanded={open}
       >
@@ -364,6 +420,9 @@ export default function TopHeaderProfile({ onSignOut }) {
           </button>
           <button type="button" className="th-profile-link" role="menuitem" onClick={() => goTo("security")}>
             Security
+          </button>
+          <button type="button" ref={sendSuggestionsRef} className="th-profile-link" role="menuitem" onClick={() => { setFeedbackOpen(true); setOpen(false); }}>
+            Send Suggestions
           </button>
 
           <div className="th-profile-divider" />
@@ -489,6 +548,11 @@ export default function TopHeaderProfile({ onSignOut }) {
         </div>,
         document.body
       )}
+      <FeedbackDialog
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        triggerRef={sendSuggestionsRef}
+      />
     </div>
   );
 }

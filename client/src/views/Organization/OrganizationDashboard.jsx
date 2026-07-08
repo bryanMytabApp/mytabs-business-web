@@ -23,6 +23,8 @@ import { toast } from "react-toastify";
 import AddMemberModal from "./AddMemberModal";
 import TaxOverrideModal from "./TaxOverrideModal";
 import CreateBusinessModal from "./CreateBusinessModal";
+import SSOConfiguration from "./SSOConfiguration";
+import DomainVerification from "./DomainVerification";
 
 
 const OrganizationDashboard = () => {
@@ -494,6 +496,16 @@ const OrganizationDashboard = () => {
 
 
         </div>{/* end panelsRow */}
+
+        {/* Domain Verification - visible only to org owners */}
+        {isOwner && (
+          <DomainVerification orgId={id} />
+        )}
+
+        {/* SSO Configuration - visible only to org owners */}
+        {isOwner && (
+          <SSOConfiguration orgId={id} />
+        )}
 
         {/* Modals */}
         <AddMemberModal

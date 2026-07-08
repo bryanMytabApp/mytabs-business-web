@@ -39,14 +39,13 @@ const getEventStatus = (event) => {
   const now = moment();
   const start = toMoment(event.startDate);
   const end = toMoment(event.endDate);
-  // An event is only completed if its end time has fully passed.
-  // If end date is the same day as start but before start time (data issue),
-  // fall back to checking if start has passed.
+  // An event is completed if its end time has fully passed.
   if (end && end.isValid() && end.isAfter(start)) {
     if (end.isBefore(now)) return "completed";
   } else if (start && start.isValid()) {
-    // No valid end or end <= start: use start + 1 day as implicit end
-    if (moment(start).add(1, 'day').isBefore(now)) return "completed";
+    // No valid end or end <= start: use start + 4 hours as implicit end
+    // (most events don't last more than 4 hours without an explicit end time)
+    if (moment(start).add(4, 'hours').isBefore(now)) return "completed";
   }
   if (start && start.isAfter(now)) return "planning";
   return "active";

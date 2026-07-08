@@ -58,11 +58,11 @@ describe('SettingsCard', () => {
     expect(screen.queryByTestId('dirty-indicator')).not.toBeInTheDocument();
   });
 
-  it('renders Save/Cancel footer when onSave is provided', () => {
+  it('renders Save/Cancel footer when onSave is provided and dirty is true', () => {
     const onSave = jest.fn();
     const onCancel = jest.fn();
     render(
-      <SettingsCard title="Test" onSave={onSave} onCancel={onCancel}>
+      <SettingsCard title="Test" onSave={onSave} onCancel={onCancel} dirty>
         Content
       </SettingsCard>
     );
@@ -78,7 +78,7 @@ describe('SettingsCard', () => {
   it('calls onSave and shows success toast on successful save', async () => {
     const onSave = jest.fn().mockResolvedValue();
     render(
-      <SettingsCard title="Test" onSave={onSave}>
+      <SettingsCard title="Test" onSave={onSave} dirty>
         Content
       </SettingsCard>
     );
@@ -94,7 +94,7 @@ describe('SettingsCard', () => {
   it('shows inline error with retry on save failure', async () => {
     const onSave = jest.fn().mockRejectedValue(new Error('Network error'));
     render(
-      <SettingsCard title="Test" onSave={onSave}>
+      <SettingsCard title="Test" onSave={onSave} dirty>
         Content
       </SettingsCard>
     );
@@ -115,7 +115,7 @@ describe('SettingsCard', () => {
       .mockResolvedValueOnce();
 
     render(
-      <SettingsCard title="Test" onSave={onSave}>
+      <SettingsCard title="Test" onSave={onSave} dirty>
         Content
       </SettingsCard>
     );
@@ -138,7 +138,7 @@ describe('SettingsCard', () => {
     const onSave = jest.fn();
     const onCancel = jest.fn();
     render(
-      <SettingsCard title="Test" onSave={onSave} onCancel={onCancel}>
+      <SettingsCard title="Test" onSave={onSave} onCancel={onCancel} dirty>
         Content
       </SettingsCard>
     );
