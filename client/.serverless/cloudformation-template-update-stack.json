@@ -6,7 +6,7 @@
       "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
       "Properties": {
         "CloudFrontOriginAccessIdentityConfig": {
-          "Comment": "mytabs-app-website-prod"
+          "Comment": "mytabs-business-web-prod"
         }
       }
     },
@@ -16,7 +16,7 @@
         "PublicAccessBlockConfiguration": {
           "BlockPublicAcls": false
         },
-        "BucketName": "mytabs-app-website-prod",
+        "BucketName": "mytabs-business-web-prod",
         "WebsiteConfiguration": {
           "IndexDocument": "index.html",
           "ErrorDocument": "index.html"
@@ -158,13 +158,13 @@
           "HttpVersion": "http2",
           "IPV6Enabled": true,
           "ViewerCertificate": {
-            "AcmCertificateArn": "arn:aws:acm:us-east-1:992382405895:certificate/b521cffe-460a-47a3-9026-4086e32abff5",
+            "AcmCertificateArn": "arn:aws:acm:us-east-1:992382405895:certificate/e4230952-fb9b-4759-b013-81faeef6518c",
             "SslSupportMethod": "sni-only",
             "MinimumProtocolVersion": "TLSv1.2_2021"
           },
           "Aliases": [
-            "mytabs.app",
-            "www.mytabs.app"
+            "keeptabs.app",
+            "www.keeptabs.app"
           ],
           "CustomErrorResponses": [
             {

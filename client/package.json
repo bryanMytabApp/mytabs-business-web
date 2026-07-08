@@ -72,6 +72,8 @@
   "devDependencies": {
     "fast-check": "^3.15.0",
     "http-proxy-middleware": "^3.0.5",
+    "serverless-deployment-bucket": "^1.6.0",
+    "serverless-s3-sync": "^3.5.1",
     "typescript": "^6.0.3"
   },
   "overrides": {
