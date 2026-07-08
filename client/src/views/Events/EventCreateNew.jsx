@@ -155,7 +155,7 @@ const G = `
 .ecn-rv-r{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.04);font-size:13px}
 .ecn-rv-r:last-child{border-bottom:none}
 .ecn-rv-l{color:var(--mu);font-weight:600}
-.ecn-rv-v{color:var(--tx);font-weight:700;text-align:right;max-width:64%}
+.ecn-rv-v{color:var(--tx);font-weight:700;text-align:right;max-width:64%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ecn-kpill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:rgba(245,166,35,.10);color:var(--or);font-size:11.5px;font-weight:700;margin:3px}
 .ecn-ok-box{background:rgba(91,184,193,.08);border:1.5px solid rgba(91,184,193,.22);border-radius:13px;padding:13px 17px;margin-bottom:20px}
 .ecn-err{border-color:#ef4444 !important;box-shadow:0 0 0 2px rgba(239,68,68,.12) !important}
@@ -548,12 +548,13 @@ function P1({ f, u, next, steps, editMode, eventId, onDelete, previewEventCode, 
 
       {/* Ad Type — collapse to pill once selected */}
       {f.adType ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <button className="ecn-bb" onClick={() => handleChange("adType", "")} style={{ background: "rgba(91,184,193,.08)", borderColor: "var(--te)", color: "var(--ted)" }}>
             <I n={ADS.find(a => a.id === f.adType)?.i || "tag"} s={14} c="var(--ted)" w={1.7} />
             {ADS.find(a => a.id === f.adType)?.l || "Ad Type"}
             <span style={{ marginLeft: 6, fontSize: 11, color: "var(--mu)" }}>&times; change</span>
           </button>
+          <button className="ecn-bn" onClick={handleNext}>Next →</button>
         </div>
       ) : (
         <div className="ecn-card">
@@ -1172,29 +1173,69 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
   const [retryCount, setRetryCount] = useState(0);
   const [bizCoords, setBizCoords] = useState(null);
 
-  // Resolve business coordinates when loc === "biz" and no explicit lat/lng
+  // Resolve coordinates when not explicitly set — either from business or by geocoding the form address
   useEffect(() => {
     if (f.latitude && f.longitude) return; // Already have coordinates
-    if (f.loc !== "biz") return; // Only resolve for business address mode
     let cancelled = false;
+
     const resolve = async () => {
-      try {
-        const token = localStorage.getItem("idToken");
-        if (!token) return;
-        const base64Url = token.split(".")[1];
-        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-        const userId = JSON.parse(decodeURIComponent(atob(base64).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join("")))["custom:user_id"];
-        const selectedBizId = sessionStorage.getItem("selectedBusinessId") || undefined;
-        const bizRes = await getBusiness(userId, selectedBizId);
-        const biz = bizRes?.data || bizRes;
-        if (!cancelled && biz?.latitude && biz?.longitude) {
-          setBizCoords({ latitude: biz.latitude, longitude: biz.longitude });
-        }
-      } catch (e) { /* non-critical */ }
+      // Case 1: loc === "biz" — resolve from business record
+      if (f.loc === "biz") {
+        try {
+          const token = localStorage.getItem("idToken");
+          if (!token) return;
+          const base64Url = token.split(".")[1];
+          const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+          const userId = JSON.parse(decodeURIComponent(atob(base64).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join("")))["custom:user_id"];
+          const selectedBizId = sessionStorage.getItem("selectedBusinessId") || undefined;
+          const bizRes = await getBusiness(userId, selectedBizId);
+          const biz = bizRes?.data || bizRes;
+          if (!cancelled && biz?.latitude && biz?.longitude) {
+            setBizCoords({ latitude: biz.latitude, longitude: biz.longitude });
+            return;
+          } else if (!cancelled && biz?.address1 && biz?.city) {
+            // Business has address but no coordinates — geocode client-side
+            try {
+              const { loadGoogleMaps } = await import('../../utils/googleMaps');
+              await loadGoogleMaps();
+              const geocoder = new window.google.maps.Geocoder();
+              const fullAddress = `${biz.address1}, ${biz.city}, ${biz.state || ''}, USA`;
+              geocoder.geocode({ address: fullAddress }, (results, status) => {
+                if (!cancelled && status === "OK" && results[0]) {
+                  const loc = results[0].geometry.location;
+                  setBizCoords({ latitude: loc.lat(), longitude: loc.lng() });
+                }
+              });
+            } catch (geoErr) { /* non-critical */ }
+          }
+        } catch (e) { /* non-critical */ }
+      }
+
+      // Case 2: loc === "new" — geocode the address from the form fields
+      if (f.loc === "new" && f.addr && f.city) {
+        try {
+          const { loadGoogleMaps } = await import('../../utils/googleMaps');
+          await loadGoogleMaps();
+          const geocoder = new window.google.maps.Geocoder();
+          // Parse state from zip field (e.g. "Texas 77002")
+          let state = "";
+          if (f.zip) {
+            const match = f.zip.match(/^(.+?)\s+(\d{5})/);
+            if (match) state = match[1];
+          }
+          const fullAddress = `${f.addr}, ${f.city}, ${state || ''}, USA`;
+          geocoder.geocode({ address: fullAddress }, (results, status) => {
+            if (!cancelled && status === "OK" && results[0]) {
+              const loc = results[0].geometry.location;
+              setBizCoords({ latitude: loc.lat(), longitude: loc.lng() });
+            }
+          });
+        } catch (geoErr) { /* non-critical */ }
+      }
     };
     resolve();
     return () => { cancelled = true; };
-  }, [f.loc, f.latitude, f.longitude]);
+  }, [f.loc, f.latitude, f.longitude, f.addr, f.city, f.zip]);
 
   const lat = f.latitude || bizCoords?.latitude;
   const lng = f.longitude || bizCoords?.longitude;
@@ -1656,7 +1697,10 @@ function P_Review({ f, goTo, submit, back, steps, isShows, selectedBusinessId, a
 
   return (
     <div className="ecn-page">
-      <button className="ecn-bb" style={{ marginBottom: 20 }} onClick={back}><I n="chevL" s={13} w={2.5} /> Go back</button>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <button className="ecn-bb" onClick={back}><I n="chevL" s={13} w={2.5} /> Go back</button>
+        <button className="ecn-bb" onClick={() => submit("launch")} style={{ background: "linear-gradient(130deg,var(--or) 0%,#f97316 100%)", borderColor: "transparent", color: "#fff" }}>{"\uD83D\uDE80"} Launch</button>
+      </div>
 
       <div className="ecn-rv-s">
         <div className="ecn-rv-h"><div className="ecn-rv-t"><I n="cal" s={13} c="var(--tx)" w={2} /> {isShows ? "Show" : "Event"} Details</div><button className="ecn-rv-e" onClick={() => goTo(1)}>Edit</button></div>
@@ -1687,7 +1731,7 @@ function P_Review({ f, goTo, submit, back, steps, isShows, selectedBusinessId, a
         {f.tickType === "ext" && (
           <>
             <div className="ecn-rv-r"><span className="ecn-rv-l">Link name</span><span className="ecn-rv-v">{f.extName || "External Links"}</span></div>
-            <div className="ecn-rv-r"><span className="ecn-rv-l">URL</span><span className="ecn-rv-v">{f.extUrl || "\u2014"}</span></div>
+            <div className="ecn-rv-r"><span className="ecn-rv-l">URL</span><span className="ecn-rv-v" title={f.extUrl}>{f.extUrl || "\u2014"}</span></div>
           </>
         )}
         {f.tickType === "none" && (
@@ -1932,21 +1976,41 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
       const token = localStorage.getItem("idToken");
       const userId = parseJwt(token);
 
+      // Parse state and zipCode from the combined "State ZIP" field (e.g. "Texas 77002")
+      let parsedState = "";
+      let parsedZip = form.zip || "";
+      if (form.zip) {
+        const zipMatch = form.zip.match(/^(.+?)\s+(\d{5}(-\d{4})?)$/);
+        if (zipMatch) {
+          parsedState = zipMatch[1].trim();
+          parsedZip = zipMatch[2].trim();
+        }
+      }
+
       // Build event payload matching existing API contract
+      const startMoment = form.adType === "shows" && form.showDates?.[0]
+        ? moment(form.showDates[0].date + "T" + (form.showDates[0].t1 || "00:00"))
+        : moment(form.date + "T" + (form.t1 || "00:00"));
+      
+      let endMoment = form.adType === "shows" && form.showDates?.[0]
+        ? moment(form.showDates[0].date + "T" + (form.showDates[0].t2 || "23:59"))
+        : moment(form.date + "T" + (form.t2 || "23:59"));
+      
+      // If end time is before start time, the event ends the next day (e.g. 6 PM - 2 AM)
+      if (endMoment.isBefore(startMoment)) {
+        endMoment = endMoment.add(1, 'day');
+      }
+
       const payload = {
         name: form.name,
         description: form.desc || "",
-        startDate: form.adType === "shows" && form.showDates?.[0]
-          ? moment(form.showDates[0].date + "T" + (form.showDates[0].t1 || "00:00")).toString()
-          : moment(form.date + "T" + (form.t1 || "00:00")).toString(),
-        endDate: form.adType === "shows" && form.showDates?.[0]
-          ? moment(form.showDates[0].date + "T" + (form.showDates[0].t2 || "23:59")).toString()
-          : moment(form.date + "T" + (form.t2 || "23:59")).toString(),
+        startDate: startMoment.toString(),
+        endDate: endMoment.toString(),
         userId,
         city: form.city || "",
-        state: "",
+        state: parsedState,
         address1: form.loc === "new" ? form.addr : "",
-        zipCode: form.zip || "",
+        zipCode: parsedZip,
         venue: form.venue || "",
         latitude: form.latitude || null,
         longitude: form.longitude || null,
@@ -1973,9 +2037,14 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
           payload.businessCode = biz.businessCode;
         }
         // Use business coordinates when location is set to "Business address"
-        if (form.loc === "biz" && !payload.latitude) {
-          if (biz?.latitude) payload.latitude = biz.latitude;
-          if (biz?.longitude) payload.longitude = biz.longitude;
+        if (form.loc === "biz") {
+          if (!payload.latitude && biz?.latitude) payload.latitude = biz.latitude;
+          if (!payload.longitude && biz?.longitude) payload.longitude = biz.longitude;
+          // Also fill in address fields from business so backend can geocode if needed
+          if (!payload.address1 && biz?.address1) payload.address1 = biz.address1;
+          if (!payload.city && biz?.city) payload.city = biz.city;
+          if (!payload.state && biz?.state) payload.state = biz.state;
+          if ((!payload.zipCode || payload.zipCode === "") && biz?.zipCode) payload.zipCode = biz.zipCode;
         }
       } catch (e) {
         // Non-critical — lambda will resolve businessId if not provided.
