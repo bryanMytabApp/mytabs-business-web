@@ -4,10 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import moment from "moment";
 import QRCode from "react-qr-code";
+import { ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea } from "recharts";
 import { createEvent, updateEvent, deleteEvent, getPresignedUrlForEvent, getEventsByUserId } from "../../services/eventService";
 import { getBusiness } from "../../services/businessService";
 import { getCustomerSubscription, getSystemSubscriptions } from "../../services/paymentService";
 import { getMyOrganizations, getOrganizationBusinesses } from "../../services/organizationService";
+import { getWeatherPreview } from "../../services/weatherPreviewService";
 import axios from "axios";
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
@@ -231,6 +233,7 @@ const G = `
 .ecn-modal-confirm:disabled{opacity:.5;cursor:not-allowed}
 @keyframes ecnFadeIn{from{opacity:0}to{opacity:1}}
 @keyframes ecnSlideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ecn-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 `;
 
 // ─── ICONS ────────────────────────────────────────────────────────────────────
@@ -272,8 +275,8 @@ const CHS = [
   { id: "push", n: "Push Notifications", d: "Mobile app", ic: "bell", on: true },
   { id: "slk", n: "Slack", d: "Team channel", ic: "link", on: false },
 ];
-const SE = [{ n: 1, l: "Setup" }, { n: 2, l: "Media" }, { n: 3, l: "Ticketing" }, { n: 4, l: "KPIs & Alerts" }, { n: 5, l: "Review" }];
-const SS = [{ n: 1, l: "Setup" }, { n: 2, l: "Show Dates" }, { n: 3, l: "Media" }, { n: 4, l: "Ticketing" }, { n: 5, l: "KPIs & Alerts" }, { n: 6, l: "Review" }];
+const SE = [{ n: 1, l: "Setup" }, { n: 2, l: "Media" }, { n: 3, l: "Ticketing" }, { n: 4, l: "Weather" }, { n: 5, l: "KPIs & Alerts" }, { n: 6, l: "Review" }];
+const SS = [{ n: 1, l: "Setup" }, { n: 2, l: "Show Dates" }, { n: 3, l: "Media" }, { n: 4, l: "Ticketing" }, { n: 5, l: "Weather" }, { n: 6, l: "KPIs & Alerts" }, { n: 7, l: "Review" }];
 
 // ─── SIDE PANEL ───────────────────────────────────────────────────────────────
 function SidePanel({ f, onImageUpload, businessCode }) {
@@ -1153,6 +1156,398 @@ function P_Ticketing({ f, u, next, back, steps, stepNum }) {
   );
 }
 
+// ─── WEATHER PREVIEW ──────────────────────────────────────────────────────────
+const SEVERITY_ORDER = { Extreme: 0, Severe: 1, Moderate: 2, Minor: 3 };
+const STATUS_STYLES = {
+  Normal: { bg: "#e6f9ed", color: "#22863a", label: "Normal" },
+  Weather_Advisory: { bg: "#fff8e1", color: "#f59e0b", label: "Advisory" },
+  Weather_Watch: { bg: "#fff3e0", color: "#f97316", label: "Watch" },
+  Severe_Weather_Warning: { bg: "#fde8e8", color: "#ef4444", label: "Severe Warning" },
+};
+
+function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [bizCoords, setBizCoords] = useState(null);
+
+  // Resolve business coordinates when loc === "biz" and no explicit lat/lng
+  useEffect(() => {
+    if (f.latitude && f.longitude) return; // Already have coordinates
+    if (f.loc !== "biz") return; // Only resolve for business address mode
+    let cancelled = false;
+    const resolve = async () => {
+      try {
+        const token = localStorage.getItem("idToken");
+        if (!token) return;
+        const base64Url = token.split(".")[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const userId = JSON.parse(decodeURIComponent(atob(base64).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join("")))["custom:user_id"];
+        const selectedBizId = sessionStorage.getItem("selectedBusinessId") || undefined;
+        const bizRes = await getBusiness(userId, selectedBizId);
+        const biz = bizRes?.data || bizRes;
+        if (!cancelled && biz?.latitude && biz?.longitude) {
+          setBizCoords({ latitude: biz.latitude, longitude: biz.longitude });
+        }
+      } catch (e) { /* non-critical */ }
+    };
+    resolve();
+    return () => { cancelled = true; };
+  }, [f.loc, f.latitude, f.longitude]);
+
+  const lat = f.latitude || bizCoords?.latitude;
+  const lng = f.longitude || bizCoords?.longitude;
+  const hasLocation = !!(lat && lng);
+  const eventDate = f.date || null;
+
+  const fetchWeather = (signal) => {
+    setLoading(true);
+    setError(null);
+    const dateStr = f.t1 ? `${f.date}T${f.t1}:00` : `${f.date}T00:00:00`;
+    getWeatherPreview(lat, lng, dateStr, signal)
+      .then(res => {
+        if (!signal.aborted) {
+          setData(res.data || res);
+          setLoading(false);
+        }
+      })
+      .catch(err => {
+        if (!signal.aborted) {
+          setError("Weather data is temporarily unavailable");
+          setLoading(false);
+        }
+      });
+  };
+
+  useEffect(() => {
+    if (!hasLocation || !eventDate) return;
+    const controller = new AbortController();
+    fetchWeather(controller.signal);
+    return () => controller.abort();
+  }, [lat, lng, f.date]);
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    const controller = new AbortController();
+    fetchWeather(controller.signal);
+  };
+
+  const daysUntilEvent = eventDate
+    ? Math.ceil((new Date(eventDate + "T00:00:00") - new Date()) / (1000 * 60 * 60 * 24))
+    : null;
+  const showHourly = (daysUntilEvent !== null && daysUntilEvent <= 7) || !!(data && data.historical);
+
+  // ─── No Location State ───
+  if (!hasLocation) {
+    return (
+      <div className="ecn-card">
+        <div className="ecn-sh">Weather Preview</div>
+        <div style={{ textAlign: "center", padding: "32px 16px" }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>📍</div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6, color: "var(--tx)" }}>No venue location set</div>
+          <div style={{ fontSize: 12.5, color: "var(--mu)", marginBottom: 18 }}>
+            Add a venue in the Setup step to see weather conditions for your event.
+          </div>
+          <button
+            className="ecn-bb"
+            onClick={() => goTo(1)}
+            style={{ marginBottom: 12 }}
+          >
+            <I n="chevL" s={13} w={2.5} /> Go to Setup
+          </button>
+        </div>
+        <div className="ecn-foot">
+          <button className="ecn-bb" onClick={back}><I n="chevL" s={13} w={2.5} /> Go back</button>
+          <button className="ecn-bn" onClick={next}>Next →</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Loading State ───
+  if (loading && !data) {
+    return (
+      <div className="ecn-card">
+        <div className="ecn-sh">Weather Preview</div>
+        <div style={{ textAlign: "center", padding: "32px 16px" }}>
+          <div className="ecn-weather-spinner" style={{ width: 36, height: 36, border: "3px solid #e2e8f0", borderTopColor: "var(--te)", borderRadius: "50%", animation: "ecn-spin 0.8s linear infinite", margin: "0 auto 14px" }} />
+          <div style={{ fontSize: 13, color: "var(--mu)" }}>Loading weather data...</div>
+        </div>
+        <div className="ecn-foot">
+          <button className="ecn-bb" onClick={back}><I n="chevL" s={13} w={2.5} /> Go back</button>
+          <button className="ecn-bn" onClick={next}>Next →</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Error State ───
+  if (error && !data) {
+    return (
+      <div className="ecn-card">
+        <div className="ecn-sh">Weather Preview</div>
+        <div style={{ textAlign: "center", padding: "32px 16px" }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6, color: "var(--tx)" }}>{error}</div>
+          <div style={{ fontSize: 12.5, color: "var(--mu)", marginBottom: 18 }}>
+            Weather information is optional — you can continue creating your event.
+          </div>
+          {retryCount < 3 && (
+            <button
+              className="ecn-bb"
+              onClick={handleRetry}
+              style={{ marginBottom: 12 }}
+            >
+              Retry
+            </button>
+          )}
+        </div>
+        <div className="ecn-foot">
+          <button className="ecn-bb" onClick={back}><I n="chevL" s={13} w={2.5} /> Go back</button>
+          <button className="ecn-bn" onClick={next}>Next →</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Success State ───
+  const { currentConditions, hourlyForecast, nextDayForecast, dailyForecast, weatherStatus, alerts, safetyDisclaimer, historical } = data || {};
+  const statusStyle = STATUS_STYLES[weatherStatus] || STATUS_STYLES.Normal;
+
+  const sortedAlerts = (alerts || [])
+    .sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 4) - (SEVERITY_ORDER[b.severity] ?? 4))
+    .slice(0, 5);
+
+  return (
+    <div className="ecn-card">
+      <div className="ecn-sh" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span>Weather Preview</span>
+        <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 12, background: statusStyle.bg, color: statusStyle.color }}>
+          {statusStyle.label}
+        </span>
+      </div>
+
+      {/* Current Conditions + Historical Data — 2 column layout */}
+      <div style={{ display: "grid", gridTemplateColumns: historical ? "1fr 1fr" : "1fr", gap: 14, marginBottom: 16 }}>
+        {/* Current Conditions */}
+        {currentConditions && (
+          <div style={{ background: "rgba(91,184,193,0.06)", borderRadius: 12, padding: "16px 18px" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--mu)", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 10 }}>Current Conditions</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ fontSize: 32, fontWeight: 800, color: "var(--tx)" }}>{currentConditions.temperature}°</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--tx)" }}>{currentConditions.description}</div>
+                <div style={{ fontSize: 12, color: "var(--mu)", marginTop: 3 }}>
+                  Feels like {currentConditions.feelsLike}° · Humidity {currentConditions.humidity}% · Wind {currentConditions.windSpeed} mph {currentConditions.windDirection || ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Historical Data Banner */}
+        {historical && (
+          <div style={{ background: "linear-gradient(135deg, rgba(245,166,35,.06), rgba(249,115,22,.04))", border: "1.5px solid rgba(245,166,35,.2)", borderRadius: 12, padding: "14px 18px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{ fontSize: 14 }}>📊</span>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#92400e" }}>Historical Data</div>
+            </div>
+            <div style={{ fontSize: 10.5, color: "#78350f", lineHeight: 1.4, marginBottom: 8 }}>
+              Based on <strong>{historical.lastYearDate}</strong> (same date last year)
+            </div>
+            {historical.climateAverages && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                <div style={{ background: "#fff", borderRadius: 6, padding: "6px 10px" }}>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" }}>High</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#ef4444" }}>{historical.climateAverages.avgHigh}°F</div>
+                </div>
+                <div style={{ background: "#fff", borderRadius: 6, padding: "6px 10px" }}>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" }}>Low</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#3b82f6" }}>{historical.climateAverages.avgLow}°F</div>
+                </div>
+                <div style={{ background: "#fff", borderRadius: 6, padding: "6px 10px" }}>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" }}>Rain</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#6366f1" }}>{historical.climateAverages.avgPrecipMm}mm</div>
+                </div>
+                <div style={{ background: "#fff", borderRadius: 6, padding: "6px 10px" }}>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" }}>Wind</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#059669" }}>{historical.climateAverages.avgWindSpeed}mph</div>
+                </div>
+              </div>
+            )}
+            <div style={{ fontSize: 9, color: "#92400e", marginTop: 6, fontStyle: "italic" }}>
+              Avg of {historical.climateAverages?.yearsAnalyzed || 3} years · Live forecast available within 16 days
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Forecast */}
+      {showHourly && hourlyForecast && hourlyForecast.length > 0 && (() => {
+        const eventStartHr = f.t1 ? parseInt(f.t1.split(":")[0]) : null;
+        const eventEndHr = f.t2 ? parseInt(f.t2.split(":")[0]) : null;
+        const spansNextDay = eventEndHr !== null && eventStartHr !== null && eventEndHr < eventStartHr;
+
+        // Build full-day chart data from all hourly data (include next day for overnight)
+        let allHours = [...hourlyForecast];
+        if (spansNextDay && nextDayForecast && nextDayForecast.length > 0) {
+          allHours = [...allHours, ...nextDayForecast];
+        }
+
+        const chartData = allHours.map(h => {
+          const dt = new Date(h.hour);
+          const hr = dt.getHours();
+          const ampm = hr >= 12 ? "PM" : "AM";
+          const h12 = hr > 12 ? hr - 12 : hr || 12;
+          const dayLabel = allHours.length > 0 && dt.getDate() !== new Date(allHours[0].hour).getDate() ? " +1" : "";
+          let isEvent = false;
+          if (eventStartHr !== null) {
+            if (spansNextDay) {
+              isEvent = (dt.getDate() === new Date(allHours[0].hour).getDate() && hr >= eventStartHr) ||
+                        (dt.getDate() !== new Date(allHours[0].hour).getDate() && hr <= eventEndHr);
+            } else if (eventEndHr !== null) {
+              isEvent = hr >= eventStartHr && hr <= eventEndHr;
+            } else {
+              isEvent = hr >= eventStartHr && hr < eventStartHr + 4;
+            }
+          }
+          return {
+            time: `${h12}${ampm}${dayLabel}`,
+            temp: Math.round(h.temperature * 10) / 10,
+            rain: h.rainProbability ?? 0,
+            wind: h.windSpeed ? Math.round(h.windSpeed) : 0,
+            isEvent,
+            conditions: h.conditions || "",
+          };
+        });
+
+        // Custom tooltip
+        const ChartTooltip = ({ active, payload }) => {
+          if (!active || !payload || !payload.length) return null;
+          const d = payload[0].payload;
+          return (
+            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", boxShadow: "0 4px 12px rgba(0,0,0,.1)" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#111", marginBottom: 4 }}>{d.time}{d.isEvent ? " 📍" : ""}</div>
+              <div style={{ fontSize: 11, color: "#555" }}>{d.conditions}</div>
+              <div style={{ fontSize: 11, color: "#111", marginTop: 4 }}>🌡️ {d.temp}°F · 💧 {d.rain}% · 💨 {d.wind}mph</div>
+            </div>
+          );
+        };
+
+        // Reference area for event window
+        const eventStartLabel = chartData.findIndex(d => d.isEvent);
+        const eventEndLabel = chartData.length - 1 - [...chartData].reverse().findIndex(d => d.isEvent);
+
+        return (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--mu)", textTransform: "uppercase", letterSpacing: ".5px" }}>Full Day Forecast</div>
+              {eventStartHr !== null && (
+                <div style={{ fontSize: 10, fontWeight: 600, color: "var(--te)", background: "rgba(91,184,193,.1)", padding: "2px 8px", borderRadius: 6 }}>
+                  Event: {f.t1}{f.t2 ? ` – ${f.t2}` : ""}{spansNextDay ? " (next day)" : ""}
+                </div>
+              )}
+            </div>
+
+            {/* Recharts Temperature + Rain Chart */}
+            <div style={{ background: "rgba(0,0,0,.015)", borderRadius: 12, padding: "12px 4px 4px" }}>
+              <ResponsiveContainer width="100%" height={180}>
+                <ComposedChart data={chartData} margin={{ top: 20, right: 12, left: 0, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="tempAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#5bb8c1" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#5bb8c1" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,.05)" vertical={false} />
+                  <XAxis dataKey="time" tick={{ fontSize: 9, fontWeight: 600, fill: "#9CA3AF" }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(chartData.length / 8) - 1)} />
+                  <YAxis tick={{ fontSize: 9, fill: "#9CA3AF" }} axisLine={false} tickLine={false} width={32} domain={['dataMin - 2', 'dataMax + 2']} unit="°" />
+                  <Tooltip content={<ChartTooltip />} />
+                  {eventStartLabel >= 0 && eventEndLabel >= 0 && (
+                    <ReferenceArea x1={chartData[eventStartLabel].time} x2={chartData[eventEndLabel].time} fill="rgba(91,184,193,.08)" stroke="rgba(91,184,193,.3)" strokeDasharray="4 2" />
+                  )}
+                  <Area type="monotone" dataKey="temp" stroke="#5bb8c1" strokeWidth={2.5} fill="url(#tempAreaGrad)" dot={{ r: 3, fill: "#fff", stroke: "#5bb8c1", strokeWidth: 2 }} activeDot={{ r: 5, fill: "#5bb8c1" }} name="Temperature" />
+                  <Bar dataKey="rain" fill="rgba(59,130,246,.3)" radius={[2, 2, 0, 0]} barSize={12} name="Rain %" />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Legend */}
+            <div style={{ display: "flex", gap: 16, marginTop: 8, padding: "0 4px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ width: 12, height: 3, background: "#5bb8c1", borderRadius: 2 }} />
+                <span style={{ fontSize: 10, color: "var(--mu)", fontWeight: 600 }}>Temperature °F</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ width: 8, height: 8, background: "rgba(59,130,246,.3)", borderRadius: 2 }} />
+                <span style={{ fontSize: 10, color: "var(--mu)", fontWeight: 600 }}>Rain %</span>
+              </div>
+              {eventStartHr !== null && (
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ width: 12, height: 8, background: "rgba(91,184,193,.1)", border: "1px dashed rgba(91,184,193,.4)", borderRadius: 2 }} />
+                  <span style={{ fontSize: 10, color: "var(--mu)", fontWeight: 600 }}>Event window</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {!showHourly && dailyForecast && dailyForecast.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--mu)", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 10 }}>Daily Forecast</div>
+          {dailyForecast.slice(0, 7).map((d, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i < Math.min(dailyForecast.length, 7) - 1 ? "1px solid rgba(0,0,0,.04)" : "none" }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--tx)" }}>
+                {d.date ? new Date(d.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : `Day ${i + 1}`}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--mu)" }}>{d.conditions}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700 }}>{d.high}° / {d.low}°</div>
+            </div>
+          ))}
+          <div style={{ fontSize: 12, color: "var(--te)", fontWeight: 600, marginTop: 10, fontStyle: "italic" }}>
+            Detailed forecast available within 7 days of the event
+          </div>
+        </div>
+      )}
+
+      {/* Alerts */}
+      {sortedAlerts.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--mu)", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 10 }}>Weather Alerts</div>
+          {sortedAlerts.map((alert, i) => {
+            const sevColor = alert.severity === "Extreme" ? "#ef4444" : alert.severity === "Severe" ? "#f97316" : alert.severity === "Moderate" ? "#f59e0b" : "#3b82f6";
+            return (
+              <div key={i} style={{ background: sevColor + "0a", border: `1px solid ${sevColor}22`, borderRadius: 8, padding: "10px 14px", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: sevColor + "18", color: sevColor }}>{alert.severity}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--tx)" }}>{alert.headline}</span>
+                </div>
+                {alert.description && (
+                  <div style={{ fontSize: 11.5, color: "var(--mu)", lineHeight: 1.4 }}>{alert.description.slice(0, 150)}{alert.description.length > 150 ? "..." : ""}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Safety Disclaimer */}
+      {safetyDisclaimer && (
+        <div style={{ fontSize: 11, color: "var(--mu)", background: "rgba(0,0,0,.02)", borderRadius: 8, padding: "10px 14px", marginBottom: 16, lineHeight: 1.5 }}>
+          {safetyDisclaimer}
+        </div>
+      )}
+
+      <div className="ecn-foot">
+        <button className="ecn-bb" onClick={back}><I n="chevL" s={13} w={2.5} /> Go back</button>
+        <button className="ecn-bn" onClick={next}>Next →</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── KPIs + ALERTS ────────────────────────────────────────────────────────────
 function P_KPIs({ f, u, next, back, steps, stepNum }) {
   const [kpis, setK] = useState(f.kpis || []);
@@ -1490,8 +1885,8 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
 
   // Hash slugs for help context — maps step number to a URL hash fragment
   const stepHashMap = isShows
-    ? { 1: "setup", 2: "show-dates", 3: "media", 4: "ticketing", 5: "kpis-alerts", 6: "review" }
-    : { 1: "setup", 2: "media", 3: "ticketing", 4: "kpis-alerts", 5: "review" };
+    ? { 1: "setup", 2: "show-dates", 3: "media", 4: "ticketing", 5: "weather", 6: "kpis-alerts", 7: "review" }
+    : { 1: "setup", 2: "media", 3: "ticketing", 4: "weather", 5: "kpis-alerts", 6: "review" };
 
   // Update URL hash and notify help SDK when step changes
   const updateHelpHash = (stepNum) => {
@@ -1718,9 +2113,11 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
                 {!isShows && step === 3 && <P_Ticketing {...sp} stepNum={3} />}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {!isShows && step === 4 && <P_KPIs {...sp} stepNum={4} />}
+                {!isShows && step === 4 && <P_Weather {...sp} goTo={goTo} stepNum={4} />}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {!isShows && step === 5 && <P_Review f={form} goTo={goTo} submit={handleSubmit} back={back} steps={steps} isShows={false} selectedBusinessId={selectedBusinessId} allBusinesses={allBusinesses} />}
+                {!isShows && step === 5 && <P_KPIs {...sp} stepNum={5} />}
+                {/* eslint-disable-next-line react/jsx-pascal-case */}
+                {!isShows && step === 6 && <P_Review f={form} goTo={goTo} submit={handleSubmit} back={back} steps={steps} isShows={false} selectedBusinessId={selectedBusinessId} allBusinesses={allBusinesses} />}
 
                 {/* Shows flow */}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
@@ -1730,9 +2127,11 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
                 {isShows && step === 4 && <P_Ticketing {...sp} stepNum={4} />}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {isShows && step === 5 && <P_KPIs {...sp} stepNum={5} />}
+                {isShows && step === 5 && <P_Weather {...sp} goTo={goTo} stepNum={5} />}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {isShows && step === 6 && <P_Review f={form} goTo={goTo} submit={handleSubmit} back={back} steps={steps} isShows={true} selectedBusinessId={selectedBusinessId} allBusinesses={allBusinesses} />}
+                {isShows && step === 6 && <P_KPIs {...sp} stepNum={6} />}
+                {/* eslint-disable-next-line react/jsx-pascal-case */}
+                {isShows && step === 7 && <P_Review f={form} goTo={goTo} submit={handleSubmit} back={back} steps={steps} isShows={true} selectedBusinessId={selectedBusinessId} allBusinesses={allBusinesses} />}
               </div>
             </div>
           </>
@@ -1774,3 +2173,4 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
 };
 
 export default EventCreateNew;
+export { P_Weather };

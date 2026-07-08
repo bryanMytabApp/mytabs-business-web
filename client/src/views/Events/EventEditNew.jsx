@@ -95,6 +95,8 @@ const EventEditNew = () => {
           addr: ev.address1 || "",
           city: ev.city || "",
           zip: ev.zipCode || ev.state ? `${ev.state || ""} ${ev.zipCode || ""}`.trim() : "",
+          latitude: ev.latitude || null,
+          longitude: ev.longitude || null,
           media: getEventPicture(ev._id),
           mediaFile: null,
           tickType: ev.ticketType === "tabs" ? "tabs" : ev.ticketType === "external" ? "ext" : ev.tickets?.some(t => t.option === "Tabs Tickets" || t.option === "Tickets with Tabs") ? "tabs" : ev.tickets?.some(t => t.option === "External link") ? "ext" : "none",
