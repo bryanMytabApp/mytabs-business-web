@@ -11,6 +11,7 @@ import { getCustomerSubscription, getSystemSubscriptions } from "../../services/
 import { getMyOrganizations, getOrganizationBusinesses } from "../../services/organizationService";
 import { getWeatherPreview } from "../../services/weatherPreviewService";
 import axios from "axios";
+import EventMembers from "./EventMembers";
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const G = `
@@ -1924,7 +1925,11 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
   }, []);
 
   const isShows = form.adType === "shows";
-  const steps = isShows ? SS : SE;
+  const baseSteps = isShows ? SS : SE;
+  // Dynamically insert "Members" step after Setup when visibility is private
+  const steps = form.visibility === 'private'
+    ? [baseSteps[0], { n: 2, l: "Members" }, ...baseSteps.slice(1).map(s => ({ ...s, n: s.n + 1 }))]
+    : baseSteps;
   const u = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   // Hash slugs for help context — maps step number to a URL hash fragment
@@ -2161,7 +2166,7 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
 
             <div className="ecn-layout">
               {/* Hide side panel on ticketing step — it uses its own 3-col layout */}
-              {!((!isShows && step === 3) || (isShows && step === 4)) && (
+              {!((!isShows && step === (form.visibility === 'private' ? 4 : 3)) || (isShows && step === (form.visibility === 'private' ? 5 : 4))) && (
                 <SidePanel f={form} onImageUpload={handleSideImageUpload} businessCode={allBusinesses.find(b => b.linkedBusinessId === selectedBusinessId)?.businessCode || ''} />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -2176,31 +2181,54 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
                   return `BIZ-${seg}-EVT-${(form.name || '').replace(/[^A-Z0-9]/gi, '').slice(0, 4).toUpperCase() || 'XXXX'}`;
                 })()} />}
 
-                {/* Event flow */}
-                {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {!isShows && step === 2 && <P_Media {...sp} stepNum={2} />}
-                {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {!isShows && step === 3 && <P_Ticketing {...sp} stepNum={3} />}
-                {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {!isShows && step === 4 && <P_Weather {...sp} goTo={goTo} stepNum={4} />}
-                {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {!isShows && step === 5 && <P_KPIs {...sp} stepNum={5} />}
-                {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {!isShows && step === 6 && <P_Review f={form} goTo={goTo} submit={handleSubmit} back={back} steps={steps} isShows={false} selectedBusinessId={selectedBusinessId} allBusinesses={allBusinesses} />}
+                {/* Members step — only shown when visibility is private */}
+                {form.visibility === 'private' && step === 2 && (
+                  <div className="ecn-page">
+                    <div className="ecn-card">
+                      <div className="ecn-cs"><I n="users" s={13} c="var(--mu)" w={2} /> Private Event Members</div>
+                      {eventId ? (
+                        <EventMembers eventId={eventId} visibility={form.visibility} />
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '30px 20px' }}>
+                          <I n="info" s={20} c="var(--te)" w={2} />
+                          <p style={{ fontSize: 14, color: 'var(--mu)', marginTop: 12, lineHeight: 1.5 }}>
+                            Save this event first to manage the member list and send access codes.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="ecn-foot">
+                      <button className="ecn-bb" onClick={back}>← Back</button>
+                      <button className="ecn-bn" onClick={next}>Next →</button>
+                    </div>
+                  </div>
+                )}
 
-                {/* Shows flow */}
+                {/* Event flow — step numbers shift +1 when visibility is private */}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {isShows && step === 2 && <P_ShowDates f={form} u={u} next={next} back={back} maxAdSpaces={maxAdSpaces} existingEventsCount={existingEventsCount} />}
+                {!isShows && step === (form.visibility === 'private' ? 3 : 2) && <P_Media {...sp} stepNum={step} />}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {isShows && step === 3 && <P_Media {...sp} stepNum={3} />}
+                {!isShows && step === (form.visibility === 'private' ? 4 : 3) && <P_Ticketing {...sp} stepNum={step} />}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {isShows && step === 4 && <P_Ticketing {...sp} stepNum={4} />}
+                {!isShows && step === (form.visibility === 'private' ? 5 : 4) && <P_Weather {...sp} goTo={goTo} stepNum={step} />}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {isShows && step === 5 && <P_Weather {...sp} goTo={goTo} stepNum={5} />}
+                {!isShows && step === (form.visibility === 'private' ? 6 : 5) && <P_KPIs {...sp} stepNum={step} />}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {isShows && step === 6 && <P_KPIs {...sp} stepNum={6} />}
+                {!isShows && step === (form.visibility === 'private' ? 7 : 6) && <P_Review f={form} goTo={goTo} submit={handleSubmit} back={back} steps={steps} isShows={false} selectedBusinessId={selectedBusinessId} allBusinesses={allBusinesses} />}
+
+                {/* Shows flow — step numbers shift +1 when visibility is private */}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {isShows && step === 7 && <P_Review f={form} goTo={goTo} submit={handleSubmit} back={back} steps={steps} isShows={true} selectedBusinessId={selectedBusinessId} allBusinesses={allBusinesses} />}
+                {isShows && step === (form.visibility === 'private' ? 3 : 2) && <P_ShowDates f={form} u={u} next={next} back={back} maxAdSpaces={maxAdSpaces} existingEventsCount={existingEventsCount} />}
+                {/* eslint-disable-next-line react/jsx-pascal-case */}
+                {isShows && step === (form.visibility === 'private' ? 4 : 3) && <P_Media {...sp} stepNum={step} />}
+                {/* eslint-disable-next-line react/jsx-pascal-case */}
+                {isShows && step === (form.visibility === 'private' ? 5 : 4) && <P_Ticketing {...sp} stepNum={step} />}
+                {/* eslint-disable-next-line react/jsx-pascal-case */}
+                {isShows && step === (form.visibility === 'private' ? 6 : 5) && <P_Weather {...sp} goTo={goTo} stepNum={step} />}
+                {/* eslint-disable-next-line react/jsx-pascal-case */}
+                {isShows && step === (form.visibility === 'private' ? 7 : 6) && <P_KPIs {...sp} stepNum={step} />}
+                {/* eslint-disable-next-line react/jsx-pascal-case */}
+                {isShows && step === (form.visibility === 'private' ? 8 : 7) && <P_Review f={form} goTo={goTo} submit={handleSubmit} back={back} steps={steps} isShows={true} selectedBusinessId={selectedBusinessId} allBusinesses={allBusinesses} />}
               </div>
             </div>
           </>

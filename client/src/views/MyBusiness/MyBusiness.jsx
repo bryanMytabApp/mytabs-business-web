@@ -465,6 +465,8 @@ const MyBusiness = () => {
   const [originalPhotoGallery, setOriginalPhotoGallery] = useState({});
   const [uploadedImage, setUploadedImage] = useState(null);
   const [, setAllBusinesses] = useState([]);
+  const [hasOrganization, setHasOrganization] = useState(false);
+  const [logoPreviewOpen, setLogoPreviewOpen] = useState(false);
   const [selectedBusinessId, setSelectedBusinessId] = useState(routeBusinessId || sessionStorage.getItem("selectedBusinessId") || null);
   const [codeCopied, setCodeCopied] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -591,6 +593,7 @@ const MyBusiness = () => {
     orgPromise.then(orgRes => {
       const orgs = orgRes?.data?.organizations || orgRes?.data || [];
       if (orgs.length > 0) {
+        setHasOrganization(true);
         const orgId = orgs[0].organizationId || orgs[0].id || orgs[0]._id;
         const orgName = orgs[0].name || 'Organization';
         const orgRole = orgs[0].role || 'member';
@@ -720,6 +723,10 @@ const MyBusiness = () => {
   const handleSave = async () => {
     try {
       const updatedItem = { ...item, categories: subcategories };
+      // If business is not in an organization, always save as public
+      if (!hasOrganization) {
+        updatedItem.visibility = 'public';
+      }
       // Upload logo if changed - bump iconUpdatedAt so caches (CloudFront / mobile) refresh
       if (uploadedImage) {
         const presignedRes = await getPresignedUrlForBusiness(userId);
@@ -918,9 +925,9 @@ const MyBusiness = () => {
             <Box sx={{ width: { xs: '100%', md: '280px' }, flexShrink: 0, display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 2 }}>
               {/* Business Image Card */}
               <Box sx={{ backgroundColor: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-                <Box sx={{ width: '100%', height: { xs: '120px', md: '160px' }, borderRadius: '12px', overflow: 'hidden', backgroundColor: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Box sx={{ width: '100%', height: { xs: '120px', md: '160px' }, borderRadius: '12px', overflow: 'hidden', backgroundColor: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => { const src = uploadedImage || (item._id ? getBusinessPicture(item.userId || userId, 'full', item.iconUpdatedAt) : null); if (src) setLogoPreviewOpen(true); }}>
                   {(() => {
-                    const logoSrc = uploadedImage || (item._id ? getBusinessPicture(item.userId || userId, 'medium', item.iconUpdatedAt) : null);
+                    const logoSrc = uploadedImage || (item._id ? getBusinessPicture(item.userId || userId, 'full', item.iconUpdatedAt) : null);
                     return logoSrc ? (
                       <img src={logoSrc} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
@@ -1078,14 +1085,14 @@ const MyBusiness = () => {
                     </Box>
                   </Box>
 
-                  {/* Visibility */}
+                  {/* Visibility - only show when business belongs to an organization */}
+                  {hasOrganization && (
                   <Box sx={{ mt: 2 }}>
                     <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#111827', mb: 1 }}>Visibility</Typography>
                     <Box sx={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                       {[
                         { id: 'public', label: 'Public', desc: 'Visible to all Tabs users', icon: '🌐' },
-                        { id: 'organization', label: 'Organization', desc: 'Visible to organization members only', icon: '🏢' },
-                        { id: 'private', label: 'Private', desc: 'Only you can see this', icon: '🔒' }
+                        { id: 'organization', label: 'Organization', desc: 'Visible to organization members only', icon: '🏢' }
                       ].map(v => (
                         <Box
                           key={v.id}
@@ -1131,6 +1138,7 @@ const MyBusiness = () => {
                       ))}
                     </Box>
                   </Box>
+                  )}
 
                   {/* Categories */}
                   <Box sx={{ mt: 2 }}>
@@ -1308,6 +1316,20 @@ const MyBusiness = () => {
           </Box>
         )}
       </Box>
+
+      {/* Logo Preview Dialog */}
+      <Dialog open={logoPreviewOpen} onClose={() => setLogoPreviewOpen(false)} maxWidth="md" PaperProps={{ sx: { borderRadius: '12px', overflow: 'hidden', background: '#000' } }}>
+        <Box sx={{ position: 'relative' }}>
+          <IconButton onClick={() => setLogoPreviewOpen(false)} sx={{ position: 'absolute', top: 8, right: 8, color: '#fff', backgroundColor: 'rgba(0,0,0,0.5)', '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' } }}>
+            <CloseIcon />
+          </IconButton>
+          <img
+            src={uploadedImage || getBusinessPicture(item.userId || userId, 'full', item.iconUpdatedAt)}
+            alt={item.name}
+            style={{ display: 'block', maxWidth: '80vw', maxHeight: '80vh', objectFit: 'contain' }}
+          />
+        </Box>
+      </Dialog>
     </Box>
   );
 };
