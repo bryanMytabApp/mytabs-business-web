@@ -14,7 +14,7 @@ import {signUp} from "../../services/authService";
 import chevronIcon from "../../assets/atoms/chevron.svg";
 import {getUserExistance} from "../../services/userService";
 import categoriesJS from "../../utils/data/categories";
-import { getPresignedUrlForBusiness } from "../../services/businessService";
+import { getPresignedUrlForBusiness, updateBusiness } from "../../services/businessService";
 import { createMultipleClasses, parseJwt } from "../../utils/common";
 import axios from "axios";
 import { State, City } from 'country-state-city';
@@ -549,6 +549,8 @@ export default function RegistrationView() {
       const blob = await base64Response.blob();
       try {
         await axios.put(presignedUrl, blob, { headers: { 'Content-Type': blob.type || 'image/png' } })
+        // Update business record with iconUpdatedAt so the image URL is cache-busted
+        await updateBusiness({ userId, iconUpdatedAt: Date.now() });
         toast.success("Image was successfully uploaded");
       } catch (error) {
         toast.error("Cannot upload image");
