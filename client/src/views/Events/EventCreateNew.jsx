@@ -1936,7 +1936,7 @@ const INIT = {
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 const PLAN_LIMITS = { 1: 3, 2: 10, 3: 25 }; // Basic: 3, Plus: 10, Premium: 25
 
-const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) => {
+const EventCreateNew = ({ editMode = false, editData = null, eventId = null, prefetchedOrg = null }) => {
   const [step, setStep] = useState(editMode ? 1 : 1);
   const [form, setForm] = useState(editData || INIT);
   const [done, setDone] = useState(false);
@@ -1960,65 +1960,78 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
         const userId = parseJwt(token);
         if (!userId) return;
 
+        // Run subscription, events count, and org fetches in parallel
+        const subsPromise = Promise.all([
+          getSystemSubscriptions(),
+          getCustomerSubscription({ userId }),
+        ]).catch(e => { console.error("Subscription fetch error:", e); return null; });
+
+        const eventsPromise = getEventsByUserId(userId).catch(e => { console.error("Events count fetch error:", e); return null; });
+
+        // Use prefetched org data if available (passed from EventEditNew), otherwise fetch
+        const orgPromise = prefetchedOrg
+          ? Promise.resolve(prefetchedOrg)
+          : (async () => {
+              const orgRes = await getMyOrganizations();
+              const orgs = orgRes?.data?.organizations || orgRes?.data || [];
+              if (orgs.length === 0) return null;
+              const orgId = orgs[0].organizationId || orgs[0].id || orgs[0]._id;
+              const bizRes = await getOrganizationBusinesses(orgId).catch(() => null);
+              const businesses = bizRes?.data?.businesses || bizRes?.data || [];
+              return { orgs, businesses, orgId };
+            })().catch(e => { console.error("Organization fetch error:", e); return null; });
+
+        // Await all in parallel
+        const [subsResult, eventsRes, orgData] = await Promise.all([subsPromise, eventsPromise, orgPromise]);
+
+        // Process subscription
         let subscriptionLevel = 1;
-        try {
-          const [systemSubsRes, customerSubRes] = await Promise.all([
-            getSystemSubscriptions(),
-            getCustomerSubscription({ userId }),
-          ]);
+        if (subsResult) {
+          const [systemSubsRes, customerSubRes] = subsResult;
           if (customerSubRes?.data?.hasSubscription && customerSubRes?.data?.priceId) {
             const subItem = systemSubsRes?.data?.find(el => el.priceId === customerSubRes.data.priceId);
             if (subItem) subscriptionLevel = subItem.level;
           }
-        } catch (e) { console.error("Subscription fetch error:", e); }
+        }
+        setMaxAdSpaces(PLAN_LIMITS[subscriptionLevel] || 3);
 
-        const totalSpaces = PLAN_LIMITS[subscriptionLevel] || 3;
-        setMaxAdSpaces(totalSpaces);
-
-        try {
-          const eventsRes = await getEventsByUserId(userId);
+        // Process events count
+        if (eventsRes) {
           setExistingEventsCount(eventsRes.data?.length || 0);
-        } catch (e) { console.error("Events count fetch error:", e); }
+        }
 
-        // Fetch organization businesses for the business selector
-        try {
-          const orgRes = await getMyOrganizations();
-          const orgs = orgRes?.data?.organizations || orgRes?.data || [];
-          if (orgs.length > 0) {
-            const orgId = orgs[0].organizationId || orgs[0].id || orgs[0]._id;
-            const orgName = orgs[0].name || 'Organization';
-            const orgRole = orgs[0].role || 'member';
-            const bizRes = await getOrganizationBusinesses(orgId).catch(() => null);
-            const businesses = bizRes?.data?.businesses || bizRes?.data || [];
-            const allBiz = [];
-            if (orgRole === 'owner') {
-              // Use the actual business _id, not userId
-              let ownerBizId = userId;
-              let ownerBizCode = '';
-              try {
-                const ownerBizRes = await getBusiness(userId);
-                const ownerBiz = ownerBizRes?.data || ownerBizRes;
-                if (ownerBiz?._id) ownerBizId = ownerBiz._id;
-                if (ownerBiz?.businessCode) ownerBizCode = ownerBiz.businessCode;
-              } catch (e) { /* fallback to userId */ }
-              allBiz.push({ linkedBusinessId: ownerBizId, userId: userId, name: orgName, isPayer: true, businessCode: ownerBizCode });
-            }
-            allBiz.push(...businesses.filter(b => b.linkedBusinessId !== userId));
-            setAllBusinesses(allBiz);
-
-            // Validate that the saved selectedBusinessId is still valid
-            // In edit mode, prefer the event's own businessId
-            const eventBizId = editMode && editData?.businessId ? editData.businessId : null;
-            const savedBiz = eventBizId || sessionStorage.getItem("selectedBusinessId");
-            if (savedBiz && allBiz.some(b => b.linkedBusinessId === savedBiz)) {
-              setSelectedBusinessId(savedBiz);
-            } else if (allBiz.length > 0) {
-              const defaultBiz = allBiz[0].linkedBusinessId;
-              setSelectedBusinessId(defaultBiz);
-              sessionStorage.setItem("selectedBusinessId", defaultBiz);
-            }
+        // Process org/business data
+        if (orgData && orgData.orgs?.length > 0) {
+          const orgs = orgData.orgs;
+          const businesses = orgData.businesses || [];
+          const orgName = orgs[0].name || 'Organization';
+          const orgRole = orgs[0].role || 'member';
+          const allBiz = [];
+          if (orgRole === 'owner') {
+            let ownerBizId = userId;
+            let ownerBizCode = '';
+            try {
+              const ownerBizRes = await getBusiness(userId);
+              const ownerBiz = ownerBizRes?.data || ownerBizRes;
+              if (ownerBiz?._id) ownerBizId = ownerBiz._id;
+              if (ownerBiz?.businessCode) ownerBizCode = ownerBiz.businessCode;
+            } catch (e) { /* fallback to userId */ }
+            allBiz.push({ linkedBusinessId: ownerBizId, userId: userId, name: orgName, isPayer: true, businessCode: ownerBizCode });
           }
-        } catch (e) { console.error("Organization fetch error:", e); }
+          allBiz.push(...businesses.filter(b => b.linkedBusinessId !== userId));
+          setAllBusinesses(allBiz);
+
+          // Validate that the saved selectedBusinessId is still valid
+          const eventBizId = editMode && editData?.businessId ? editData.businessId : null;
+          const savedBiz = eventBizId || sessionStorage.getItem("selectedBusinessId");
+          if (savedBiz && allBiz.some(b => b.linkedBusinessId === savedBiz)) {
+            setSelectedBusinessId(savedBiz);
+          } else if (allBiz.length > 0) {
+            const defaultBiz = allBiz[0].linkedBusinessId;
+            setSelectedBusinessId(defaultBiz);
+            sessionStorage.setItem("selectedBusinessId", defaultBiz);
+          }
+        }
       } catch (e) { console.error("Plan data fetch error:", e); }
     };
     fetchPlanData();

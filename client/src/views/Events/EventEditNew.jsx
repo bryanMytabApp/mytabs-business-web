@@ -21,6 +21,7 @@ const EventEditNew = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const [eventData, setEventData] = useState(null);
+  const [prefetchedOrg, setPrefetchedOrg] = useState(null);
   const [, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,55 +30,55 @@ const EventEditNew = () => {
       const userId = parseJwt(token);
       if (!userId || !eventId) { setLoading(false); return; }
 
-      console.log('🔍 EventEditNew load - logged in userId:', userId);
-      
-      // Determine the correct userId for event API calls
-      // If user has a selected business, use that business owner's userId
       const savedBizId = sessionStorage.getItem("selectedBusinessId");
-      let apiUserId = userId; // Default to logged-in user
+      let apiUserId = userId;
+
+      // Run org lookup and event fetch in PARALLEL
+      // We optimistically fetch the event with the logged-in userId,
+      // and resolve the correct apiUserId from org data simultaneously
+      const orgPromise = getMyOrganizations().catch(() => null);
       
-      console.log('🔍 EventEditNew - savedBizId from sessionStorage:', savedBizId);
-      
-      // Always try to resolve the business owner's userId
-      try {
-        const orgRes = await getMyOrganizations();
-        const orgs = orgRes?.data?.organizations || orgRes?.data || [];
-        console.log('🔍 EventEditNew - organizations:', orgs.length);
-        
-        if (orgs.length > 0) {
-          const orgId = orgs[0].organizationId || orgs[0].id || orgs[0]._id;
-          const bizRes = await getOrganizationBusinesses(orgId);
-          const businesses = bizRes?.data?.businesses || bizRes?.data || [];
-          console.log('🔍 EventEditNew - businesses from org:', businesses.map(b => ({ 
-            linkedBusinessId: b.linkedBusinessId, 
-            userId: b.userId, 
-            name: b.name 
-          })));
-          
-          // Find the selected business or use the first one
-          const targetBizId = savedBizId || (businesses.length > 0 ? businesses[0].linkedBusinessId : null);
-          const selectedBiz = businesses.find(b => b.linkedBusinessId === targetBizId);
-          
-          console.log('🔍 EventEditNew - targetBizId:', targetBizId);
-          console.log('🔍 EventEditNew - selectedBiz:', selectedBiz);
-          
-          if (selectedBiz && selectedBiz.userId) {
-            apiUserId = selectedBiz.userId;
-            console.log('🔍 EventEditNew - using business owner userId:', apiUserId);
-          } else {
-            console.warn('⚠️ EventEditNew - selectedBiz.userId is missing, falling back to logged-in user');
-          }
+      // Start event fetch immediately — most of the time the logged-in user owns it
+      let eventPromise = getEvent(userId, eventId).catch(() => null);
+
+      const orgRes = await orgPromise;
+      const orgs = orgRes?.data?.organizations || orgRes?.data || [];
+      let orgData = null;
+
+      if (orgs.length > 0) {
+        const orgId = orgs[0].organizationId || orgs[0].id || orgs[0]._id;
+        const bizRes = await getOrganizationBusinesses(orgId).catch(() => null);
+        const businesses = bizRes?.data?.businesses || bizRes?.data || [];
+
+        // Store org data to pass down (avoids duplicate fetch in EventCreateNew)
+        orgData = { orgs, businesses, orgId };
+        setPrefetchedOrg(orgData);
+
+        // Find the selected business or use the first one
+        const targetBizId = savedBizId || (businesses.length > 0 ? businesses[0].linkedBusinessId : null);
+        const selectedBiz = businesses.find(b => b.linkedBusinessId === targetBizId);
+
+        if (selectedBiz && selectedBiz.userId && selectedBiz.userId !== userId) {
+          apiUserId = selectedBiz.userId;
+          // Re-fetch event with correct userId (the first fetch may have failed)
+          eventPromise = getEvent(apiUserId, eventId).catch(() => null);
         }
-      } catch (err) {
-        console.error('Error resolving business owner userId:', err);
       }
-      
-      console.log('🔍 EventEditNew - FINAL apiUserId for event fetch:', apiUserId);
 
       try {
-        const res = await getEvent(apiUserId, eventId);
-        const ev = res.data;
-        console.log('🔍 Event data from API:', { eventCode: ev.eventCode, _id: ev._id, name: ev.name });
+        const res = await eventPromise;
+        if (!res?.data) {
+          // If optimistic fetch failed and we have a different apiUserId, try once more
+          if (apiUserId !== userId) {
+            const retry = await getEvent(apiUserId, eventId);
+            if (!retry?.data) throw new Error("Event not found");
+            var ev = retry.data;
+          } else {
+            throw new Error("Event not found");
+          }
+        } else {
+          var ev = res.data;
+        }
 
         // Map API event data to the form shape used by EventCreateNew
         const formData = {
@@ -142,12 +143,9 @@ const EventEditNew = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
-  // Suspense fallback already covers chunk load. Skip the second spinner.
-  // (Was: if (loading) return <MTBLoading />.)
-
   if (!eventData) return null;
 
-  return <EventCreateNew editMode={true} editData={eventData} eventId={eventId} />;
+  return <EventCreateNew editMode={true} editData={eventData} eventId={eventId} prefetchedOrg={prefetchedOrg} />;
 };
 
 export default EventEditNew;
