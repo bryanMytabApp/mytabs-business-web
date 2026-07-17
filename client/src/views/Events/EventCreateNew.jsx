@@ -1372,7 +1372,7 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
       </div>
 
       {/* Current Conditions + Event Time Conditions — 2 column layout */}
-      <div style={{ display: "grid", gridTemplateColumns: (currentConditions && hourlyForecast && hourlyForecast.length > 0) ? "1fr 1fr" : "1fr", gap: 14, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: (currentConditions && (hourlyForecast && hourlyForecast.length > 0 || historical)) ? "1fr 1fr" : "1fr", gap: 14, marginBottom: 16 }}>
         {/* Current Conditions */}
         {currentConditions && (
           <div style={{ background: "rgba(91,184,193,0.06)", borderRadius: 12, padding: "16px 18px" }}>
@@ -1389,8 +1389,8 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
           </div>
         )}
 
-        {/* Event Day & Time Conditions */}
-        {hourlyForecast && hourlyForecast.length > 0 && (() => {
+        {/* Event Day & Time Conditions — only when we have LIVE hourly data (not historical) */}
+        {hourlyForecast && hourlyForecast.length > 0 && !historical && (() => {
           const eventStartHr = f.t1 ? parseInt(f.t1.split(":")[0]) : null;
           const eventEndHr = f.t2 ? parseInt(f.t2.split(":")[0]) : null;
           // Find hourly data matching the event start time
@@ -1414,10 +1414,10 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
           const fmtTime = (t) => { if (!t) return ""; const [h, m] = t.split(":"); const hr = parseInt(h); return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`; };
           if (!eventHourData && !eventHigh) return null;
           return (
-            <div style={{ background: "linear-gradient(135deg, rgba(91,184,193,0.08), rgba(0,119,204,0.04))", border: "1.5px solid rgba(91,184,193,.2)", borderRadius: 12, padding: "16px 18px" }}>
+            <div style={{ background: "linear-gradient(135deg, rgba(128,90,213,0.08), rgba(128,90,213,0.04))", border: "1.5px solid rgba(128,90,213,.2)", borderRadius: 12, padding: "16px 18px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--mu)", textTransform: "uppercase", letterSpacing: ".5px" }}>Event Day Conditions</div>
-                <div style={{ fontSize: 9, fontWeight: 600, color: "var(--te)", background: "rgba(91,184,193,.12)", padding: "2px 6px", borderRadius: 4 }}>
+                <div style={{ fontSize: 9, fontWeight: 600, color: "var(--te)", background: "rgba(128,90,213,.12)", padding: "2px 6px", borderRadius: 4 }}>
                   {fmtTime(f.t1)}{f.t2 ? ` – ${fmtTime(f.t2)}` : ""}
                 </div>
               </div>
@@ -1435,11 +1435,9 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
             </div>
           );
         })()}
-      </div>
 
-      {/* Historical Data */}
-      {historical && (
-        <div style={{ marginBottom: 16 }}>
+        {/* Historical Data — in grid next to Current Conditions when historical is present */}
+        {historical && (
           <div style={{ background: "linear-gradient(135deg, rgba(245,166,35,.06), rgba(249,115,22,.04))", border: "1.5px solid rgba(245,166,35,.2)", borderRadius: 12, padding: "14px 18px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
               <span style={{ fontSize: 14 }}>📊</span>
@@ -1449,7 +1447,7 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
               Based on <strong>{historical.lastYearDate}</strong> (same date last year)
             </div>
             {historical.climateAverages && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 <div style={{ background: "#fff", borderRadius: 6, padding: "6px 10px" }}>
                   <div style={{ fontSize: 8, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" }}>High</div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: "#ef4444" }}>{historical.climateAverages.avgHigh}°F</div>
@@ -1472,8 +1470,8 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
               Avg of {historical.climateAverages?.yearsAnalyzed || 3} years · Live forecast available within 16 days
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Forecast */}
       {showHourly && hourlyForecast && hourlyForecast.length > 0 && (() => {
@@ -1496,8 +1494,15 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
           let isEvent = false;
           if (eventStartHr !== null) {
             if (spansNextDay) {
-              isEvent = (dt.getDate() === new Date(allHours[0].hour).getDate() && hr >= eventStartHr) ||
-                        (dt.getDate() !== new Date(allHours[0].hour).getDate() && hr <= eventEndHr);
+              // For overnight events: mark from start time to end of current day data,
+              // and from start of next day data to end time
+              const isSameDay = dt.getDate() === new Date(allHours[0].hour).getDate();
+              const isNextDay = !isSameDay;
+              isEvent = (isSameDay && hr >= eventStartHr) || (isNextDay && hr <= eventEndHr);
+              // If no next day data exists, just highlight from start to end of chart
+              if (!nextDayForecast || nextDayForecast.length === 0) {
+                isEvent = hr >= eventStartHr;
+              }
             } else if (eventEndHr !== null) {
               isEvent = hr >= eventStartHr && hr <= eventEndHr;
             } else {
@@ -1534,9 +1539,9 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
         return (
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--mu)", textTransform: "uppercase", letterSpacing: ".5px" }}>Full Day Forecast</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--mu)", textTransform: "uppercase", letterSpacing: ".5px" }}>{historical ? "Historical Forecast" : "Full Day Forecast"}</div>
               {eventStartHr !== null && (
-                <div style={{ fontSize: 10, fontWeight: 600, color: "var(--te)", background: "rgba(91,184,193,.1)", padding: "2px 8px", borderRadius: 6 }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: "var(--te)", background: "rgba(128,90,213,.1)", padding: "2px 8px", borderRadius: 6 }}>
                   Event: {(() => { const [h,m] = f.t1.split(":"); const hr = parseInt(h); return `${hr > 12 ? hr-12 : hr||12}:${m} ${hr>=12?"PM":"AM"}`; })()}{f.t2 ? ` – ${(() => { const [h,m] = f.t2.split(":"); const hr = parseInt(h); return `${hr > 12 ? hr-12 : hr||12}:${m} ${hr>=12?"PM":"AM"}`; })()}` : ""}{spansNextDay ? " (next day)" : ""}
                 </div>
               )}
@@ -1557,7 +1562,7 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
                   <YAxis tick={{ fontSize: 9, fill: "#9CA3AF" }} axisLine={false} tickLine={false} width={32} domain={['dataMin - 2', 'dataMax + 2']} unit="°" />
                   <Tooltip content={<ChartTooltip />} />
                   {eventStartLabel >= 0 && eventEndLabel >= 0 && (
-                    <ReferenceArea x1={chartData[eventStartLabel].time} x2={chartData[eventEndLabel].time} fill="rgba(91,184,193,.08)" stroke="rgba(91,184,193,.3)" strokeDasharray="4 2" />
+                    <ReferenceArea x1={chartData[eventStartLabel].time} x2={chartData[eventEndLabel].time} fill="rgba(128,90,213,.12)" stroke="rgba(128,90,213,.45)" strokeDasharray="4 2" />
                   )}
                   <Area type="monotone" dataKey="temp" stroke="#5bb8c1" strokeWidth={2.5} fill="url(#tempAreaGrad)" dot={{ r: 3, fill: "#fff", stroke: "#5bb8c1", strokeWidth: 2 }} activeDot={{ r: 5, fill: "#5bb8c1" }} name="Temperature" />
                   <Bar dataKey="rain" fill="rgba(59,130,246,.3)" radius={[2, 2, 0, 0]} barSize={12} name="Rain %" />
@@ -1577,7 +1582,7 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
               </div>
               {eventStartHr !== null && (
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <div style={{ width: 12, height: 8, background: "rgba(91,184,193,.1)", border: "1px dashed rgba(91,184,193,.4)", borderRadius: 2 }} />
+                  <div style={{ width: 12, height: 8, background: "rgba(128,90,213,.15)", border: "1px dashed rgba(128,90,213,.5)", borderRadius: 2 }} />
                   <span style={{ fontSize: 10, color: "var(--mu)", fontWeight: 600 }}>Event window</span>
                 </div>
               )}
