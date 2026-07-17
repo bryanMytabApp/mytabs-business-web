@@ -1440,7 +1440,7 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
       {/* Historical Data */}
       {historical && (
         <div style={{ marginBottom: 16 }}>
-        <div style={{ background: "linear-gradient(135deg, rgba(245,166,35,.06), rgba(249,115,22,.04))", border: "1.5px solid rgba(245,166,35,.2)", borderRadius: 12, padding: "14px 18px" }}>
+          <div style={{ background: "linear-gradient(135deg, rgba(245,166,35,.06), rgba(249,115,22,.04))", border: "1.5px solid rgba(245,166,35,.2)", borderRadius: 12, padding: "14px 18px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
               <span style={{ fontSize: 14 }}>📊</span>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#92400e" }}>Historical Data</div>
