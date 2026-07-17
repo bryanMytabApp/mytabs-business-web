@@ -48,7 +48,7 @@ const PageLoader = () => (
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '50vh',
-    background: 'transparent',
+    background: 'linear-gradient(135deg,#e8f4fd 0%,#dbeeff 35%,#f0f8ff 65%,#e2eeff 100%)',
     padding: '24px',
   }}>
     <div style={{

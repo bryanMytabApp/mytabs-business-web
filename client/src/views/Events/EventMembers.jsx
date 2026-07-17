@@ -1,8 +1,12 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "react-toastify";
-import axios from "axios";
-import { getMembers, addMember, removeMember, getImportPresignedUrl, importMembers, resendCode, toggleMemberStatus, regenerateCode } from "../../services/eventMemberService";
+import { getMembers, addMember, removeMember, resendCode, toggleMemberStatus, regenerateCode } from "../../services/eventMemberService";
+
+// Lazy-load heavy modal components so they don't block initial page render
+const ImportMembersModal = lazy(() => import("./ImportMembersModal"));
+const ApplySavedListModal = lazy(() => import('../MyBusiness/ApplySavedListModal'));
+const SaveListFromEventDialog = lazy(() => import('../MyBusiness/SaveListFromEventDialog'));
 
 // Delivery status config: label → dot color
 const deliveryStatusConfig = {
@@ -29,11 +33,9 @@ const maskAccessCode = (code) => {
   return `${code.slice(0, 3)}***${code.slice(-2)}`;
 };
 
-const MAX_FILE_SIZE_MB = 5;
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-const ACCEPTED_FILE_TYPES = '.xlsx,.csv,.txt';
-
-const EventMembers = ({ eventId, visibility }) => {
+const EventMembers = ({ eventId, visibility, businessId: businessIdProp, readOnly }) => {
+  // Fall back to sessionStorage if businessId prop isn't passed
+  const businessId = businessIdProp || sessionStorage.getItem('selectedBusinessId') || '';
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newUserId, setNewUserId] = useState('');
@@ -42,7 +44,10 @@ const EventMembers = ({ eventId, visibility }) => {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
   const [importing, setImporting] = useState(false);
-  const fileInputRef = useRef(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showSaveListDialog, setShowSaveListDialog] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   useEffect(() => {
     if (visibility === 'private' && eventId) {
@@ -94,6 +99,14 @@ const EventMembers = ({ eventId, visibility }) => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [openDropdown]);
 
+  // Close actions menu when clicking outside
+  useEffect(() => {
+    if (!showActionsMenu) return;
+    const handleClick = () => setShowActionsMenu(false);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [showActionsMenu]);
+
   const handleOpenDropdown = useCallback((e, memberId) => {
     e.stopPropagation();
     if (openDropdown === memberId) {
@@ -101,8 +114,13 @@ const EventMembers = ({ eventId, visibility }) => {
       return;
     }
     const rect = e.currentTarget.getBoundingClientRect();
+    const menuHeight = 180; // approximate dropdown menu height
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpward = spaceBelow < menuHeight;
+
     setDropdownPos({
-      top: rect.bottom + 4,
+      top: openUpward ? undefined : rect.bottom + 4,
+      bottom: openUpward ? (window.innerHeight - rect.top + 4) : undefined,
       right: window.innerWidth - rect.right,
     });
     setOpenDropdown(memberId);
@@ -195,70 +213,6 @@ const EventMembers = ({ eventId, visibility }) => {
     }
   };
 
-  const handleImportClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileSelected = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Client-side file size validation
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      toast.error(`File must be under ${MAX_FILE_SIZE_MB} MB`);
-      return;
-    }
-
-    // Validate file extension
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    if (!['xlsx', 'csv', 'txt'].includes(ext)) {
-      toast.error('Unsupported file format. Please use .xlsx, .csv, or .txt');
-      return;
-    }
-
-    setImporting(true);
-    try {
-      // Step 1: Get presigned URL from backend
-      const presignRes = await getImportPresignedUrl(eventId, file.name, file.type || 'application/octet-stream');
-      const { uploadUrl, fileKey } = presignRes.data;
-
-      // Step 2: Upload file directly to S3 via presigned URL
-      await axios.put(uploadUrl, file, {
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
-      });
-
-      // Step 3: Call import endpoint with the S3 file key
-      const importRes = await importMembers(eventId, fileKey);
-      const { imported, skipped, duplicates } = importRes.data;
-
-      // Step 4: Display import results summary
-      const parts = [];
-      if (imported > 0) parts.push(`${imported} member${imported !== 1 ? 's' : ''} imported`);
-      if (skipped > 0) parts.push(`${skipped} skipped (invalid email)`);
-      if (duplicates > 0) parts.push(`${duplicates} duplicate${duplicates !== 1 ? 's' : ''} ignored`);
-
-      if (imported > 0) {
-        toast.success(parts.join('. '));
-      } else if (parts.length > 0) {
-        toast.info(parts.join('. '));
-      } else {
-        toast.info('No members were imported');
-      }
-
-      // Step 5: Refresh member list
-      fetchMembers();
-    } catch (error) {
-      console.error('Error importing members:', error);
-      const errorMsg = error.response?.data?.error || 'Failed to import members';
-      toast.error(errorMsg);
-    } finally {
-      setImporting(false);
-    }
-  };
-
   // Only render when visibility is private
   if (visibility !== 'private') {
     return null;
@@ -276,12 +230,46 @@ const EventMembers = ({ eventId, visibility }) => {
 
   return (
     <div style={containerStyle}>
-      <h3 style={headingStyle}>Event Members</h3>
-      <p style={descriptionStyle}>
-        Manage who can access this private event. Only listed members will be able to view it.
-      </p>
+      <style>{`
+        @media (max-width: 640px) {
+          .em-header-row { display: none !important; }
+          .em-member-row {
+            flex-wrap: wrap !important;
+            padding: 14px 16px !important;
+            margin-bottom: 10px !important;
+            border-radius: 10px !important;
+            background: #FCFCFC !important;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+            border: 1px solid #E5E7EB !important;
+            gap: 4px 12px !important;
+            position: relative !important;
+          }
+          .em-member-row > span { overflow: visible !important; white-space: normal !important; }
+          .em-member-row .em-cell-email {
+            flex: none !important;
+            width: 100% !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            margin-bottom: 4px !important;
+          }
+          .em-member-row .em-cell-actions {
+            position: absolute !important;
+            top: 12px !important;
+            right: 12px !important;
+            width: auto !important;
+            flex: none !important;
+          }
+        }
+      `}</style>
+      {!readOnly && <h3 style={headingStyle}>Event Members</h3>}
+      {!readOnly && (
+        <p style={descriptionStyle}>
+          Manage who can access this private event. Only listed members will be able to view it.
+        </p>
+      )}
 
       {/* Add Member Section */}
+      {!readOnly && (
       <div style={addSectionStyle}>
         <div style={addInputRowStyle}>
           <div style={inputWrapperStyle}>
@@ -296,48 +284,64 @@ const EventMembers = ({ eventId, visibility }) => {
               }}
             />
           </div>
-          <button
-            onClick={handleAddMember}
-            disabled={adding || !newUserId.trim()}
-            style={{
-              ...addButtonStyle,
-              opacity: (adding || !newUserId.trim()) ? 0.5 : 1,
-              cursor: (adding || !newUserId.trim()) ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {adding ? 'Adding...' : 'Add Member'}
-          </button>
-          {/* Import button hidden for now */}
-          {/* <button
-            onClick={handleImportClick}
-            disabled={importing}
-            style={{
-              ...importButtonStyle,
-              opacity: importing ? 0.5 : 1,
-              cursor: importing ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {importing ? 'Importing...' : 'Import'}
-          </button> */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ACCEPTED_FILE_TYPES}
-            onChange={handleFileSelected}
-            style={{ display: 'none' }}
-          />
+          <div style={{ display: 'flex' }}>
+            <button
+              onClick={handleAddMember}
+              disabled={adding}
+              style={{
+                ...addButtonStyle,
+                opacity: adding ? 0.5 : 1,
+                cursor: adding ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {adding ? '...' : 'Add'}
+            </button>
+            <div style={actionsDropdownWrapperStyle}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowActionsMenu(!showActionsMenu); }}
+                style={actionsDropdownBtnStyle}
+              >
+                ▾
+              </button>
+              {showActionsMenu && (
+                <div style={actionsDropdownMenuStyle}>
+                  <button
+                    onClick={() => { setShowActionsMenu(false); setShowImportModal(true); }}
+                    style={actionsDropdownItemStyle}
+                  >
+                    Import from File
+                  </button>
+                  <button
+                    onClick={() => { setShowActionsMenu(false); setShowApplyModal(true); }}
+                    style={actionsDropdownItemStyle}
+                  >
+                    Apply Saved List
+                  </button>
+                  {members.length > 0 && (
+                    <button
+                      onClick={() => { setShowActionsMenu(false); setShowSaveListDialog(true); }}
+                      style={actionsDropdownItemStyle}
+                    >
+                      Save as List
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
+      )}
 
       {/* Members List Header */}
       {members.length > 0 && (
-        <div style={memberHeaderRowStyle}>
+        <div className="em-header-row" style={memberHeaderRowStyle}>
           <span style={headerCellEmailStyle}>Email</span>
           <span style={headerCellStyle}>Name</span>
           <span style={headerCellStyle}>Delivery</span>
           <span style={headerCellStyle}>Redemption</span>
           <span style={headerCellStyle}>Code</span>
-          <span style={headerCellActionsStyle}>Actions</span>
+          {!readOnly && <span style={headerCellActionsStyle}>Actions</span>}
         </div>
       )}
 
@@ -349,8 +353,8 @@ const EventMembers = ({ eventId, visibility }) => {
           <p style={emptyStyle}>No members added yet. Add members to grant them access to this private event.</p>
         ) : (
           members.map((member) => (
-            <div key={member.userId || member.email} style={memberRowStyle}>
-              <span style={cellEmailStyle}>{member.email || member.userId}</span>
+            <div key={member.userId || member.email} className="em-member-row" style={memberRowStyle}>
+              <span className="em-cell-email" style={cellEmailStyle}>{member.email || member.userId}</span>
               <span style={cellStyle}>{member.memberName || '—'}</span>
               <span style={cellStyle}>
                 {renderStatusBadge(member.deliveryStatus, deliveryStatusConfig)}
@@ -361,7 +365,7 @@ const EventMembers = ({ eventId, visibility }) => {
               <span style={cellCodeStyle}>
                 {maskAccessCode(member.accessCode)}
               </span>
-              <div style={cellActionsStyle}>
+              {!readOnly && <div className="em-cell-actions" style={cellActionsStyle}>
                 {confirmRemove === (member.userId || member.email) ? (
                   <div style={confirmContainerStyle}>
                     <span style={confirmTextStyle}>Remove?</span>
@@ -387,7 +391,7 @@ const EventMembers = ({ eventId, visibility }) => {
                       Edit ▾
                     </button>
                     {openDropdown === (member.userId || member.email) && createPortal(
-                      <div style={{ ...dropdownMenuStyle, position: 'fixed', top: dropdownPos.top, right: dropdownPos.right }}>
+                      <div style={{ ...dropdownMenuStyle, position: 'fixed', top: dropdownPos.top, bottom: dropdownPos.bottom, right: dropdownPos.right }}>
                         <button
                           onClick={() => { handleToggleStatus(member); setOpenDropdown(null); }}
                           style={dropdownItemStyle}
@@ -422,11 +426,48 @@ const EventMembers = ({ eventId, visibility }) => {
                     )}
                   </div>
                 )}
-              </div>
+              </div>}
             </div>
           ))
         )}
       </div>
+
+      {/* Import Members Modal */}
+      {showImportModal && (
+        <Suspense fallback={null}>
+          <ImportMembersModal
+            isOpen={showImportModal}
+            onClose={() => setShowImportModal(false)}
+            eventId={eventId}
+            onImportComplete={fetchMembers}
+          />
+        </Suspense>
+      )}
+
+      {/* Apply Saved List Modal */}
+      {showApplyModal && (
+        <Suspense fallback={null}>
+          <ApplySavedListModal
+            open={showApplyModal}
+            onClose={() => setShowApplyModal(false)}
+            businessId={businessId}
+            eventId={eventId}
+            onApplySuccess={() => { setShowApplyModal(false); fetchMembers(); }}
+          />
+        </Suspense>
+      )}
+
+      {/* Save as List Dialog */}
+      {showSaveListDialog && (
+        <Suspense fallback={null}>
+          <SaveListFromEventDialog
+            open={showSaveListDialog}
+            onClose={() => setShowSaveListDialog(false)}
+            businessId={businessId}
+            members={members}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };
@@ -488,7 +529,7 @@ const inputStyle = {
 
 const addButtonStyle = {
   padding: '10px 18px',
-  borderRadius: '8px',
+  borderRadius: '8px 0 0 8px',
   border: 'none',
   background: '#00AAD6',
   color: 'white',
@@ -507,6 +548,53 @@ const importButtonStyle = {
   fontSize: '14px',
   fontFamily: 'Outfit',
   fontWeight: 500,
+  whiteSpace: 'nowrap',
+};
+
+const actionsDropdownWrapperStyle = {
+  position: 'relative',
+};
+
+const actionsDropdownBtnStyle = {
+  padding: '10px 12px',
+  borderRadius: '0 8px 8px 0',
+  border: '1px solid #00AAD6',
+  borderLeft: 'none',
+  background: '#00AAD6',
+  color: 'white',
+  fontSize: '12px',
+  fontFamily: 'Outfit',
+  fontWeight: 500,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  marginLeft: '-1px',
+};
+
+const actionsDropdownMenuStyle = {
+  position: 'absolute',
+  top: '100%',
+  right: 0,
+  marginTop: '4px',
+  background: 'white',
+  border: '1px solid #E5E7EB',
+  borderRadius: '8px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  zIndex: 50,
+  minWidth: '160px',
+  padding: '4px 0',
+};
+
+const actionsDropdownItemStyle = {
+  display: 'block',
+  width: '100%',
+  padding: '10px 16px',
+  border: 'none',
+  background: 'transparent',
+  color: '#374151',
+  fontSize: '14px',
+  fontFamily: 'Outfit',
+  textAlign: 'left',
+  cursor: 'pointer',
   whiteSpace: 'nowrap',
 };
 

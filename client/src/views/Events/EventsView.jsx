@@ -86,6 +86,7 @@ const S = `
 .chip-red{background:rgba(232,68,90,0.12);color:var(--red)}
 .chip-teal{background:rgba(0,180,216,0.12);color:#0099bb}
 .chip-gold{background:rgba(244,167,35,0.14);color:#c47e00}
+.chip-purple{background:rgba(139,92,246,0.12);color:#7c3aed}
 .ev-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px}
 .ev-card{background:var(--glass-bg);backdrop-filter:blur(18px) saturate(1.4);border:1.5px solid var(--glass-border);box-shadow:var(--glass-shadow);border-radius:var(--radius);padding:22px;cursor:pointer;transition:all var(--transition);display:flex;flex-direction:column}
 .ev-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,100,180,0.14)}
@@ -340,6 +341,7 @@ const EventsView = () => {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <span className={`ev-chip ${statusColor(status)}`} style={{ marginBottom: 8, display: "inline-flex" }}>{statusLabel(status)}</span>
                       {(ev.status === "inactive" || ev.status === "draft" || ev.isActive === false) && <span className="ev-chip chip-gold" style={{ marginBottom: 8, marginLeft: 6, display: "inline-flex" }}>Draft</span>}
+                      {ev.visibility === "private" && <span className="ev-chip chip-purple" style={{ marginBottom: 8, marginLeft: 6, display: "inline-flex" }}>Private</span>}
                       <div className="ev-card-name">{ev.name || "Untitled Event"}</div>
                       <div className="ev-card-sub">{[venue, cat].filter(Boolean).join(" \u00B7 ")}</div>
                     </div>

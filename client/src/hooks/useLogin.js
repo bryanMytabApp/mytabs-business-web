@@ -84,6 +84,10 @@ const useLogin = () => {
       return;
     }
 
+    // Clear any stale session data from a previous user before authenticating
+    localStorage.clear();
+    sessionStorage.clear();
+
     const _invalid = {
       username: username.trim() ? undefined : "Please enter your email or username",
       password: password ? undefined : "Please enter your password",

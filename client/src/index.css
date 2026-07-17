@@ -44,3 +44,14 @@ code {
   /* Effects */
   --shadow-box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.1);
 }
+
+/* Hide help SDK floating panel elements on small phones only */
+@media (max-width: 480px) {
+  [data-tabs-help],
+  #tabs-help-root,
+  #tabs-help-panel,
+  .tabs-help-trigger,
+  .tabs-help-fab {
+    display: none !important;
+  }
+}

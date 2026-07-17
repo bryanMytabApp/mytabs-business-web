@@ -198,6 +198,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  background: linear-gradient(135deg,#e8f4fd 0%,#dbeeff 35%,#f0f8ff 65%,#e2eeff 100%);
 }
 
 .TopHeader {

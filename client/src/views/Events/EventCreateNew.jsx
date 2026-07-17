@@ -11,7 +11,7 @@ import { getCustomerSubscription, getSystemSubscriptions } from "../../services/
 import { getMyOrganizations, getOrganizationBusinesses } from "../../services/organizationService";
 import { getWeatherPreview } from "../../services/weatherPreviewService";
 import axios from "axios";
-import EventMembers from "./EventMembers";
+const EventMembers = React.lazy(() => import("./EventMembers"));
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const G = `
@@ -260,6 +260,7 @@ function I({ n, s = 20, c = "currentColor", w = 1.65 }) {
     bar: <><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></>,
     trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>,
     warn: <><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>,
+    users: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></>,
   };
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round">{p[n]}</svg>;
 }
@@ -1689,8 +1690,48 @@ function P_KPIs({ f, u, next, back, steps, stepNum }) {
   );
 }
 
+// ─── REVIEW MEMBERS (read-only) ───────────────────────────────────────────────
+function ReviewMembersList({ eventId }) {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!eventId) return;
+    const token = localStorage.getItem("idToken");
+    const baseUrl = require("../../config.json").backendUrl;
+    fetch(`${baseUrl}events/${eventId}/members`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        const list = Array.isArray(data) ? data : data?.members || [];
+        setMembers(list);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [eventId]);
+
+  if (loading) return <div className="ecn-rv-r"><span className="ecn-rv-l">Loading...</span></div>;
+  if (members.length === 0) return <div className="ecn-rv-r"><span className="ecn-rv-l">Members</span><span className="ecn-rv-v">None added yet</span></div>;
+
+  return (
+    <>
+      <div className="ecn-rv-r"><span className="ecn-rv-l">Total</span><span className="ecn-rv-v">{members.length} member{members.length !== 1 ? 's' : ''}</span></div>
+      {members.slice(0, 10).map((m, i) => (
+        <div key={m.email || i} className="ecn-rv-r">
+          <span className="ecn-rv-l" style={{ fontSize: 12 }}>{m.email}</span>
+          <span className="ecn-rv-v" style={{ fontSize: 12 }}>{m.memberName || '—'}</span>
+        </div>
+      ))}
+      {members.length > 10 && (
+        <div className="ecn-rv-r"><span className="ecn-rv-l" style={{ fontSize: 11, color: '#9CA3AF' }}>+{members.length - 10} more</span></div>
+      )}
+    </>
+  );
+}
+
 // ─── REVIEW ───────────────────────────────────────────────────────────────────
-function P_Review({ f, goTo, submit, back, steps, isShows, selectedBusinessId, allBusinesses }) {
+function P_Review({ f, goTo, submit, back, steps, isShows, selectedBusinessId, allBusinesses, eventId }) {
   const fd = d => d ? new Date(d + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric" }) : "\u2014";
   const ft = t => { if (!t) return "\u2014"; const [h, m] = t.split(":"); const hr = parseInt(h); return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`; };
   const CHN = CHS.reduce((a, c) => ({ ...a, [c.id]: c.n }), {});
@@ -1754,6 +1795,18 @@ function P_Review({ f, goTo, submit, back, steps, isShows, selectedBusinessId, a
         <div className="ecn-rv-r"><span className="ecn-rv-l">Checkpoints</span><span className="ecn-rv-v">{f.checkpoints?.length > 0 ? [...f.checkpoints].sort((a, b) => b - a).join(", ") + " days" : "None"}</span></div>
         <div className="ecn-rv-r"><span className="ecn-rv-l">Channels</span><span className="ecn-rv-v">{f.channels ? Object.entries(f.channels).filter(([, v]) => v).map(([k]) => CHN[k]).join(", ") || "None" : "Default"}</span></div>
       </div>
+
+      {f.visibility === 'private' && (
+        <div className="ecn-rv-s">
+          <div className="ecn-rv-h"><div className="ecn-rv-t"><I n="users" s={13} c="var(--tx)" w={2} /> Private Members</div><button className="ecn-rv-e" onClick={() => goTo(isShows ? 3 : 2)}>Edit</button></div>
+          {eventId ? (
+            // eslint-disable-next-line react/jsx-no-undef
+            <ReviewMembersList eventId={eventId} />
+          ) : (
+            <div className="ecn-rv-r"><span className="ecn-rv-l">Status</span><span className="ecn-rv-v">Save event first to manage members</span></div>
+          )}
+        </div>
+      )}
 
       <div className="ecn-ok-box">
         <div style={{ fontSize: 12.5, fontWeight: 800, color: "var(--ted)", marginBottom: 5, display: "flex", alignItems: "center", gap: 7 }}><I n="chk" s={13} c="var(--ted)" w={2.5} /> Ready to launch</div>
@@ -1855,8 +1908,10 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
 
         let subscriptionLevel = 1;
         try {
-          const systemSubsRes = await getSystemSubscriptions();
-          const customerSubRes = await getCustomerSubscription({ userId });
+          const [systemSubsRes, customerSubRes] = await Promise.all([
+            getSystemSubscriptions(),
+            getCustomerSubscription({ userId }),
+          ]);
           if (customerSubRes?.data?.hasSubscription && customerSubRes?.data?.priceId) {
             const subItem = systemSubsRes?.data?.find(el => el.priceId === customerSubRes.data.priceId);
             if (subItem) subscriptionLevel = subItem.level;
@@ -1885,25 +1940,17 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
             if (orgRole === 'owner') {
               // Use the actual business _id, not userId
               let ownerBizId = userId;
+              let ownerBizCode = '';
               try {
                 const ownerBizRes = await getBusiness(userId);
                 const ownerBiz = ownerBizRes?.data || ownerBizRes;
                 if (ownerBiz?._id) ownerBizId = ownerBiz._id;
+                if (ownerBiz?.businessCode) ownerBizCode = ownerBiz.businessCode;
               } catch (e) { /* fallback to userId */ }
-              allBiz.push({ linkedBusinessId: ownerBizId, userId: userId, name: orgName, isPayer: true });
+              allBiz.push({ linkedBusinessId: ownerBizId, userId: userId, name: orgName, isPayer: true, businessCode: ownerBizCode });
             }
             allBiz.push(...businesses.filter(b => b.linkedBusinessId !== userId));
             setAllBusinesses(allBiz);
-
-            // Fetch businessCode for the owner's business if not already present
-            try {
-              const ownerBizRes = await getBusiness(userId);
-              const ownerBiz = ownerBizRes?.data || ownerBizRes;
-              if (ownerBiz?.businessCode && allBiz[0]?.isPayer) {
-                allBiz[0].businessCode = ownerBiz.businessCode;
-                setAllBusinesses([...allBiz]);
-              }
-            } catch (e) { /* non-critical */ }
 
             // Validate that the saved selectedBusinessId is still valid
             // In edit mode, prefer the event's own businessId
@@ -1940,19 +1987,57 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
   // Update URL hash and notify help SDK when step changes
   const updateHelpHash = (stepNum) => {
     const hash = stepHashMap[stepNum] || "setup";
-    window.history.replaceState(null, "", `#${hash}`);
     if (window.tabsHelp && typeof window.tabsHelp.setRoute === "function") {
       window.tabsHelp.setRoute(window.location.pathname + `#${hash}`);
     }
   };
 
-  const next = () => setStep(s => { const n = s + 1; updateHelpHash(n); return n; });
-  const back = () => setStep(s => { const n = s - 1; updateHelpHash(n); return n; });
-  const goTo = n => { updateHelpHash(n); setStep(n); };
-  const reset = () => { setForm(INIT); setStep(1); setDone(false); updateHelpHash(1); };
+  const next = () => setStep(s => s + 1);
+  const back = () => setStep(s => s > 1 ? s - 1 : s);
+  const goTo = n => setStep(n);
+  const reset = () => { setForm(INIT); setStep(1); setDone(false); };
+
+  // Track whether step change came from popstate (browser back/forward)
+  const isPopStateRef = useRef(false);
+  const prevStepRef = useRef(step);
+  const stepsNavRef = useRef(null);
+
+  // Push history state whenever step changes (but not from popstate)
+  useEffect(() => {
+    if (step !== prevStepRef.current) {
+      if (!isPopStateRef.current) {
+        const hash = stepHashMap[step] || 'setup';
+        window.history.pushState({ step }, "", `#${hash}`);
+      }
+      updateHelpHash(step);
+      prevStepRef.current = step;
+      isPopStateRef.current = false;
+    }
+    // Auto-scroll step nav to show active tab
+    if (stepsNavRef.current) {
+      const activeBtn = stepsNavRef.current.querySelector(`[data-step="${step}"]`);
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [step]);
+
+  // Handle browser back/forward button
+  useEffect(() => {
+    const handlePopState = (e) => {
+      isPopStateRef.current = true;
+      if (e.state?.step) {
+        setStep(e.state.step);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Set initial hash on mount
-  useEffect(() => { updateHelpHash(step); // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    window.history.replaceState({ step }, "", `#${stepHashMap[step] || 'setup'}`);
+    updateHelpHash(step); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Delete event handler
@@ -2146,7 +2231,7 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
   return (
     <>
       <style>{G}</style>
-      <div className="ecn-wrap">
+      <div className="ecn-wrap" style={{ background: 'linear-gradient(135deg,#e8f4fd 0%,#dbeeff 35%,#f0f8ff 65%,#e2eeff 100%)' }}>
         {done ? <Done f={form} reset={reset} isShows={isShows} /> : (
           <>
             {/* Title + Step Wizard above the layout */}
@@ -2154,10 +2239,10 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <div className="ecn-pg-h" style={{ marginBottom: 0 }}>{editMode ? "Edit Event" : "Create Event"}</div>
               </div>
-              <div className="ecn-steps" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div className="ecn-steps" ref={stepsNavRef} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <button className="ecn-bb" onClick={() => navigate("/admin/my-events")} style={{ margin: 0 }}><I n="chevL" s={13} w={2.5} /> <span className="ecn-bb-full">Back to Events</span><span className="ecn-bb-short">Back</span></button>
                 {steps.map(s => (
-                  <button key={s.n} className={`ecn-step-btn${step === s.n ? " cur" : step > s.n ? " done" : ""}`}>
+                  <button key={s.n} className={`ecn-step-btn${step === s.n ? " cur" : step > s.n ? " done" : ""}`} data-step={s.n}>
                     {step > s.n ? "\u2713 " : ""}{s.l}
                   </button>
                 ))}
@@ -2187,7 +2272,9 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
                     <div className="ecn-card">
                       <div className="ecn-cs"><I n="users" s={13} c="var(--mu)" w={2} /> Private Event Members</div>
                       {eventId ? (
-                        <EventMembers eventId={eventId} visibility={form.visibility} />
+                        <React.Suspense fallback={<div style={{ textAlign: 'center', padding: '20px' }}>Loading members...</div>}>
+                          <EventMembers eventId={eventId} visibility={form.visibility} />
+                        </React.Suspense>
                       ) : (
                         <div style={{ textAlign: 'center', padding: '30px 20px' }}>
                           <I n="info" s={20} c="var(--te)" w={2} />
@@ -2214,7 +2301,7 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
                 {!isShows && step === (form.visibility === 'private' ? 6 : 5) && <P_KPIs {...sp} stepNum={step} />}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {!isShows && step === (form.visibility === 'private' ? 7 : 6) && <P_Review f={form} goTo={goTo} submit={handleSubmit} back={back} steps={steps} isShows={false} selectedBusinessId={selectedBusinessId} allBusinesses={allBusinesses} />}
+                {!isShows && step === (form.visibility === 'private' ? 7 : 6) && <P_Review f={form} goTo={goTo} submit={handleSubmit} back={back} steps={steps} isShows={false} selectedBusinessId={selectedBusinessId} allBusinesses={allBusinesses} eventId={eventId} />}
 
                 {/* Shows flow — step numbers shift +1 when visibility is private */}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
@@ -2228,7 +2315,7 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null }) =
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
                 {isShows && step === (form.visibility === 'private' ? 7 : 6) && <P_KPIs {...sp} stepNum={step} />}
                 {/* eslint-disable-next-line react/jsx-pascal-case */}
-                {isShows && step === (form.visibility === 'private' ? 8 : 7) && <P_Review f={form} goTo={goTo} submit={handleSubmit} back={back} steps={steps} isShows={true} selectedBusinessId={selectedBusinessId} allBusinesses={allBusinesses} />}
+                {isShows && step === (form.visibility === 'private' ? 8 : 7) && <P_Review f={form} goTo={goTo} submit={handleSubmit} back={back} steps={steps} isShows={true} selectedBusinessId={selectedBusinessId} allBusinesses={allBusinesses} eventId={eventId} />}
               </div>
             </div>
           </>

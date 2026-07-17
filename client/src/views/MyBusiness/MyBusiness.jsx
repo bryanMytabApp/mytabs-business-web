@@ -17,6 +17,7 @@ import { jsPDF } from "jspdf";
 import config from "../../config.json";
 import axios from "axios";
 import categoriesJS from "../../utils/data/categories";
+import MemberListsTab from './MemberListsTab';
 
 const countryCode = 'US';
 let userId;
@@ -199,12 +200,12 @@ const GalleryTab = ({ item, photoGallery, onLabelChange, onPhotoUpload, onRemove
   return (
     <Box sx={{ backgroundColor: '#fff', borderRadius: '16px', padding: '28px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
         <Box>
           <Typography sx={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>Photo Gallery</Typography>
           <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>{allPhotos.length} photo{allPhotos.length !== 1 ? 's' : ''}</Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             type="text"
             value={search}
@@ -338,12 +339,12 @@ const MenusTab = ({ item, onLabelChange, onMenuUpload, onRemoveMenu, readOnly })
   return (
     <Box sx={{ backgroundColor: '#fff', borderRadius: '16px', padding: '28px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
         <Box>
           <Typography sx={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>Menus</Typography>
           <Typography sx={{ fontSize: '13px', color: '#6B7280' }}>{allMenus.length} menu{allMenus.length !== 1 ? 's' : ''} uploaded</Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             type="text"
             value={search}
@@ -475,8 +476,8 @@ const MyBusiness = () => {
   const [menuFiles, setMenuFiles] = useState({ menu1: null, menu2: null, menu3: null, menu4: null });
 
   // Tab mapping for URL hash
-  const tabMap = { profile: 0, gallery: 1, menus: 2 };
-  const tabNames = ['profile', 'gallery', 'menus'];
+  const tabMap = { profile: 0, gallery: 1, menus: 2, 'member-lists': 3 };
+  const tabNames = ['profile', 'gallery', 'menus', 'member-lists'];
   
   // Get initial tab from URL hash
   const getTabFromHash = () => {
@@ -905,49 +906,52 @@ const MyBusiness = () => {
         {/* Tabs */}
         <div className="ev-filter-bar">
           <div className="ev-tabs">
-            {['Profile', 'Gallery', 'Menus'].map((label, i) => (
+            {['Profile', 'Gallery', 'Menus', 'Member Lists'].map((label, i) => (
               <button key={label} className={`ev-tab${activeTab === i ? ' on' : ''}`} onClick={() => handleTabChange(i)}>{label}</button>
             ))}
           </div>
         </div>
         <style>{`
 .ev-filter-bar{background:rgba(255,255,255,0.75);backdrop-filter:blur(18px) saturate(1.4);border:1.5px solid rgba(200,220,240,0.6);box-shadow:0 4px 20px rgba(0,100,180,0.06);border-radius:14px;padding:14px 18px;margin-bottom:16px;display:flex;gap:12px;align-items:center}
-.ev-tabs{display:flex;gap:4px;background:rgba(0,80,160,0.06);padding:4px;border-radius:12px;flex:1;max-width:480px}
-.ev-tab{flex:1;padding:8px 14px;border:none;background:none;border-radius:9px;font-size:13px;font-weight:500;color:#5a738a;cursor:pointer;transition:all 0.22s cubic-bezier(.4,0,.2,1);font-family:'Outfit',sans-serif}
-.ev-tab.on{background:#0077cc;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(0,119,204,0.25)}
-.ev-tab:hover{color:#0077cc}
+.ev-tabs{display:flex;gap:4px;background:rgba(0,80,160,0.06);padding:4px;border-radius:12px;flex:1;max-width:480px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.ev-tab{padding:8px 14px;border:none;background:none;border-radius:9px;font-size:13px;font-weight:500;color:#5a738a;cursor:pointer;transition:all 0.22s cubic-bezier(.4,0,.2,1);font-family:'Outfit',sans-serif;white-space:nowrap;flex-shrink:0}
+.ev-tab.on{background:#0077cc;color:#fff !important;font-weight:700;box-shadow:0 2px 8px rgba(0,119,204,0.25)}
+.ev-tab:not(.on):hover{color:#0077cc}
         `}</style>
 
         {/* Tab 0: Profile */}
         {activeTab === 0 && (
           <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
             {/* Left Panel - Image + QR */}
-            <Box sx={{ width: { xs: '100%', md: '280px' }, flexShrink: 0, display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 2 }}>
-              {/* Business Image Card */}
-              <Box sx={{ backgroundColor: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-                <Box sx={{ width: '100%', height: { xs: '120px', md: '160px' }, borderRadius: '12px', overflow: 'hidden', backgroundColor: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => { const src = uploadedImage || (item._id ? getBusinessPicture(item.userId || userId, 'full', item.iconUpdatedAt) : null); if (src) setLogoPreviewOpen(true); }}>
-                  {(() => {
-                    const logoSrc = uploadedImage || (item._id ? getBusinessPicture(item.userId || userId, 'full', item.iconUpdatedAt) : null);
-                    return logoSrc ? (
-                      <img src={logoSrc} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <Typography sx={{ color: '#fff', fontSize: '20px', fontWeight: 800, fontFamily: 'Outfit' }}>{item.name || 'Business'}</Typography>
-                    );
-                  })()}
+            <Box sx={{ width: { xs: '100%', md: '280px' }, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Cards Row */}
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 2, alignItems: 'stretch' }}>
+                {/* Business Image Card */}
+                <Box sx={{ flex: { xs: 1, md: 'none' }, backgroundColor: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 0, gap: 1.5 }}>
+                  <Box sx={{ width: '100%', flex: 1, borderRadius: '12px', overflow: 'hidden', backgroundColor: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', minHeight: { xs: '100px', md: '160px' } }} onClick={() => { const src = uploadedImage || (item._id ? getBusinessPicture(item.userId || userId, 'full', item.iconUpdatedAt) : null); if (src) setLogoPreviewOpen(true); }}>
+                    {(() => {
+                      const logoSrc = uploadedImage || (item._id ? getBusinessPicture(item.userId || userId, 'full', item.iconUpdatedAt) : null);
+                      return logoSrc ? (
+                        <img src={logoSrc} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <Typography sx={{ color: '#fff', fontSize: '20px', fontWeight: 800, fontFamily: 'Outfit' }}>{item.name || 'Business'}</Typography>
+                      );
+                    })()}
+                  </Box>
+                  {/* Submit button */}
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    size="small"
+                    sx={{ textTransform: 'none', borderRadius: '20px', borderColor: '#00AAD6', color: '#00AAD6', fontWeight: 600, fontSize: '12px', width: '100%', '&:hover': { backgroundColor: '#00AAD6', color: '#fff' } }}
+                  >
+                    Submit ↑
+                    <input type="file" accept="image/*" hidden onChange={processFile} ref={inputref} />
+                  </Button>
                 </Box>
-                <Button
-                  variant="outlined"
-                  component="label"
-                  size="small"
-                  sx={{ textTransform: 'none', borderRadius: '20px', borderColor: '#00AAD6', color: '#00AAD6', fontWeight: 600, fontSize: '12px', '&:hover': { backgroundColor: '#00AAD6', color: '#fff' } }}
-                >
-                  Submit ↑
-                  <input type="file" accept="image/*" hidden onChange={processFile} ref={inputref} />
-                </Button>
-              </Box>
 
-              {/* QR Code Card */}
-              <Box sx={{ backgroundColor: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+                {/* QR Code Card */}
+                <Box sx={{ flex: { xs: 1, md: 'none' }, backgroundColor: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
                 <Box sx={{ position: 'relative', display: 'inline-flex' }}>
                   <QRCode
                     size={160}
@@ -971,10 +975,11 @@ const MyBusiness = () => {
                   variant="outlined"
                   onClick={downloadQRPdf}
                   size="small"
-                  sx={{ textTransform: 'none', borderRadius: '20px', borderColor: '#00AAD6', color: '#00AAD6', fontWeight: 600, fontSize: '12px', '&:hover': { backgroundColor: '#00AAD6', color: '#fff' } }}
+                  sx={{ textTransform: 'none', borderRadius: '20px', borderColor: '#00AAD6', color: '#00AAD6', fontWeight: 600, fontSize: '12px', width: '100%', '&:hover': { backgroundColor: '#00AAD6', color: '#fff' } }}
                 >
-                  Print QR Code (PDF)
+                  Print QR (PDF)
                 </Button>
+              </Box>
               </Box>
             </Box>
 
@@ -1298,6 +1303,11 @@ const MyBusiness = () => {
           ) : (
           <MenusTab item={item} onLabelChange={(menuNum, value) => handleItemChange(`menuLabel${menuNum}`, value)} onMenuUpload={handleMenuUpload} onRemoveMenu={(menuNum) => handleItemChange(`menuUrl${menuNum}`, null)} />
           )
+        )}
+
+        {/* Tab 3: Member Lists */}
+        {activeTab === 3 && (
+          <MemberListsTab selectedBusinessId={selectedBusinessId} userRole={userRole} />
         )}
 
         {/* Floating Save Bar - appears on any tab when dirty (only for owner/admin) */}
