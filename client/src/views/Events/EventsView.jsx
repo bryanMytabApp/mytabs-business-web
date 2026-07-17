@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
-import { getEventsByUserId } from "../../services/eventService";
+import { getEventsByUserId, deleteEvent } from "../../services/eventService";
 import { getBusiness } from "../../services/businessService";
 import { getCustomerSubscription, getSystemSubscriptions } from "../../services/paymentService";
 import { getOrganizationBusinesses, getMyOrganizations } from "../../services/organizationService";
@@ -113,6 +113,25 @@ const S = `
 .ev-create-icon{width:48px;height:48px;border-radius:50%;background:rgba(0,119,204,0.1);display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--blue)}
 .ev-create-title{font-size:14px;font-weight:600;color:var(--blue)}
 .ev-create-sub{font-size:12px;color:var(--text-muted);text-align:center}
+.ev-card-delete{width:30px;height:30px;border-radius:50%;background:rgba(232,68,90,0.1);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--transition);flex-shrink:0;margin-left:8px}
+.ev-card-delete:hover{background:rgba(232,68,90,0.25);transform:scale(1.1)}
+.ev-card-delete svg{width:15px;height:15px;color:var(--red)}
+.ev-card-check{position:absolute;bottom:12px;right:12px;width:24px;height:24px;border-radius:50%;border:2px solid rgba(0,119,204,0.4);background:rgba(255,255,255,0.9);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--transition);z-index:2}
+.ev-card-check.checked{background:var(--blue);border-color:var(--blue)}
+.ev-card-check svg{width:14px;height:14px;color:#fff;opacity:0;transition:opacity 0.15s}
+.ev-card-check.checked svg{opacity:1}
+.ev-card{position:relative}
+.ev-bulk-bar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(10,37,64,0.95);backdrop-filter:blur(12px);border-radius:14px;padding:12px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,0.25);z-index:100;animation:ev-slide-up 0.25s ease}
+@keyframes ev-slide-up{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+.ev-bulk-bar span{color:#fff;font-size:14px;font-weight:600}
+.ev-bulk-btn{border:none;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:all var(--transition);font-family:'Outfit',sans-serif}
+.ev-bulk-btn-delete{background:#e8445a;color:#fff}
+.ev-bulk-btn-delete:hover{background:#d63047}
+.ev-bulk-btn-cancel{background:rgba(255,255,255,0.15);color:#fff}
+.ev-bulk-btn-cancel:hover{background:rgba(255,255,255,0.25)}
+.ev-select-btn{background:none;border:1.5px solid rgba(0,119,204,0.3);border-radius:10px;padding:9px 16px;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;transition:all var(--transition);font-family:'Outfit',sans-serif}
+.ev-select-btn:hover{border-color:var(--blue);background:rgba(0,119,204,0.06)}
+.ev-select-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
 @media(max-width:768px){.ev-wrap{padding:16px}.ev-grid{grid-template-columns:1fr}.ev-filter-bar{flex-direction:column;align-items:stretch;gap:10px;padding:12px}.ev-search{flex:none;width:100%}.ev-tabs{max-width:none;overflow-x:auto;flex:none}.ev-tab{padding:8px 12px;font-size:12px}.ev-chip{align-self:flex-start}.ev-header{flex-direction:column;align-items:flex-start;gap:12px}.ev-title{font-size:22px}}
 `;
 
@@ -126,6 +145,9 @@ const EventsView = () => {
   const [, setAllBusinesses] = useState([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState(sessionStorage.getItem("selectedBusinessId") || null);
   const [primaryBizId, setPrimaryBizId] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -251,6 +273,68 @@ const EventsView = () => {
     navigate("/admin/my-events/create");
   };
 
+  const getUserId = () => {
+    const token = localStorage.getItem("idToken");
+    return parseJwt(token);
+  };
+
+  const handleDeleteSingle = async (ev, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Delete "${ev.name || 'this event'}"? This cannot be undone.`)) return;
+    const userId = getUserId();
+    if (!userId) return;
+    try {
+      setDeleting(true);
+      await deleteEvent({ userId, _id: ev._id });
+      setItems(prev => prev.filter(item => item._id !== ev._id));
+      toast.success("Event deleted");
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error("Failed to delete event");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.size;
+    if (count === 0) return;
+    if (!window.confirm(`Delete ${count} event${count > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    const userId = getUserId();
+    if (!userId) return;
+    try {
+      setDeleting(true);
+      await Promise.all([...selectedIds].map(id => deleteEvent({ userId, _id: id })));
+      setItems(prev => prev.filter(item => !selectedIds.has(item._id)));
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      toast.success(`${count} event${count > 1 ? 's' : ''} deleted`);
+    } catch (err) {
+      console.error("Bulk delete error:", err);
+      toast.error("Some events could not be deleted");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const toggleSelect = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(ev => ev._id)));
+    }
+  };
+
   const filtered = items
     .filter(ev => {
       // Filter events by the selected business from the global context.
@@ -310,7 +394,17 @@ const EventsView = () => {
               <div className="ev-title">Event <span style={{color:'#f97316'}}>Management</span></div>
               <div style={{ fontSize: 14, color: '#2a4a6e', fontWeight: 600, marginTop: 4 }}>Create, manage, and track your events and advertisements</div>
             </div>
-            <button className="ev-btn-primary" onClick={handleCreate}>+ Create Event</button>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              {filtered.length > 0 && (
+                <button
+                  className={`ev-select-btn${selectMode ? ' active' : ''}`}
+                  onClick={() => { setSelectMode(!selectMode); setSelectedIds(new Set()); }}
+                >
+                  {selectMode ? 'Cancel' : 'Select'}
+                </button>
+              )}
+              <button className="ev-btn-primary" onClick={handleCreate}>+ Create Event</button>
+            </div>
           </div>
 
           {/* Filter bar */}
@@ -336,7 +430,13 @@ const EventsView = () => {
               const cat = ev.category || ev.cat || "";
 
               return (
-                <div key={ev._id} className="ev-card" onClick={() => navigate(`/admin/my-events/${ev._id}`)}>
+                <div key={ev._id} className="ev-card" onClick={() => selectMode ? toggleSelect(ev._id, { stopPropagation: () => {} }) : navigate(`/admin/my-events/${ev._id}`)} style={selectMode && selectedIds.has(ev._id) ? { borderColor: 'var(--blue)', borderWidth: 2 } : {}}>
+                  {/* Select checkbox */}
+                  {selectMode && (
+                    <div className={`ev-card-check${selectedIds.has(ev._id) ? ' checked' : ''}`} onClick={(e) => toggleSelect(ev._id, e)}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                  )}
                   <div className="ev-card-top">
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <span className={`ev-chip ${statusColor(status)}`} style={{ marginBottom: 8, display: "inline-flex" }}>{statusLabel(status)}</span>
@@ -379,7 +479,14 @@ const EventsView = () => {
                       {d === 0 ? " \u00B7 Today" : d === 1 ? " \u00B7 Tomorrow" : d !== null && d > 1 ? ` \u00B7 ${d}d away` : ""}
                       {ev.startDate ? ` @ ${toMoment(ev.startDate)?.format("h:mm A") || ""}` : ""}
                     </span>
-                    {kpis.length > 0 && <span className="ev-card-link">{kpis.length} KPIs tracked →</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {kpis.length > 0 && <span className="ev-card-link">{kpis.length} KPIs tracked →</span>}
+                      {!selectMode && (
+                        <button className="ev-card-delete" onClick={(e) => handleDeleteSingle(ev, e)} title="Delete event" disabled={deleting}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -392,6 +499,19 @@ const EventsView = () => {
               <div className="ev-create-sub">Add KPIs, set targets, and track progress</div>
             </div>
           </div>
+
+          {/* Bulk action bar */}
+          {selectMode && selectedIds.size > 0 && (
+            <div className="ev-bulk-bar">
+              <span>{selectedIds.size} selected</span>
+              <button className="ev-bulk-btn ev-bulk-btn-cancel" onClick={toggleSelectAll}>
+                {selectedIds.size === filtered.length ? 'Deselect All' : 'Select All'}
+              </button>
+              <button className="ev-bulk-btn ev-bulk-btn-delete" onClick={handleBulkDelete} disabled={deleting}>
+                {deleting ? 'Deleting...' : `Delete ${selectedIds.size}`}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>
