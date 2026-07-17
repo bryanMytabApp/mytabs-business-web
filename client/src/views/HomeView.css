@@ -225,6 +225,9 @@ body[data-help-pinned] .HomeView {
 body[data-help-pinned] .ViewContent {
   margin-right: 420px;
 }
+body[data-help-pinned] {
+  background: #f8f9fa;
+}
 
 .TopHeaderLeft {
   display: flex;

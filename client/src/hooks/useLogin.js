@@ -85,8 +85,11 @@ const useLogin = () => {
     }
 
     // Clear any stale session data from a previous user before authenticating
+    // Preserve non-user-specific preferences
+    const helpPinned = localStorage.getItem('tabsHelp_pinned');
     localStorage.clear();
     sessionStorage.clear();
+    if (helpPinned) localStorage.setItem('tabsHelp_pinned', helpPinned);
 
     const _invalid = {
       username: username.trim() ? undefined : "Please enter your email or username",
