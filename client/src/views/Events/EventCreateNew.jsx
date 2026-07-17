@@ -1371,8 +1371,8 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
         </span>
       </div>
 
-      {/* Current Conditions + Historical Data — 2 column layout */}
-      <div style={{ display: "grid", gridTemplateColumns: historical ? "1fr 1fr" : "1fr", gap: 14, marginBottom: 16 }}>
+      {/* Current Conditions + Event Time Conditions — 2 column layout */}
+      <div style={{ display: "grid", gridTemplateColumns: (currentConditions && hourlyForecast && hourlyForecast.length > 0) ? "1fr 1fr" : "1fr", gap: 14, marginBottom: 16 }}>
         {/* Current Conditions */}
         {currentConditions && (
           <div style={{ background: "rgba(91,184,193,0.06)", borderRadius: 12, padding: "16px 18px" }}>
@@ -1389,9 +1389,58 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
           </div>
         )}
 
-        {/* Historical Data Banner */}
-        {historical && (
-          <div style={{ background: "linear-gradient(135deg, rgba(245,166,35,.06), rgba(249,115,22,.04))", border: "1.5px solid rgba(245,166,35,.2)", borderRadius: 12, padding: "14px 18px" }}>
+        {/* Event Day & Time Conditions */}
+        {hourlyForecast && hourlyForecast.length > 0 && (() => {
+          const eventStartHr = f.t1 ? parseInt(f.t1.split(":")[0]) : null;
+          const eventEndHr = f.t2 ? parseInt(f.t2.split(":")[0]) : null;
+          // Find hourly data matching the event start time
+          const eventHourData = eventStartHr !== null ? hourlyForecast.find(h => {
+            const hr = new Date(h.hour).getHours();
+            return hr === eventStartHr;
+          }) : null;
+          // Calculate high/low during event window
+          let eventHigh = null, eventLow = null, eventMaxRain = 0;
+          if (eventStartHr !== null) {
+            const eventHours = hourlyForecast.filter(h => {
+              const hr = new Date(h.hour).getHours();
+              return eventEndHr !== null ? (hr >= eventStartHr && hr <= eventEndHr) : (hr >= eventStartHr && hr < eventStartHr + 4);
+            });
+            if (eventHours.length > 0) {
+              eventHigh = Math.round(Math.max(...eventHours.map(h => h.temperature)));
+              eventLow = Math.round(Math.min(...eventHours.map(h => h.temperature)));
+              eventMaxRain = Math.round(Math.max(...eventHours.map(h => h.rainProbability || 0)));
+            }
+          }
+          const fmtTime = (t) => { if (!t) return ""; const [h, m] = t.split(":"); const hr = parseInt(h); return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`; };
+          if (!eventHourData && !eventHigh) return null;
+          return (
+            <div style={{ background: "linear-gradient(135deg, rgba(91,184,193,0.08), rgba(0,119,204,0.04))", border: "1.5px solid rgba(91,184,193,.2)", borderRadius: 12, padding: "16px 18px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--mu)", textTransform: "uppercase", letterSpacing: ".5px" }}>Event Day Conditions</div>
+                <div style={{ fontSize: 9, fontWeight: 600, color: "var(--te)", background: "rgba(91,184,193,.12)", padding: "2px 6px", borderRadius: 4 }}>
+                  {fmtTime(f.t1)}{f.t2 ? ` – ${fmtTime(f.t2)}` : ""}
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ fontSize: 32, fontWeight: 800, color: "var(--tx)" }}>{eventHourData ? Math.round(eventHourData.temperature) : eventHigh}°</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--tx)" }}>{eventHourData?.conditions || "Forecast"}</div>
+                  <div style={{ fontSize: 12, color: "var(--mu)", marginTop: 3 }}>
+                    {eventHigh !== null && eventLow !== null && `High ${eventHigh}° · Low ${eventLow}°`}
+                    {eventMaxRain > 0 && ` · Rain ${eventMaxRain}%`}
+                    {eventHourData?.windSpeed && ` · Wind ${Math.round(eventHourData.windSpeed)} mph`}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Historical Data */}
+      {historical && (
+        <div style={{ marginBottom: 16 }}>
+        <div style={{ background: "linear-gradient(135deg, rgba(245,166,35,.06), rgba(249,115,22,.04))", border: "1.5px solid rgba(245,166,35,.2)", borderRadius: 12, padding: "14px 18px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
               <span style={{ fontSize: 14 }}>📊</span>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#92400e" }}>Historical Data</div>
@@ -1400,7 +1449,7 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
               Based on <strong>{historical.lastYearDate}</strong> (same date last year)
             </div>
             {historical.climateAverages && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
                 <div style={{ background: "#fff", borderRadius: 6, padding: "6px 10px" }}>
                   <div style={{ fontSize: 8, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" }}>High</div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: "#ef4444" }}>{historical.climateAverages.avgHigh}°F</div>
@@ -1423,8 +1472,8 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
               Avg of {historical.climateAverages?.yearsAnalyzed || 3} years · Live forecast available within 16 days
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Forecast */}
       {showHourly && hourlyForecast && hourlyForecast.length > 0 && (() => {
@@ -1488,7 +1537,7 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--mu)", textTransform: "uppercase", letterSpacing: ".5px" }}>Full Day Forecast</div>
               {eventStartHr !== null && (
                 <div style={{ fontSize: 10, fontWeight: 600, color: "var(--te)", background: "rgba(91,184,193,.1)", padding: "2px 8px", borderRadius: 6 }}>
-                  Event: {f.t1}{f.t2 ? ` – ${f.t2}` : ""}{spansNextDay ? " (next day)" : ""}
+                  Event: {(() => { const [h,m] = f.t1.split(":"); const hr = parseInt(h); return `${hr > 12 ? hr-12 : hr||12}:${m} ${hr>=12?"PM":"AM"}`; })()}{f.t2 ? ` – ${(() => { const [h,m] = f.t2.split(":"); const hr = parseInt(h); return `${hr > 12 ? hr-12 : hr||12}:${m} ${hr>=12?"PM":"AM"}`; })()}` : ""}{spansNextDay ? " (next day)" : ""}
                 </div>
               )}
             </div>
