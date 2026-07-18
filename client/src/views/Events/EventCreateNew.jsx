@@ -1393,16 +1393,20 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
         {hourlyForecast && hourlyForecast.length > 0 && !historical && (() => {
           const eventStartHr = f.t1 ? parseInt(f.t1.split(":")[0]) : null;
           const eventEndHr = f.t2 ? parseInt(f.t2.split(":")[0]) : null;
+          const isOvernight = eventEndHr !== null && eventStartHr !== null && eventEndHr < eventStartHr;
           // Find hourly data matching the event start time
           const eventHourData = eventStartHr !== null ? hourlyForecast.find(h => {
             const hr = new Date(h.hour).getHours();
             return hr === eventStartHr;
           }) : null;
-          // Calculate high/low during event window
+          // Calculate high/low during event window (handle overnight spans)
           let eventHigh = null, eventLow = null, eventMaxRain = 0;
           if (eventStartHr !== null) {
             const eventHours = hourlyForecast.filter(h => {
               const hr = new Date(h.hour).getHours();
+              if (isOvernight) {
+                return hr >= eventStartHr || hr <= eventEndHr;
+              }
               return eventEndHr !== null ? (hr >= eventStartHr && hr <= eventEndHr) : (hr >= eventStartHr && hr < eventStartHr + 4);
             });
             if (eventHours.length > 0) {
