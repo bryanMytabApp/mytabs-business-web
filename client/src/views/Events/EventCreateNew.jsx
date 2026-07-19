@@ -1937,12 +1937,23 @@ const INIT = {
   eventCode: "",
 };
 
+// Factory function to create a fresh initial state (prevents shared references)
+const getInitState = () => ({
+  ...INIT,
+  tickets: [],
+  kpis: [],
+  checkpoints: [90, 30, 14, 7],
+  showDates: [],
+  extName: "",
+  freeName: "",
+});
+
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 const PLAN_LIMITS = { 1: 3, 2: 10, 3: 25 }; // Basic: 3, Plus: 10, Premium: 25
 
 const EventCreateNew = ({ editMode = false, editData = null, eventId = null, prefetchedOrg = null }) => {
   const [step, setStep] = useState(editMode ? 1 : 1);
-  const [form, setForm] = useState(editData || INIT);
+  const [form, setForm] = useState(editData || getInitState());
   const [done, setDone] = useState(false);
   const [, setSubmitting] = useState(false);
   const [maxAdSpaces, setMaxAdSpaces] = useState(3);
@@ -2066,7 +2077,15 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
   const next = () => setStep(s => s + 1);
   const back = () => setStep(s => s > 1 ? s - 1 : s);
   const goTo = n => setStep(n);
-  const reset = () => { setForm(INIT); setStep(1); setDone(false); };
+  const reset = () => {
+    // Revoke any blob URL to prevent memory leaks
+    if (form.media && form.media.startsWith("blob:")) {
+      URL.revokeObjectURL(form.media);
+    }
+    setForm(getInitState());
+    setStep(1);
+    setDone(false);
+  };
 
   // Track whether step change came from popstate (browser back/forward)
   const isPopStateRef = useRef(false);

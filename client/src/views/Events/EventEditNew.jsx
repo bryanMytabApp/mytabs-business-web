@@ -25,6 +25,10 @@ const EventEditNew = () => {
   const [, setLoading] = useState(true);
 
   useEffect(() => {
+    // Clear previous event data immediately when eventId changes
+    setEventData(null);
+    setPrefetchedOrg(null);
+
     const load = async () => {
       const token = localStorage.getItem("idToken");
       const userId = parseJwt(token);
