@@ -23,6 +23,8 @@ import shopActiveIcon from "../assets/menu/shopActive.svg";
 import shopInactiveIcon from "../assets/menu/shopInactive.svg";
 import configurationActiveIcon from "../assets/menu/configurationActive.svg";
 import configurationInactiveIcon from "../assets/menu/configurationInactive.svg";
+import aiDiscoveryActiveIcon from "../assets/menu/aiDiscoveryActive.svg";
+import aiDiscoveryInactiveIcon from "../assets/menu/aiDiscoveryInactive.svg";
 import logout from "../assets/menu/logout.svg";
 
 import {UserDataProvider} from "../utils/UserDataProvider";
@@ -99,6 +101,14 @@ const options = [
     requiresServiceId: "organization",
   },
   {
+    path: "/admin/ai-agents",
+    icon: {
+      active: aiDiscoveryActiveIcon,
+      inactive: aiDiscoveryInactiveIcon,
+    },
+    title: "AI Agents",
+  },
+  {
     path: "/admin/configuration",
     icon: configurationInactiveIcon,
     title: "Configuration",
@@ -150,6 +160,9 @@ export default function HomeView() {
     team:         { description: "Invite team members, assign roles and permissions, and manage access to your business tools", path: "/admin/configuration#team", icon: teamInactiveIcon, iconBg: "#D1C4E9", pricing: "Included" },
     configuration:{ description: "App settings, notification preferences, integrations, and account-level configuration options", path: "/admin/configuration", icon: configurationInactiveIcon, iconBg: "#CFD8DC", pricing: "Included" },
     "market-intelligence": { description: "University event intelligence platform with KPI tracking, AI recommendations, and sponsorship ROI dashboards", path: "/admin/service/market-intelligence", icon: analyticsInactiveIcon, iconBg: "#B3E5FC", pricing: "$1,299/month" },
+    "ai_agent_starter": { description: "Automated AI agents that discover, extract, and create draft events from trusted sources 24/7", path: "/admin/ai-agents", icon: aiDiscoveryInactiveIcon, iconBg: "#EBF5FF", pricing: "Free" },
+    "ai_agent_pro": { description: "Automated AI agents that discover, extract, and create draft events from trusted sources 24/7", path: "/admin/ai-agents", icon: aiDiscoveryInactiveIcon, iconBg: "#EBF5FF", pricing: "Free" },
+    "ai_agent_enterprise": { description: "Automated AI agents that discover, extract, and create draft events from trusted sources 24/7", path: "/admin/ai-agents", icon: aiDiscoveryInactiveIcon, iconBg: "#EBF5FF", pricing: "Free" },
   };
 
   // Fetch entitlements from the API on mount
@@ -192,7 +205,25 @@ export default function HomeView() {
             pricing: miMeta.pricing,
           });
         }
-        setHeaderServices(services);
+        // Consolidate all ai_agent_* entries into a single "AI Agents" entry.
+        // AI Agent access is now plan-based (included with subscription), not a separate purchase.
+        // Remove individual ai_agent_* entries
+        const filteredServices = services.filter((s) => !(s.id && s.id.startsWith("ai_agent_")));
+        // Add single consolidated AI Agents entry
+        const aiMeta = serviceUIMeta["ai_agent_starter"];
+        filteredServices.push({
+          id: "ai_agents",
+          name: "AI Agents",
+          type: "included",
+          status: "active",
+          subscribed: true,
+          description: aiMeta.description,
+          path: aiMeta.path,
+          icon: aiMeta.icon,
+          iconBg: aiMeta.iconBg,
+          pricing: "Included",
+        });
+        setHeaderServices(filteredServices);
       } catch (error) {
         console.error("Failed to load entitlements:", error);
         // On error, leave headerServices empty so the UI degrades gracefully
@@ -535,14 +566,14 @@ export default function HomeView() {
                             const categories = [...new Set(filtered.map((s) => {
                               if (["organization", "business", "team"].includes(s.id)) return "Management";
                               if (["ticketing", "shop"].includes(s.id)) return "Sales";
-                              if (["events"].includes(s.id)) return "Marketing";
+                              if (["events", "ai_agents"].includes(s.id)) return "Marketing";
                               if (["analytics", "market-intelligence"].includes(s.id)) return "Insights";
                               return "Settings";
                             }))];
                             const getCategory = (s) => {
                               if (["organization", "business", "team"].includes(s.id)) return "Management";
                               if (["ticketing", "shop"].includes(s.id)) return "Sales";
-                              if (["events"].includes(s.id)) return "Marketing";
+                              if (["events", "ai_agents"].includes(s.id)) return "Marketing";
                               if (["analytics", "market-intelligence"].includes(s.id)) return "Insights";
                               return "Settings";
                             };
