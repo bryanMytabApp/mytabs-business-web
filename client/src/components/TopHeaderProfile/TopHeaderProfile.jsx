@@ -115,14 +115,14 @@ export default function TopHeaderProfile({ onSignOut }) {
             // Build the full business list for the switcher
             const bizList = [];
             if (resolvedOrg.role === 'owner') {
-              // Primary = the organization itself
-              // Use the org name and the user's own userId (matches JWT → no org verification)
-              bizList.push({ linkedBusinessId: userId, name: resolvedOrg.name, isPayer: true });
+              // Primary = the organization's own business record (the payer business)
+              // Use the org ID so My Business page loads the correct org business data
+              bizList.push({ linkedBusinessId: resolvedOrg.id, name: resolvedOrg.name, isPayer: true });
             }
             bizList.push(...businesses.filter(b => {
               const id = b.linkedBusinessId || b._id;
-              // Exclude the user's own ID (already the Primary entry)
-              return id !== userId;
+              // Exclude the org payer ID and the user's own ID (already the Primary entry)
+              return id !== userId && id !== resolvedOrg.id;
             }).map(b => ({ ...b, isPayer: false })));
             setAllBusinesses(bizList);
 
