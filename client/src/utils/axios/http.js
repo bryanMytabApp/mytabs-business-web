@@ -72,6 +72,11 @@ http.interceptors.request.use( async function ( config ) {
       config.headers.Authorization = `Bearer ${token}`;
     }
   }
+  // Attach the selected business context header on all requests when a business is selected.
+  const selectedBizId = sessionStorage.getItem("selectedBusinessId");
+  if (selectedBizId) {
+    config.headers["X-Business-Id"] = selectedBizId;
+  }
   return config;
 }, function (error) {
   return Promise.reject(error);

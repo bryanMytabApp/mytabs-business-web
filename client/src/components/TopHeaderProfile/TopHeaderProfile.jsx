@@ -115,16 +115,15 @@ export default function TopHeaderProfile({ onSignOut }) {
             // Build the full business list for the switcher
             const bizList = [];
             if (resolvedOrg.role === 'owner') {
-              // Fetch the owner's actual business _id (not userId)
-              let ownerBizId = userId;
-              try {
-                const ownerBizRes = await getBusiness(userId);
-                const ownerBiz = ownerBizRes?.data || ownerBizRes;
-                if (ownerBiz?._id) ownerBizId = ownerBiz._id;
-              } catch (e) { /* fallback to userId */ }
-              bizList.push({ linkedBusinessId: ownerBizId, name: resolvedOrg.name, isPayer: true });
+              // Primary = the organization itself
+              // Use the org name and the user's own userId (matches JWT → no org verification)
+              bizList.push({ linkedBusinessId: userId, name: resolvedOrg.name, isPayer: true });
             }
-            bizList.push(...businesses.filter(b => (b.linkedBusinessId || b._id) !== userId));
+            bizList.push(...businesses.filter(b => {
+              const id = b.linkedBusinessId || b._id;
+              // Exclude the user's own ID (already the Primary entry)
+              return id !== userId;
+            }).map(b => ({ ...b, isPayer: false })));
             setAllBusinesses(bizList);
 
             // Default selection if none saved
@@ -132,9 +131,20 @@ export default function TopHeaderProfile({ onSignOut }) {
             console.log("[TopHeaderProfile] savedBiz:", savedBiz, "bizList:", bizList.map(b => ({ id: b.linkedBusinessId, name: b.name })));
             if (savedBiz && bizList.some(b => (b.linkedBusinessId || b._id) === savedBiz)) {
               setSelectedBusinessId(savedBiz);
-              // Sync displayed business name with the selected business
-              const selectedBiz = bizList.find(b => (b.linkedBusinessId || b._id) === savedBiz);
-              if (selectedBiz) resolvedBiz = { name: selectedBiz.name || "" };
+              // Sync displayed business name — fetch actual name from API for accuracy
+              try {
+                const bizDataRes = await getBusiness(savedBiz);
+                const bizData = bizDataRes?.data || bizDataRes;
+                if (bizData?.name || bizData?.businessName) {
+                  resolvedBiz = { name: bizData.name || bizData.businessName };
+                } else {
+                  const selectedBiz = bizList.find(b => (b.linkedBusinessId || b._id) === savedBiz);
+                  if (selectedBiz) resolvedBiz = { name: selectedBiz.name || "" };
+                }
+              } catch (e) {
+                const selectedBiz = bizList.find(b => (b.linkedBusinessId || b._id) === savedBiz);
+                if (selectedBiz) resolvedBiz = { name: selectedBiz.name || "" };
+              }
             } else if (bizList.length > 0) {
               // Only set default if nothing is saved — never overwrite an existing value
               if (!savedBiz) {
@@ -248,8 +258,14 @@ export default function TopHeaderProfile({ onSignOut }) {
     // Update displayed business name
     const biz = allBusinesses.find(b => (b.linkedBusinessId || b._id) === bizId);
     if (biz) setBusiness({ name: biz.name || biz.businessName || "" });
-    // Navigate to the dashboard home — avoids staying on a page that belongs to the old business
-    window.location.href = "/admin/home";
+    // Notify other components of the business context change
+    window.dispatchEvent(new CustomEvent("businessContextChanged", { detail: { businessId: bizId } }));
+    // Force full page reload to re-fetch all data with new business context
+    if (window.location.pathname === "/admin/home") {
+      window.location.reload();
+    } else {
+      window.location.href = "/admin/home";
+    }
   };
 
   const goTo = (hash) => {
