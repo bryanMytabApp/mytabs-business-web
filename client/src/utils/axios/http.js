@@ -73,8 +73,9 @@ http.interceptors.request.use( async function ( config ) {
     }
   }
   // Attach the selected business context header on all requests when a business is selected.
+  // Allow individual requests to opt out via config.skipBusinessContext = true
   const selectedBizId = sessionStorage.getItem("selectedBusinessId");
-  if (selectedBizId) {
+  if (selectedBizId && !config.skipBusinessContext) {
     config.headers["X-Business-Id"] = selectedBizId;
   }
   return config;

@@ -190,7 +190,7 @@ const HomeMainView = () => {
   }, []);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (userId) fetchDashboardData(); }, [userId]);
+  useEffect(() => { console.log('[HomeMainView] 🚀 useEffect FIRED, userId:', userId); if (userId) fetchDashboardData(); }, [userId]);
 
   const handleSaveGoals = async () => {
     if (!businessData) return;
@@ -249,10 +249,18 @@ const HomeMainView = () => {
       // Fetch business + events in parallel for speed
       const savedBizId = sessionStorage.getItem("selectedBusinessId");
       console.log("📊 Dashboard: using selectedBusinessId from sessionStorage:", savedBizId);
-      const [businessRes, eventsRes] = await Promise.all([
-        getBusiness(userId, savedBizId || undefined).catch((err) => { console.error("❌ Dashboard: getBusiness failed:", err); return null; }),
-        getEventsByUserId(userId).catch(() => ({ data: [] })),
-      ]);
+      
+      // For linked org businesses, the savedBizId is the owner's userId.
+      // Try with the current user first, then fall back to using the savedBizId as the owner.
+      let businessRes = await getBusiness(userId, savedBizId || undefined).catch((err) => { console.error("❌ Dashboard: getBusiness failed:", err); return null; });
+      if ((!businessRes?.data || !businessRes.data._id) && savedBizId && savedBizId !== userId) {
+        businessRes = await getBusiness(savedBizId).catch(() => null);
+      }
+      const eventsRes = await getEventsByUserId(userId).catch(() => ({ data: [] }));
+      // The X-Business-Id header (set by axios interceptor) tells the backend
+      // which business context to use. No need for a second fetch.
+      let allEvents = eventsRes.data || [];
+      console.log("📊 Dashboard: events fetched:", allEvents.length, "X-Business-Id was:", savedBizId);
 
       console.log("📊 Dashboard: getBusiness response:", businessRes?.data);
 
@@ -281,7 +289,7 @@ const HomeMainView = () => {
         setEditingActivitySettings(resolvedBusiness.activitySettings);
       }
 
-      const events = eventsRes.data || [];
+      const events = allEvents;
       // Filter events to only those belonging to the selected business.
       // Events without a businessId are "untagged" and belong to the owner's
       // PRIMARY business (the one with userId as partition key, not linked businesses).
@@ -295,6 +303,7 @@ const HomeMainView = () => {
       const filteredEvents = savedBizId
         ? events.filter(e => {
             if (e.businessId === savedBizId) return true;
+            if (e.userId === savedBizId) return true;
             // Untagged events only belong to the primary business
             if (!e.businessId && savedBizId === primaryBizId) return true;
             return false;

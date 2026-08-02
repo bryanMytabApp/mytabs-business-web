@@ -1,5 +1,4 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { toast } from "react-toastify";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { getImportPresignedUrl, importMembers } from "../../services/eventMemberService";
@@ -30,7 +29,7 @@ const isValidEmail = (email) => {
  */
 const nameFromEmail = (email) => {
   const prefix = email.split('@')[0] || '';
-  return prefix.replace(/[._+\-]/g, ' ').trim() || email;
+  return prefix.replace(/[._+-]/g, ' ').trim() || email;
 };
 
 /**
@@ -212,7 +211,6 @@ const ImportMembersModal = ({ isOpen, onClose, eventId, onImportComplete, onUplo
   const [error, setError] = useState(null);
   const [parsedData, setParsedData] = useState(null); // { records, errors, truncated }
   const [importResult, setImportResult] = useState(null);
-  const [showErrors, setShowErrors] = useState(false);
   const [previewTab, setPreviewTab] = useState('valid'); // 'valid' | 'errors'
   const fileInputRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
@@ -223,16 +221,15 @@ const ImportMembersModal = ({ isOpen, onClose, eventId, onImportComplete, onUplo
     setError(null);
     setParsedData(null);
     setImportResult(null);
-    setShowErrors(false);
     setPreviewTab('valid');
     setDragOver(false);
   };
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (step === 'uploading') return;
     reset();
     onClose();
-  };
+  }, [step, onClose]);
 
   // Close on Escape key
   useEffect(() => {
@@ -246,7 +243,7 @@ const ImportMembersModal = ({ isOpen, onClose, eventId, onImportComplete, onUplo
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, step]);
+  }, [isOpen, handleClose]);
 
   const validateFile = (f) => {
     if (!f) return 'No file selected';
@@ -275,7 +272,7 @@ const ImportMembersModal = ({ isOpen, onClose, eventId, onImportComplete, onUplo
     }
   };
 
-  const handleFileSelect = async (f) => {
+  const handleFileSelect = useCallback(async (f) => {
     const err = validateFile(f);
     if (err) {
       setError(err);
@@ -297,7 +294,7 @@ const ImportMembersModal = ({ isOpen, onClose, eventId, onImportComplete, onUplo
     }
 
     setStep('preview');
-  };
+  }, []);
 
   const handleInputChange = (e) => {
     const f = e.target.files?.[0];
@@ -309,7 +306,7 @@ const ImportMembersModal = ({ isOpen, onClose, eventId, onImportComplete, onUplo
     setDragOver(false);
     const f = e.dataTransfer.files?.[0];
     if (f) handleFileSelect(f);
-  }, []);
+  }, [handleFileSelect]);
 
   const handleDragOver = (e) => { e.preventDefault(); setDragOver(true); };
   const handleDragLeave = () => { setDragOver(false); };
@@ -760,7 +757,6 @@ const dismissAllContainerStyle = { display: 'flex', justifyContent: 'flex-end', 
 const dismissAllBtn = { fontFamily: 'Outfit', fontSize: '12px', fontWeight: 500, color: '#6B7280', background: 'none', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '4px 12px', cursor: 'pointer' };
 const moreRowsStyle = { fontFamily: 'Outfit', fontSize: '12px', color: '#6B7280', textAlign: 'center', padding: '8px 0', margin: 0 };
 // Errors section styles
-const errorsContainerStyle = { marginBottom: '12px' };
 const errorTableCellRow = { width: '40px', fontFamily: 'Outfit', fontSize: '12px', fontWeight: 500, color: '#6B7280' };
 
 // Result error details

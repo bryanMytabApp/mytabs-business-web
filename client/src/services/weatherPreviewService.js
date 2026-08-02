@@ -1,4 +1,3 @@
-import http from "../utils/axios/http";
 import axios from "axios";
 import configJSON from "../config.json";
 

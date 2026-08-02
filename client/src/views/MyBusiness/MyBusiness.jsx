@@ -514,6 +514,7 @@ const MyBusiness = () => {
   }, []);
 
   const inputref = useRef(null);
+  const uploadedFileRef = useRef(null);
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
 
@@ -534,10 +535,19 @@ const MyBusiness = () => {
     
     // Run all API calls in parallel instead of sequentially
     // Try with businessId first; if it returns empty (team member accessing
-    // a business they don't own), fall back to letting the Lambda resolve via access table.
+    // a business they don't own), try using the businessId as the owner userId
+    // (for linked org businesses where linkedBusinessId == owner's userId).
+    // Final fallback: let the Lambda resolve via the current user's access table.
     const businessPromise = getBusiness(userId, targetBusinessId || undefined)
       .then(res => {
         if (res?.data && res.data._id) return res;
+        // Try using targetBusinessId as the owner's userId (linked org business)
+        if (targetBusinessId && targetBusinessId !== userId) {
+          return getBusiness(targetBusinessId).then(res2 => {
+            if (res2?.data && res2.data._id) return res2;
+            return getBusiness(userId);
+          });
+        }
         // Fallback: let Lambda resolve through User_Business_Access
         return getBusiness(userId);
       });
@@ -644,6 +654,17 @@ const MyBusiness = () => {
     } else {
       init(routeBusinessId);
     }
+
+    // Listen for business context changes from the business switcher
+    const handleBusinessContextChange = (e) => {
+      const newBizId = e.detail?.businessId;
+      if (newBizId && newBizId !== selectedBusinessId) {
+        setSelectedBusinessId(newBizId);
+        init(newBizId);
+      }
+    };
+    window.addEventListener("businessContextChanged", handleBusinessContextChange);
+    return () => window.removeEventListener("businessContextChanged", handleBusinessContextChange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -730,31 +751,36 @@ const MyBusiness = () => {
       }
       // Upload logo if changed - bump iconUpdatedAt so caches (CloudFront / mobile) refresh
       if (uploadedImage) {
-        const presignedRes = await getPresignedUrlForBusiness(userId);
+        // Use item.userId for the S3 key — this matches what getBusinessPicture() uses
+        // to display the logo: getBusinessPicture(item.userId || userId)
+        const uploadBizId = item.userId || selectedBusinessId || userId;
+        const presignedRes = await getPresignedUrlForBusiness(uploadBizId);
         const presignedUrl = presignedRes.data;
-        const blob = await (await fetch(uploadedImage)).blob();
-        await axios.put(presignedUrl, blob, { headers: { 'Content-Type': blob.type } });
+        const file = uploadedFileRef.current;
+        await axios.put(presignedUrl, file, { headers: { 'Content-Type': file.type } });
         updatedItem.iconUpdatedAt = Date.now();
       }
       // Upload gallery photos
       for (const galleryId of Object.keys(photoGallery)) {
         const photos = photoGallery[galleryId] || [];
         const newPhotos = photos.filter(p => p.file);
+        const uploadBizId = item.userId || selectedBusinessId || userId;
         for (let i = 0; i < newPhotos.length; i++) {
           const photo = newPhotos[i];
-          const presignedRes = await getPresignedUrlForGalleryPhoto(userId, galleryId, photos.indexOf(photo));
+          const presignedRes = await getPresignedUrlForGalleryPhoto(uploadBizId, galleryId, photos.indexOf(photo));
           await axios.put(presignedRes.data, photo.file, { headers: { 'Content-Type': photo.file.type } });
         }
         updatedItem.photoGallery = updatedItem.photoGallery || {};
         updatedItem.photoGallery[galleryId] = photos.length;
       }
       // Upload menus
+      const menuUploadBizId = item.userId || selectedBusinessId || userId;
       for (let i = 1; i <= 4; i++) {
         if (menuFiles[`menu${i}`]) {
-          const presignedRes = await getPresignedUrlForMenu(userId, i);
+          const presignedRes = await getPresignedUrlForMenu(menuUploadBizId, i);
           await axios.put(presignedRes.data, menuFiles[`menu${i}`], { headers: { 'Content-Type': menuFiles[`menu${i}`].type } });
           // Add cache-busting timestamp so updated menus refresh on mobile
-          updatedItem[`menuUrl${i}`] = `${config.bucketUrl}business/${userId}/menu${i}?v=${Date.now()}`;
+          updatedItem[`menuUrl${i}`] = `${config.bucketUrl}business/${menuUploadBizId}/menu${i}?v=${Date.now()}`;
         }
       }
       await updateBusiness(updatedItem);
@@ -762,7 +788,9 @@ const MyBusiness = () => {
       setOriginalItem(JSON.parse(JSON.stringify(updatedItem)));
       setOriginalSubcategories([...subcategories]);
       setOriginalPhotoGallery(JSON.parse(JSON.stringify(photoGallery)));
+      if (uploadedImage) URL.revokeObjectURL(uploadedImage);
       setUploadedImage(null);
+      uploadedFileRef.current = null;
       setMenuFiles({ menu1: null, menu2: null, menu3: null, menu4: null });
       toast.success("Business updated successfully!");
     } catch (err) {
@@ -774,10 +802,15 @@ const MyBusiness = () => {
 
   const processFile = (e) => {
     const file = e.target.files[0];
+    console.log('[MyBusiness:processFile] file selected:', file?.name, 'type:', file?.type, 'size:', file?.size);
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setUploadedImage(ev.target.result);
-      reader.readAsDataURL(file);
+      const previewUrl = URL.createObjectURL(file);
+      console.log('[MyBusiness:processFile] objectURL created:', previewUrl);
+      setUploadedImage(previewUrl);
+      uploadedFileRef.current = file;
+      console.log('[MyBusiness:processFile] state updated, ref set');
+    } else {
+      console.log('[MyBusiness:processFile] no file in event');
     }
   };
 
@@ -928,9 +961,10 @@ const MyBusiness = () => {
               <Box sx={{ display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 2, alignItems: 'stretch' }}>
                 {/* Business Image Card */}
                 <Box sx={{ flex: { xs: 1, md: 'none' }, backgroundColor: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 0, gap: 1.5 }}>
-                  <Box sx={{ width: '100%', flex: 1, borderRadius: '12px', overflow: 'hidden', backgroundColor: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', minHeight: { xs: '100px', md: '160px' } }} onClick={() => { const src = uploadedImage || (item._id ? getBusinessPicture(item.userId || userId, 'full', item.iconUpdatedAt) : null); if (src) setLogoPreviewOpen(true); }}>
+                  <Box sx={{ width: '100%', flex: 1, borderRadius: '12px', overflow: 'hidden', backgroundColor: (uploadedImage || item._id) ? '#ffffff' : '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', minHeight: { xs: '100px', md: '160px' } }} onClick={() => { const src = uploadedImage || (item._id ? getBusinessPicture(item.userId || userId, 'full', item.iconUpdatedAt) : null); if (src) setLogoPreviewOpen(true); }}>
                     {(() => {
                       const logoSrc = uploadedImage || (item._id ? getBusinessPicture(item.userId || userId, 'full', item.iconUpdatedAt) : null);
+                      console.log('[MyBusiness:render] logoSrc:', logoSrc ? logoSrc.substring(0, 60) + '...' : null, 'uploadedImage:', !!uploadedImage);
                       return logoSrc ? (
                         <img src={logoSrc} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (

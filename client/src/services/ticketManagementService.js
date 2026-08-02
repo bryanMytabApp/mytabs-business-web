@@ -166,7 +166,7 @@ export const getEventTicketStats = async (eventId) => {
   }
 };
 
-export default {
+const ticketManagementService = {
   cancelTicket,
   updateCustomerDetails,
   resendTicket,
@@ -175,3 +175,5 @@ export default {
   getTicketsByEvent,
   getEventTicketStats
 };
+
+export default ticketManagementService;

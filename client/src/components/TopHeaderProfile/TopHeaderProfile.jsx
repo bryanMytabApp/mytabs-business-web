@@ -256,9 +256,13 @@ export default function TopHeaderProfile({ onSignOut }) {
   const handleBusinessSwitch = (bizId) => {
     setSelectedBusinessId(bizId);
     sessionStorage.setItem("selectedBusinessId", bizId);
-    // Update displayed business name
+    // Store the owner userId for the selected business
     const biz = allBusinesses.find(b => (b.linkedBusinessId || b._id) === bizId);
-    if (biz) setBusiness({ name: biz.name || biz.businessName || "" });
+    if (biz) {
+      setBusiness({ name: biz.name || biz.businessName || "" });
+      // Cache the owner userId so event fetches use the right ID
+      sessionStorage.setItem("selectedBusinessUserId", biz.userId || bizId);
+    }
     // Notify other components of the business context change
     window.dispatchEvent(new CustomEvent("businessContextChanged", { detail: { businessId: bizId } }));
     // Force full page reload to re-fetch all data with new business context

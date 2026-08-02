@@ -96,7 +96,8 @@ const countryCode = 'US';
 const PLAN_LIMITS = {
   1: 3,   // Basic: 3 ad spaces
   2: 10,  // Plus: 10 ad spaces
-  3: 25   // Premium: 25 ad spaces
+  3: 25,  // Premium: 25 ad spaces
+  4: Infinity  // Organization: Unlimited
 }
 
 const baseTicket = {

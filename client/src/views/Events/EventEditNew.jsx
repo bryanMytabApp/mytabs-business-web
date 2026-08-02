@@ -34,16 +34,17 @@ const EventEditNew = () => {
       const userId = parseJwt(token);
       if (!userId || !eventId) { setLoading(false); return; }
 
+      // The X-Business-Id header (set by axios interceptor from sessionStorage)
+      // tells the backend which business context to use. Just pass userId — the
+      // backend resolves the effective userId from the header.
       const savedBizId = sessionStorage.getItem("selectedBusinessId");
       let apiUserId = userId;
 
       // Run org lookup and event fetch in PARALLEL
-      // We optimistically fetch the event with the logged-in userId,
-      // and resolve the correct apiUserId from org data simultaneously
       const orgPromise = getMyOrganizations().catch(() => null);
       
-      // Start event fetch immediately — most of the time the logged-in user owns it
-      let eventPromise = getEvent(userId, eventId).catch(() => null);
+      // Start event fetch — backend will use X-Business-Id header for context
+      let eventPromise = getEvent(apiUserId, eventId).catch(() => null);
 
       const orgRes = await orgPromise;
       const orgs = orgRes?.data?.organizations || orgRes?.data || [];
@@ -62,8 +63,8 @@ const EventEditNew = () => {
         const targetBizId = savedBizId || (businesses.length > 0 ? businesses[0].linkedBusinessId : null);
         const selectedBiz = businesses.find(b => b.linkedBusinessId === targetBizId);
 
-        if (selectedBiz && selectedBiz.userId && selectedBiz.userId !== userId) {
-          apiUserId = selectedBiz.userId;
+        if (selectedBiz && (selectedBiz.userId || selectedBiz.linkedBusinessId) && (selectedBiz.userId || selectedBiz.linkedBusinessId) !== userId) {
+          apiUserId = selectedBiz.userId || selectedBiz.linkedBusinessId;
           // Re-fetch event with correct userId (the first fetch may have failed)
           eventPromise = getEvent(apiUserId, eventId).catch(() => null);
         }
@@ -71,17 +72,23 @@ const EventEditNew = () => {
 
       try {
         const res = await eventPromise;
+        let ev;
         if (!res?.data) {
-          // If optimistic fetch failed and we have a different apiUserId, try once more
+          // If optimistic fetch failed, try with the selected business ID or apiUserId
           if (apiUserId !== userId) {
             const retry = await getEvent(apiUserId, eventId);
             if (!retry?.data) throw new Error("Event not found");
-            var ev = retry.data;
+            ev = retry.data;
+          } else if (savedBizId && savedBizId !== userId) {
+            // Try with selectedBusinessId as a last resort
+            const retry = await getEvent(savedBizId, eventId);
+            if (!retry?.data) throw new Error("Event not found");
+            ev = retry.data;
           } else {
             throw new Error("Event not found");
           }
         } else {
-          var ev = res.data;
+          ev = res.data;
         }
 
         // Map API event data to the form shape used by EventCreateNew
@@ -102,7 +109,7 @@ const EventEditNew = () => {
           zip: ev.zipCode || ev.state ? `${ev.state || ""} ${ev.zipCode || ""}`.trim() : "",
           latitude: ev.latitude || null,
           longitude: ev.longitude || null,
-          media: getEventPicture(ev._id),
+          media: ev.createdByAi && ev.imageUrl ? ev.imageUrl : getEventPicture(ev._id),
           mediaFile: null,
           tickType: ev.ticketType === "tabs" ? "tabs" : ev.ticketType === "external" ? "ext" : ev.tickets?.some(t => t.option === "Tabs Tickets" || t.option === "Tickets with Tabs") ? "tabs" : ev.tickets?.some(t => t.option === "External link") ? "ext" : "none",
           extUrl: ev.tickets?.find(t => t.option === "External link")?.link1 || "",
@@ -133,6 +140,9 @@ const EventEditNew = () => {
           visibility: ev.visibility || "public",
           eventCode: ev.eventCode || "",
           businessId: ev.businessId || "",
+          createdByAi: ev.createdByAi || false,
+          sourceUrl: ev.sourceUrl || "",
+          agentId: ev.agentId || "",
         };
 
         setEventData(formData);

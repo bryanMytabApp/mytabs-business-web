@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import {
   getSavedLists,
@@ -40,9 +40,6 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import axios from 'axios';
 import ImportMembersModal from '../Events/ImportMembersModal';
 
-const MAX_FILE_SIZE_MB = 5;
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-const ACCEPTED_EXTENSIONS = ['xlsx', 'csv', 'txt'];
 const LIST_NAME_REGEX = /^[A-Za-z0-9 \-_]+$/;
 const MEMBER_CAP = 5000;
 
@@ -50,7 +47,7 @@ const MEMBER_CAP = 5000;
 const autoNameFromEmail = (email) => {
   if (!email || !email.includes('@')) return '';
   const prefix = email.split('@')[0] || '';
-  return prefix.replace(/[._+\-]/g, ' ').trim();
+  return prefix.replace(/[._+-]/g, ' ').trim();
 };
 
 // Validation helpers
@@ -125,9 +122,8 @@ const MemberListsTab = ({ selectedBusinessId, userRole }) => {
   const [removingMember, setRemovingMember] = useState(false);
 
   // Import
-  const [importing, setImporting] = useState(false);
+  const [importing] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const fileInputRef = useRef(null);
 
   // Fetch all lists
   const fetchLists = async (autoExpandFirst = false) => {

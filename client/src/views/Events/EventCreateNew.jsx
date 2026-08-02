@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import ReactDOM from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import moment from "moment";
 import QRCode from "react-qr-code";
@@ -745,7 +745,7 @@ function P_ShowDates({ f, u, next, back, maxAdSpaces = 3, existingEventsCount = 
       toast.error("At least one show date must have a date, start time, and end time");
       return;
     }
-    if (dates.length > remainingSpaces && remainingSpaces > 0) {
+    if (dates.length > remainingSpaces && remainingSpaces > 0 && remainingSpaces !== Infinity) {
       toast.error(`Your plan allows ${maxAdSpaces} total ad spaces. You have ${existingEventsCount} existing events, so you can add up to ${remainingSpaces} show dates.`);
       return;
     }
@@ -756,9 +756,16 @@ function P_ShowDates({ f, u, next, back, maxAdSpaces = 3, existingEventsCount = 
     <div className="ecn-page">
       <button className="ecn-bb" style={{ marginBottom: 20 }} onClick={back}><I n="chevL" s={13} w={2.5} /> Go back</button>
 
-      {dates.length > 0 && (
+      {dates.length > 0 && maxAdSpaces !== Infinity && (
         <div className="ecn-sbar">
           {[{ v: dates.length, l: "Total Dates" }, { v: dates.filter(d => d.status === "scheduled").length, l: "Scheduled" }, { v: `${remainingSpaces - dates.length >= 0 ? remainingSpaces - dates.length : 0}`, l: "Remaining Spaces" }, { v: maxAdSpaces, l: "Plan Capacity" }].map(s => (
+            <div key={s.l} className="ecn-sbi"><div className="ecn-sbv">{s.v}</div><div className="ecn-sbl">{s.l}</div></div>
+          ))}
+        </div>
+      )}
+      {dates.length > 0 && maxAdSpaces === Infinity && (
+        <div className="ecn-sbar">
+          {[{ v: dates.length, l: "Total Dates" }, { v: dates.filter(d => d.status === "scheduled").length, l: "Scheduled" }, { v: "∞", l: "Plan Capacity" }].map(s => (
             <div key={s.l} className="ecn-sbi"><div className="ecn-sbv">{s.v}</div><div className="ecn-sbl">{s.l}</div></div>
           ))}
         </div>
@@ -811,12 +818,12 @@ function P_ShowDates({ f, u, next, back, maxAdSpaces = 3, existingEventsCount = 
       ))}
 
       <button className="ecn-sdadd" onClick={() => {
-        if (dates.length >= remainingSpaces && remainingSpaces > 0) {
+        if (dates.length >= remainingSpaces && remainingSpaces > 0 && remainingSpaces !== Infinity) {
           toast.warning(`Your plan allows ${maxAdSpaces} ad spaces total. You've used ${existingEventsCount} already.`);
           return;
         }
         add();
-      }} style={dates.length >= remainingSpaces && remainingSpaces > 0 ? { opacity: 0.5, cursor: "not-allowed" } : {}}><I n="plus" s={15} c="var(--ted)" w={2} /> Add another date {remainingSpaces > 0 ? `(${Math.max(0, remainingSpaces - dates.length)} remaining)` : ""}</button>
+      }} style={dates.length >= remainingSpaces && remainingSpaces > 0 && remainingSpaces !== Infinity ? { opacity: 0.5, cursor: "not-allowed" } : {}}><I n="plus" s={15} c="var(--ted)" w={2} /> Add another date {remainingSpaces > 0 && remainingSpaces !== Infinity ? `(${Math.max(0, remainingSpaces - dates.length)} remaining)` : ""}</button>
       <div className="ecn-foot">
         <button className="ecn-bb" onClick={back}><I n="chevL" s={13} w={2.5} /> Go back</button>
         <button className="ecn-bn" onClick={handleNext}>Next →</button>
@@ -1268,6 +1275,7 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
     const controller = new AbortController();
     fetchWeather(controller.signal);
     return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lat, lng, f.date]);
 
   const handleRetry = () => {
@@ -1372,7 +1380,7 @@ function P_Weather({ f, u, next, back, goTo, steps, stepNum }) {
       </div>
 
       {/* Current Conditions + Event Time Conditions — 2 column layout */}
-      <div style={{ display: "grid", gridTemplateColumns: (currentConditions && (hourlyForecast && hourlyForecast.length > 0 || historical)) ? "1fr 1fr" : "1fr", gap: 14, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: (currentConditions && ((hourlyForecast && hourlyForecast.length > 0) || historical)) ? "1fr 1fr" : "1fr", gap: 14, marginBottom: 16 }}>
         {/* Current Conditions */}
         {currentConditions && (
           <div style={{ background: "rgba(91,184,193,0.06)", borderRadius: 12, padding: "16px 18px" }}>
@@ -1949,7 +1957,7 @@ const getInitState = () => ({
 });
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
-const PLAN_LIMITS = { 1: 3, 2: 10, 3: 25 }; // Basic: 3, Plus: 10, Premium: 25
+const PLAN_LIMITS = { 1: 3, 2: 10, 3: 25, 4: Infinity }; // Basic: 3, Plus: 10, Premium: 25, Organization: Unlimited
 
 const EventCreateNew = ({ editMode = false, editData = null, eventId = null, prefetchedOrg = null }) => {
   const [step, setStep] = useState(editMode ? 1 : 1);
@@ -1966,6 +1974,46 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
     (editMode && editData?.businessId) || sessionStorage.getItem("selectedBusinessId") || null
   );
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Pre-fill form from AI draft data passed via router state
+  useEffect(() => {
+    const draft = location.state?.draft;
+    if (draft && !editMode) {
+      // Convert 24h time to form's expected format (HH:MM)
+      let startTime = draft.time || "";
+      let endTime = draft.endTime || "";
+      // If no end time, estimate 3 hours after start
+      if (!endTime && startTime) {
+        const [h, m] = startTime.split(":");
+        const endHour = (parseInt(h) + 3) % 24;
+        endTime = `${String(endHour).padStart(2, "0")}:${m || "00"}`;
+      }
+      // If no start time at all, default to full day (9 AM - 7 PM)
+      if (!startTime) {
+        startTime = "09:00";
+        endTime = "19:00";
+      }
+      setForm(prev => ({
+        ...prev,
+        adType: "event",
+        name: draft.title || "",
+        cat: draft.category || prev.cat,
+        date: draft.date ? draft.date.split("T")[0] : "",
+        t1: startTime,
+        t2: endTime,
+        desc: draft.description || "",
+        venue: draft.venue || "",
+        loc: (draft.address || draft.city) ? "new" : "biz",
+        addr: draft.address || "",
+        city: draft.city || "",
+        zip: draft.state ? `${draft.state}${draft.zip ? " " + draft.zip : ""}` : "",
+        media: draft.imageUrl || "",
+        extUrl: draft.eventUrl || "",
+        tickType: draft.eventUrl ? "ext" : "",
+      }));
+    }
+  }, [location.state, editMode]);
 
   // Fetch subscription level and existing events count on mount
   useEffect(() => {
@@ -2007,6 +2055,10 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
             const subItem = systemSubsRes?.data?.find(el => el.priceId === customerSubRes.data.priceId);
             if (subItem) subscriptionLevel = subItem.level;
           }
+        }
+        // Organization-tier businesses get unlimited event creation
+        if (orgData && orgData.orgs?.length > 0) {
+          subscriptionLevel = 4;
         }
         setMaxAdSpaces(PLAN_LIMITS[subscriptionLevel] || 3);
 
@@ -2110,6 +2162,7 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
         activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
   // Handle browser back/forward button
@@ -2328,9 +2381,14 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
             <div className="ecn-header">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <div className="ecn-pg-h" style={{ marginBottom: 0 }}>{editMode ? "Edit Event" : "Create Event"}</div>
+                {editMode && form.createdByAi && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(0,180,216,0.12)', color: '#0099bb', borderRadius: 99, padding: '5px 12px', fontSize: 12, fontWeight: 600 }}>
+                    🤖 AI Published{form.sourceUrl && <a href={form.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#0077cc', marginLeft: 4, textDecoration: 'underline' }}>Source ↗</a>}
+                  </div>
+                )}
               </div>
               <div className="ecn-steps" ref={stepsNavRef} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button className="ecn-bb" onClick={() => navigate("/admin/my-events")} style={{ margin: 0 }}><I n="chevL" s={13} w={2.5} /> <span className="ecn-bb-full">Back to Events</span><span className="ecn-bb-short">Back</span></button>
+                <button className="ecn-bb" onClick={() => location.state?.draft ? navigate(-1) : navigate("/admin/my-events")} style={{ margin: 0 }}><I n="chevL" s={13} w={2.5} /> <span className="ecn-bb-full">{location.state?.draft ? "Back to Agent" : "Back to Events"}</span><span className="ecn-bb-short">Back</span></button>
                 {steps.map(s => (
                   <button key={s.n} className={`ecn-step-btn${step === s.n ? " cur" : step > s.n ? " done" : ""}`} data-step={s.n}>
                     {step > s.n ? "\u2713 " : ""}{s.l}

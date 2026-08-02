@@ -1,0 +1,10 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Magnifying glass -->
+  <circle cx="10.5" cy="10.5" r="6" stroke="#2563EB" stroke-width="2" fill="#2563EB" fill-opacity="0.15"/>
+  <line x1="15" y1="15" x2="20" y2="20" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- AI text inside the glass -->
+  <text x="7.5" y="13.5" font-family="Arial, sans-serif" font-size="7" font-weight="bold" fill="#2563EB">AI</text>
+  <!-- Sparkles -->
+  <path d="M18 3l0.5 1.5L20 5l-1.5 0.5L18 7l-0.5-1.5L16 5l1.5-0.5L18 3z" fill="#2563EB"/>
+  <path d="M21 8l0.35 1L22.5 9.35l-1.15 0.35L21 11l-0.35-1.3L19.5 9.35l1.15-0.35L21 8z" fill="#2563EB" opacity="0.7"/>
+</svg>

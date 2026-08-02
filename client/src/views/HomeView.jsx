@@ -135,6 +135,7 @@ export const LoaderHome = () => {
 export default function HomeView() {
   const location = useLocation();
   const navigate = useNavigate();
+  console.log('[HomeView] 🏠 RENDER — location.pathname:', location.pathname);
   const sessionManagerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -698,7 +699,7 @@ export default function HomeView() {
               </div>
             </div>
             <div className='ViewContent'>
-              <Outlet />
+              <Outlet key={location.key} />
             </div>
           </div>
         </div>

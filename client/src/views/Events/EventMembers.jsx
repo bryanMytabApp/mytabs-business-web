@@ -43,17 +43,29 @@ const EventMembers = ({ eventId, visibility, businessId: businessIdProp, readOnl
   const [confirmRemove, setConfirmRemove] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
-  const [importing, setImporting] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showSaveListDialog, setShowSaveListDialog] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
 
+  const fetchMembers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getMembers(eventId);
+      setMembers(res.data?.members || res.data || []);
+    } catch (error) {
+      console.error('Error fetching event members:', error);
+      toast.error('Failed to load event members');
+    } finally {
+      setLoading(false);
+    }
+  }, [eventId]);
+
   useEffect(() => {
     if (visibility === 'private' && eventId) {
       fetchMembers();
     }
-  }, [eventId, visibility]);
+  }, [eventId, visibility, fetchMembers]);
 
   // Lightweight polling: refresh members every 10s while page is visible.
   // Pauses when tab is hidden to avoid wasting memory/network.
@@ -125,19 +137,6 @@ const EventMembers = ({ eventId, visibility, businessId: businessIdProp, readOnl
     });
     setOpenDropdown(memberId);
   }, [openDropdown]);
-
-  const fetchMembers = async () => {
-    setLoading(true);
-    try {
-      const res = await getMembers(eventId);
-      setMembers(res.data?.members || res.data || []);
-    } catch (error) {
-      console.error('Error fetching event members:', error);
-      toast.error('Failed to load event members');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleAddMember = async () => {
     if (!newUserId.trim()) {
@@ -533,18 +532,6 @@ const addButtonStyle = {
   border: 'none',
   background: '#00AAD6',
   color: 'white',
-  fontSize: '14px',
-  fontFamily: 'Outfit',
-  fontWeight: 500,
-  whiteSpace: 'nowrap',
-};
-
-const importButtonStyle = {
-  padding: '10px 18px',
-  borderRadius: '8px',
-  border: '1px solid #00AAD6',
-  background: 'transparent',
-  color: '#00AAD6',
   fontSize: '14px',
   fontFamily: 'Outfit',
   fontWeight: 500,

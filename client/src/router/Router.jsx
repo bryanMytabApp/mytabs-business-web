@@ -113,6 +113,12 @@ const OrganizationList = lazy(() => import("../views/Organization/OrganizationLi
 const OrganizationDashboard = lazy(() => import("../views/Organization/OrganizationDashboard"));
 const CreateOrganization = lazy(() => import("../views/Organization/CreateOrganization"));
 
+// AI Agent views
+const AiAgentSubscribe = lazy(() => import("../views/AiAgents/AiAgentSubscribe"));
+const AiAgentDashboard = lazy(() => import("../views/AiAgents/AiAgentDashboard"));
+const AiAgentDetail = lazy(() => import("../views/AiAgents/AiAgentDetail"));
+const AiAgentRouteGuard = lazy(() => import("../components/AiAgentRouteGuard"));
+
 // Other views
 const ShopView = lazy(() => import("../views/Shop/ShopView"));
 const SettingsPlatform = lazy(() => import("../views/MyTabsConfiguration/SettingsPlatform"));
@@ -237,6 +243,11 @@ const router = createBrowserRouter([
         element: <LazyRoute><JumpPage /></LazyRoute>,
       },
       {
+        path: "business/ai-agents/subscribe",
+        element: <LazyRoute><AiAgentSubscribe /></LazyRoute>,
+        loader: () => routerHandler(true),
+      },
+      {
         path: "m/:code",
         element: <LazyRoute><JumpPage /></LazyRoute>,
       },
@@ -352,6 +363,30 @@ const router = createBrowserRouter([
             path: "service/:serviceId",
             element: <LazyRoute><ServiceLanding /></LazyRoute>,
             loader: () => routerHandler(true),
+          },
+          {
+            path: "ai-agents/subscribe",
+            element: <LazyRoute><AiAgentSubscribe /></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "ai-agents",
+            element: <LazyRoute><AiAgentRouteGuard><Outlet /></AiAgentRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+            children: [
+              {
+                index: true,
+                element: <LazyRoute><AiAgentDashboard /></LazyRoute>,
+              },
+              {
+                path: "dashboard",
+                element: <LazyRoute><AiAgentDashboard /></LazyRoute>,
+              },
+              {
+                path: ":agentId",
+                element: <LazyRoute><AiAgentDetail /></LazyRoute>,
+              },
+            ],
           },
         ],
       },

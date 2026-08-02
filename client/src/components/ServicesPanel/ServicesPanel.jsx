@@ -13,6 +13,7 @@ import businessIcon from "../../assets/menu/clientCatalogInactive.svg";
 import teamIcon from "../../assets/menu/teamInactive.svg";
 import configurationIcon from "../../assets/menu/configurationInactive.svg";
 import shopIcon from "../../assets/menu/shopInactive.svg";
+import aiDiscoveryIcon from "../../assets/menu/aiDiscoveryInactive.svg";
 
 const services = [
   {
@@ -78,6 +79,15 @@ const services = [
     icon: analyticsIcon,
     path: "/admin/service/market-intelligence",
     category: "Insights",
+  },
+  {
+    id: "ai-agents",
+    name: "AI Event Discovery",
+    description: "Automated AI agents that discover, extract, and create draft events from trusted sources",
+    icon: aiDiscoveryIcon,
+    path: "/admin/ai-agents",
+    category: "Marketing",
+    pricing: "Free",
   },
 ];
 

@@ -28,6 +28,7 @@ import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import SettingsCard from '../components/SettingsCard';
@@ -1291,13 +1292,14 @@ const OrganizationSection = () => {
                       {biz.linkedAt ? new Date(biz.linkedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                     </TableCell>
                     <TableCell sx={tableStyles.bodyCell}>
-                      <Button
+                      <IconButton
                         size="small"
                         onClick={() => handleDeleteBusiness(biz.linkedBusinessId || biz._id, biz.name || biz.businessName)}
-                        sx={{ textTransform: 'none', fontSize: '13px', color: '#EF4444', fontWeight: 500, padding: '4px 10px', '&:hover': { backgroundColor: '#FEF2F2' } }}
+                        sx={{ color: '#EF4444', '&:hover': { backgroundColor: '#FEF2F2' } }}
+                        title="Remove business"
                       >
-                        Remove
-                      </Button>
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
                 ))}

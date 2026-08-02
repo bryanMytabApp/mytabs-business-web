@@ -21,7 +21,6 @@ const SubscriptionView = () => {
   const cursorRef = useRef(null);
   const cursorDotRef = useRef(null);
   const heroRef = useRef(null);
-  const taglineRef = useRef(null);
   const headlineRef = useRef(null);
   const subRef = useRef(null);
   const pricingRef = useRef(null);

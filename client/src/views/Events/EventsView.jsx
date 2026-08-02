@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import moment from "moment";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getEventsByUserId, deleteEvent } from "../../services/eventService";
 import { getBusiness } from "../../services/businessService";
 import { getCustomerSubscription, getSystemSubscriptions } from "../../services/paymentService";
@@ -8,7 +8,7 @@ import { getOrganizationBusinesses, getMyOrganizations } from "../../services/or
 import { getEventPicture } from "../../utils/common";
 import { toast } from "react-toastify";
 
-const PLAN_LIMITS = { 1: 3, 2: 10, 3: 25 };
+const PLAN_LIMITS = { 1: 3, 2: 10, 3: 25, 4: Infinity };
 
 const parseJwt = (token) => {
   if (!token || typeof token !== "string" || token.split(".").length !== 3) return null;
@@ -149,23 +149,35 @@ const EventsView = () => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  console.log('[EventsView] 🔄 RENDER — pathname:', location.pathname, 'items.length:', items.length);
 
   useEffect(() => {
+    console.log('[EventsView] 🚀 useEffect FIRED — location.key:', location.key);
     const load = async () => {
+      console.log('[EventsView] 📡 load() starting...');
       const token = localStorage.getItem("idToken");
       const userId = parseJwt(token);
-      if (!userId) { setIsLoading(false); return; }
+      if (!userId) { console.log('[EventsView] ❌ No userId from token'); setIsLoading(false); return; }
 
       const savedBiz = sessionStorage.getItem("selectedBusinessId");
+      console.log('[EventsView] 👤 userId:', userId, '🏢 savedBiz:', savedBiz);
 
       // Fetch events
       let eventsData = [];
       try {
+        // The X-Business-Id header (added by axios interceptor from sessionStorage)
+        // tells the backend which business context to use. The backend resolves
+        // the effective userId from this header, so we just need to call with any userId.
+        console.log('[EventsView] 📡 Calling getEventsByUserId...');
         const res = await getEventsByUserId(userId);
-        eventsData = (res.data || []).slice(0, 25);
+        eventsData = (res.data || []);
+        console.log('[EventsView] ✅ Events fetched:', eventsData.length, 'X-Business-Id header was:', sessionStorage.getItem("selectedBusinessId"));
       } catch (e) {
-        console.error("Events error:", e);
+        console.error("[EventsView] ❌ Events error:", e.message, e.response?.status, e.response?.data);
       }
+      console.log('[EventsView] 📊 Total eventsData:', eventsData.length);
 
       // Determine primary business for untagged event ownership
       let primaryBizId = null;
@@ -175,6 +187,7 @@ const EventsView = () => {
       } catch (e) { /* ignore */ }
 
       // Set items and selected business TOGETHER to avoid flash
+      console.log('[EventsView] 💾 Setting items:', eventsData.length, 'events');
       setItems(eventsData);
       if (savedBiz) setSelectedBusinessId(savedBiz);
       if (primaryBizId) setPrimaryBizId(primaryBizId);
@@ -220,25 +233,15 @@ const EventsView = () => {
             }
             setSelectedBusinessId(targetBizId);
 
-            // Org owners can switch between linked businesses. When the
-            // pinned business is owned by someone else, refetch using that
-            // owner's userId so the events for THAT business appear. For
-            // team members (and the org owner viewing their own business)
-            // the fast-path fetch above is already correct — skip the
-            // refetch to avoid clobbering the events with an empty list
-            // when the resolution returns nothing.
-            const targetBiz = allBiz.find(b => b.linkedBusinessId === targetBizId);
-            const targetOwnerUserId = targetBiz?.userId;
-            const isDifferentOwner = targetOwnerUserId && targetOwnerUserId !== userId;
-            if (isDifferentOwner) {
-              try {
-                const evRes = await getEventsByUserId(targetOwnerUserId);
-                setItems(evRes.data || []);
-              } catch (e) {
-                console.error("Events fetch (owner) error:", e);
-                // Don't blow away the items already on screen.
-              }
-            }
+            // Store the owner userId for the selected business so other pages
+            // (Dashboard, etc.) can fetch events without re-resolving.
+            const selectedBizEntry = allBiz.find(b => b.linkedBusinessId === targetBizId);
+            const ownerUserId = selectedBizEntry?.userId || userId;
+            sessionStorage.setItem("selectedBusinessUserId", ownerUserId);
+
+            // No need to re-fetch events here — the X-Business-Id header on the
+            // initial fetch already told the backend which business to use.
+            // The backend uses resolveEffectiveUserId to pick the right partition key.
           }
           // No organizations: nothing to do — fast-path fetch already loaded the user's events.
         } catch (e) {
@@ -253,12 +256,15 @@ const EventsView = () => {
             if (sub) level = sub.level;
           }
         } catch (e) {}
+        // Organization-tier businesses get unlimited event creation
+        const orgsCheck = orgRes?.data?.organizations || orgRes?.data || [];
+        if (orgsCheck.length > 0) level = 4;
         setCurrentLevel(level);
         setMaxAds(PLAN_LIMITS[level] || 3);
       });
     };
     load();
-  }, []);
+  }, [location.key]);
 
   const handleCreate = () => {
     if (items.length >= maxAds) {
@@ -341,6 +347,8 @@ const EventsView = () => {
       if (selectedBusinessId) {
         if (ev.businessId === selectedBusinessId) {
           // Event explicitly tagged with this business — include
+        } else if (ev.userId === selectedBusinessId) {
+          // Event owned by this business (e.g. AI-published events) — include
         } else if (!ev.businessId && selectedBusinessId === primaryBizId) {
           // Untagged event + primary business selected — include
         } else {
@@ -442,15 +450,23 @@ const EventsView = () => {
                       <span className={`ev-chip ${statusColor(status)}`} style={{ marginBottom: 8, display: "inline-flex" }}>{statusLabel(status)}</span>
                       {(ev.status === "inactive" || ev.status === "draft" || ev.isActive === false) && <span className="ev-chip chip-gold" style={{ marginBottom: 8, marginLeft: 6, display: "inline-flex" }}>Draft</span>}
                       {ev.visibility === "private" && <span className="ev-chip chip-purple" style={{ marginBottom: 8, marginLeft: 6, display: "inline-flex" }}>Private</span>}
+                      {ev.createdByAi && <span className="ev-chip chip-teal" style={{ marginBottom: 8, marginLeft: 6, display: "inline-flex" }}>🤖 AI Published</span>}
                       <div className="ev-card-name">{ev.name || "Untitled Event"}</div>
                       <div className="ev-card-sub">{[venue, cat].filter(Boolean).join(" \u00B7 ")}</div>
                     </div>
                     <img
                       className="ev-card-img"
-                      src={getEventPicture(ev._id, 'thumb')}
+                      src={ev.imageUrl && ev.createdByAi ? ev.imageUrl : getEventPicture(ev._id, 'thumb')}
                       alt=""
                       loading="lazy"
-                      onError={e => { e.target.style.display = "none"; }}
+                      onError={e => {
+                        // Fall back to external imageUrl for AI-published events
+                        if (ev.imageUrl && e.target.src !== ev.imageUrl) {
+                          e.target.src = ev.imageUrl;
+                        } else {
+                          e.target.style.display = "none";
+                        }
+                      }}
                     />
                   </div>
 

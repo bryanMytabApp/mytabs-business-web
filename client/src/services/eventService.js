@@ -12,8 +12,24 @@ export const deleteEvent = (params) => {
   return http.post('/event/delete', params)
 };
 
-export const getEventsByUserId = (userId) => {
-  return http.get(`/event/${userId}/all`)
+export const getEventsByUserId = async (userId) => {
+  // Fetch events using the X-Business-Id header (business context).
+  const bizRes = await http.get(`/event/${userId}/all`).catch(() => ({ data: [] }));
+  const bizEvents = bizRes.data || [];
+
+  // Also fetch events without the business header (events stored under user's own ID).
+  // This handles events created before business context was added.
+  const selectedBiz = sessionStorage.getItem("selectedBusinessId");
+  if (selectedBiz && selectedBiz !== userId) {
+    const userRes = await http.get(`/event/${userId}/all`, { skipBusinessContext: true }).catch(() => ({ data: [] }));
+    const userEvents = userRes.data || [];
+    // Merge without duplicates
+    const existingIds = new Set(bizEvents.map(e => e._id));
+    const merged = [...bizEvents, ...userEvents.filter(e => !existingIds.has(e._id))];
+    return { data: merged };
+  }
+
+  return bizRes;
 };
 
 export const getEvent = (userId, eventId) => {

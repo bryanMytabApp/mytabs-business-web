@@ -30,7 +30,7 @@ step() { echo -e "\n${MAGENTA}[Step $1]${NC} $2"; }
 # Get current version
 get_version() {
   if [ -f "$VERSION_FILE" ]; then
-    grep -oP 'APP_VERSION\s*=\s*"\K[^"]+' "$VERSION_FILE" 2>/dev/null || echo "1.0.0"
+    sed -n 's/.*APP_VERSION.*"\([^"]*\)".*/\1/p' "$VERSION_FILE" 2>/dev/null || echo "1.0.0"
   else
     echo "1.0.0"
   fi

@@ -5,11 +5,13 @@
       "appIDs": [
         "43ZKAP9G3U.com.bluepeople.mytabsmobiletesting"
       ],
-      "components": [{
-        "paths": [
-          "/*"
-        ]
-      }]
+      "components": [
+        { "/": "/b/*", "exclude": true, "comment": "QR jump pages open in browser" },
+        { "/": "/e/*", "exclude": true, "comment": "QR jump pages open in browser" },
+        { "/": "/m/*", "exclude": true, "comment": "QR jump pages open in browser" },
+        { "/": "/o/*", "exclude": true, "comment": "QR jump pages open in browser" },
+        { "/": "/*" }
+      ]
     }]
   }
 }
