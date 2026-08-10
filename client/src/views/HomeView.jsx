@@ -335,8 +335,11 @@ export default function HomeView() {
       }
 
       // Hide org-restricted items for users not in the required org
-      if (option.requiresOrg && option.requiresOrg !== userOrgName) {
-        return false;
+      if (option.requiresOrg) {
+        const normalize = (s) => (s || '').replace(/\s+/g, '').toLowerCase();
+        if (normalize(option.requiresOrg) !== normalize(userOrgName)) {
+          return false;
+        }
       }
 
       // Hide other restricted items (should be in bottom section only)

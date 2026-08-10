@@ -27,7 +27,10 @@ const UrbanHTXRouteGuard = ({ children, featureName = "This feature" }) => {
         if (cancelled) return;
         const orgs = res?.data?.organizations || res?.data || [];
         const hasUrbanHTX = orgs.some(
-          (org) => org.name === "UrbanHTX" || org.platformOwned === true
+          (org) => {
+            const name = (org.name || '').replace(/\s+/g, '').toLowerCase();
+            return name === 'urbanhtx' || org.platformOwned === true;
+          }
         );
         setIsUrbanHTX(hasUrbanHTX);
       } catch {

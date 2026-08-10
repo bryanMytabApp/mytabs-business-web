@@ -2089,7 +2089,10 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
           const orgName = orgs[0].name || 'Organization';
           const orgRole = orgs[0].role || 'member';
           // Check if user belongs to UrbanHTX org
-          const isUrbanHTX = orgs.some(o => o.name === 'UrbanHTX' || o.platformOwned === true);
+          const isUrbanHTX = orgs.some(o => {
+            const name = (o.name || '').replace(/\s+/g, '').toLowerCase();
+            return name === 'urbanhtx' || o.platformOwned === true;
+          });
           setIsUrbanHTXOrg(isUrbanHTX);
           const allBiz = [];
           if (orgRole === 'owner') {

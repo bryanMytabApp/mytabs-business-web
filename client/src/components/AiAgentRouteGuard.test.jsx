@@ -74,7 +74,7 @@ describe("AiAgentRouteGuard", () => {
 
   it("renders children when user belongs to UrbanHTX org", async () => {
     getMyOrganizations.mockResolvedValue({
-      data: [{ name: "UrbanHTX", id: "org-urbanhtx" }],
+      data: [{ name: "Urban HTX", id: "org-urbanhtx" }],
     });
 
     renderGuard();
@@ -108,7 +108,7 @@ describe("AiAgentRouteGuard", () => {
 
   it("grants access when organizations are in nested data.organizations format", async () => {
     getMyOrganizations.mockResolvedValue({
-      data: { organizations: [{ name: "UrbanHTX", id: "org-urbanhtx" }] },
+      data: { organizations: [{ name: "Urban HTX", id: "org-urbanhtx" }] },
     });
 
     renderGuard();
