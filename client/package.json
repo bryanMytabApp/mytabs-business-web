@@ -49,6 +49,7 @@
     "buffer": "^6.0.3",
     "country-state-city": "^3.2.1",
     "date-fns": "^3.6.0",
+    "dayjs": "^1.11.21",
     "file-saver": "^2.0.5",
     "jspdf": "^2.5.1",
     "jszip": "^3.10.1",

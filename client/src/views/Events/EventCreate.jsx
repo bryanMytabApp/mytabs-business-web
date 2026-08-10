@@ -210,6 +210,14 @@ const EventCreate = () => {
     itemCopy.hasTickets = tickets && tickets.length > 0
     itemCopy.visibility = eventVisibility || businessData?.visibility || 'public'
     
+    // Always attach businessId so the event appears in business-scoped views
+    const selectedBizId = sessionStorage.getItem("selectedBusinessId");
+    if (selectedBizId) {
+      itemCopy.businessId = selectedBizId;
+    } else if (businessData?._id) {
+      itemCopy.businessId = businessData._id;
+    }
+    
     // Check if using Tabs ticketing system
     const hasTabsTickets = tickets.some(t => t.option === 'Tabs Tickets' || t.option === 'Tickets with Tabs')
     if (hasTabsTickets) {

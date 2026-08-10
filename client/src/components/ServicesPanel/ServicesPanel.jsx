@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ReactSVG } from "react-svg";
 import styles from "./ServicesPanel.module.css";
@@ -14,6 +14,8 @@ import teamIcon from "../../assets/menu/teamInactive.svg";
 import configurationIcon from "../../assets/menu/configurationInactive.svg";
 import shopIcon from "../../assets/menu/shopInactive.svg";
 import aiDiscoveryIcon from "../../assets/menu/aiDiscoveryInactive.svg";
+import experiencesIcon from "../../assets/menu/experiencesInactive.svg";
+import { getMyOrganizations } from "../../services/organizationService";
 
 const services = [
   {
@@ -89,15 +91,47 @@ const services = [
     category: "Marketing",
     pricing: "Free",
   },
+  {
+    id: "experiences",
+    name: "Tabs Engagements",
+    description: "Raffles, live polls, trivia, and interactive engagement tools for your events",
+    icon: experiencesIcon,
+    path: "/admin/experiences",
+    category: "Engagement",
+    orgRestriction: "UrbanHTX",
+  },
 ];
 
 const ServicesPanel = ({ open, onClose }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [userOrgName, setUserOrgName] = useState(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const fetchOrg = async () => {
+      try {
+        const res = await getMyOrganizations();
+        if (cancelled) return;
+        const orgs = res?.data?.organizations || res?.data || [];
+        if (orgs.length > 0) {
+          setUserOrgName(orgs[0].name || null);
+        }
+      } catch {
+        // User may not be in any org — that's fine
+      }
+    };
+    fetchOrg();
+    return () => { cancelled = true; };
+  }, [open]);
 
   if (!open) return null;
 
   const filtered = services.filter((s) => {
+    // Org-restricted services only show for users in the matching org
+    if (s.orgRestriction && s.orgRestriction !== userOrgName) return false;
+
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (

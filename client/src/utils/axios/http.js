@@ -18,7 +18,13 @@ const refreshAccessToken = async () => {
       return "";
     }
     
-    var refreshToken = JSON.parse(ref);
+    var refreshToken;
+    try {
+      refreshToken = JSON.parse(ref);
+    } catch (e) {
+      // Token stored as raw string (not JSON-stringified)
+      refreshToken = ref;
+    }
     var email = localStorage.getItem("username");
     
     if (!email) {

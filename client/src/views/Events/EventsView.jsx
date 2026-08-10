@@ -451,6 +451,7 @@ const EventsView = () => {
                       {(ev.status === "inactive" || ev.status === "draft" || ev.isActive === false) && <span className="ev-chip chip-gold" style={{ marginBottom: 8, marginLeft: 6, display: "inline-flex" }}>Draft</span>}
                       {ev.visibility === "private" && <span className="ev-chip chip-purple" style={{ marginBottom: 8, marginLeft: 6, display: "inline-flex" }}>Private</span>}
                       {ev.createdByAi && <span className="ev-chip chip-teal" style={{ marginBottom: 8, marginLeft: 6, display: "inline-flex" }}>🤖 AI Published</span>}
+                      {ev.testMode && <span className="ev-chip" style={{ marginBottom: 8, marginLeft: 6, display: "inline-flex", background: "rgba(245,158,11,0.12)", color: "#D97706" }}>Test</span>}
                       <div className="ev-card-name">{ev.name || "Untitled Event"}</div>
                       <div className="ev-card-sub">{[venue, cat].filter(Boolean).join(" \u00B7 ")}</div>
                     </div>

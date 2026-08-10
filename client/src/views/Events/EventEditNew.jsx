@@ -138,6 +138,7 @@ const EventEditNew = () => {
           channels: ev.channels || null,
           showDates: ev.showDates || [],
           visibility: ev.visibility || "public",
+          testMode: ev.testMode === true,
           eventCode: ev.eventCode || "",
           businessId: ev.businessId || "",
           createdByAi: ev.createdByAi || false,

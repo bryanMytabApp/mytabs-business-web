@@ -810,8 +810,20 @@ const EventEditTickets = ({
                         <div className={styles.inputContainer} style={getContainerErrorStyle('type')}>
                           <select
                             className={styles.input}
-                            value={tickets[ticketSelectedIndex]?.type || ''}
-                            onChange={(e) => changeTicketSelectedAttr('type', e.target.value)}
+                            value={(() => {
+                              const t = tickets[ticketSelectedIndex];
+                              if (!t || !t.type) return '';
+                              const opts = getTicketTypeOptions(t.option);
+                              return opts.includes(t.type) ? t.type : 'Custom';
+                            })()}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              changeTicketSelectedAttr('type', val);
+                              // If switching away from Custom, clear customName
+                              if (val !== 'Custom') {
+                                changeTicketSelectedAttr('customName', '');
+                              }
+                            }}
                             style={{ cursor: 'pointer' }}
                           >
                             <option value="">Select ticket type</option>
@@ -822,24 +834,31 @@ const EventEditTickets = ({
                             ))}
                           </select>
                         </div>
-                        {/* Custom ticket name field - only show when Custom is selected */}
-                        {tickets[ticketSelectedIndex]?.type === 'Custom' && (
-                          <div style={{ marginTop: '10px' }}>
-                            <div className={styles['field-label']}>
-                              Custom Ticket Name
+                        {/* Custom ticket name field - show when Custom is selected or type is non-standard */}
+                        {(() => {
+                          const t = tickets[ticketSelectedIndex];
+                          if (!t || !t.type) return null;
+                          const opts = getTicketTypeOptions(t.option);
+                          const isCustom = t.type === 'Custom' || !opts.includes(t.type);
+                          if (!isCustom) return null;
+                          return (
+                            <div style={{ marginTop: '10px' }}>
+                              <div className={styles['field-label']}>
+                                Custom Ticket Name
+                              </div>
+                              <div className={styles.inputContainer}>
+                                <input
+                                  className={styles.input}
+                                  type="text"
+                                  value={t.customName || t.customLabel || (opts.includes(t.type) ? '' : t.type) || ''}
+                                  placeholder="Enter custom ticket name"
+                                  onBlur={() => {}}
+                                  onChange={(e) => changeTicketSelectedAttr('customName', e.target.value)}
+                                />
+                              </div>
                             </div>
-                            <div className={styles.inputContainer}>
-                              <input
-                                className={styles.input}
-                                type="text"
-                                value={tickets[ticketSelectedIndex]?.customName || ''}
-                                placeholder="Enter custom ticket name"
-                                onBlur={() => {}}
-                                onChange={(e) => changeTicketSelectedAttr('customName', e.target.value)}
-                              />
-                            </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
 
                       {/* Row 1, Column 2: Price per ticket */}
@@ -944,22 +963,40 @@ const EventEditTickets = ({
         onClose={handleCloseTestModal}
         aria-labelledby="test-purchase-modal"
         aria-describedby="test-purchase-preview"
+        container={document.body}
+        disablePortal={false}
+        sx={{ 
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        slotProps={{
+          backdrop: {
+            sx: { 
+              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            }
+          }
+        }}
       >
         <Box
           sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '420px', // iPhone-like width
-            height: '750px', // iPhone-like height
-            bgcolor: '#1a1a1a', // Dark phone frame
+            width: '420px',
+            height: '750px',
+            maxHeight: '90vh',
+            bgcolor: '#1a1a1a',
             borderRadius: '25px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-            p: '12px', // Phone frame padding
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            p: '12px',
             overflow: 'hidden',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            outline: 'none',
           }}
         >
           {/* Phone Frame Header (notch area) */}
