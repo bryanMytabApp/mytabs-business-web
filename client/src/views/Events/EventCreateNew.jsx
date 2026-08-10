@@ -711,6 +711,19 @@ function P1({ f, u, next, steps, editMode, eventId, onDelete, previewEventCode, 
             </div>
           ))}
         </div>
+
+        {/* Test Mode toggle — UrbanHTX only */}
+        {(localStorage.getItem("username") || "").toLowerCase() === "urbanhtx" && (
+          <div style={{ marginTop: 16, padding: '12px 16px', background: f.testMode ? 'rgba(255, 193, 7, 0.08)' : 'rgba(0,0,0,0.02)', border: f.testMode ? '1.5px solid #FFC107' : '1px solid var(--ibr)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => u("testMode", !f.testMode)}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: f.testMode ? '#F59E0B' : 'var(--tx)' }}>🧪 Test Mode</div>
+              <div style={{ fontSize: 11, color: 'var(--mu)', marginTop: 2 }}>Only visible to your account (vsmike2500@gmail.com)</div>
+            </div>
+            <div style={{ width: 38, height: 22, borderRadius: 11, background: f.testMode ? '#F59E0B' : '#ccc', position: 'relative', transition: 'background 0.2s' }}>
+              <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: f.testMode ? 18 : 2, transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="ecn-foot">
@@ -1011,10 +1024,10 @@ function P_Ticketing({ f, u, next, back, steps, stepNum }) {
             <div className="ecn-tform">
               <div className="ecn-fg"><label className="ecn-fl">Ticket title</label>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  {tk.type === "Custom" && (
-                    <input className="ecn-fi" style={{ flex: 1 }} placeholder="Custom ticket name" value={tk.customName || ""} onChange={e => upd(act, "customName", e.target.value)} />
+                  {(tk.type === "Custom" || (tk.type && !TKTS.includes(tk.type))) && (
+                    <input className="ecn-fi" style={{ flex: 1 }} placeholder="Custom ticket name" value={tk.customName || (TKTS.includes(tk.type) ? "" : tk.type) || ""} onChange={e => upd(act, "customName", e.target.value)} />
                   )}
-                  <div className="ecn-sw" style={{ flex: tk.type === "Custom" ? "0 0 160px" : "1" }}><select className="ecn-fs" value={tk.type} onChange={e => upd(act, "type", e.target.value)}><option value="">Select type</option>{TKTS.map(t => <option key={t}>{t}</option>)}</select></div>
+                  <div className="ecn-sw" style={{ flex: (tk.type === "Custom" || (tk.type && !TKTS.includes(tk.type))) ? "0 0 160px" : "1" }}><select className="ecn-fs" value={TKTS.includes(tk.type) ? tk.type : (tk.type ? "Custom" : "")} onChange={e => upd(act, "type", e.target.value)}><option value="">Select type</option>{TKTS.map(t => <option key={t}>{t}</option>)}</select></div>
                 </div>
               </div>
               {isShows && (
@@ -1942,6 +1955,7 @@ const INIT = {
   media: "", mediaFile: null, tickType: "", extUrl: "", tickets: [],
   kpis: [], checkpoints: [90, 30, 14, 7], channels: null, showDates: [],
   visibility: "public",
+  testMode: false,
   eventCode: "",
 };
 
@@ -1969,6 +1983,7 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [allBusinesses, setAllBusinesses] = useState([]);
+  const [isUrbanHTXOrg, setIsUrbanHTXOrg] = useState(false);
   const [selectedBusinessId, setSelectedBusinessId] = useState(
     // In edit mode, prefer the event's own businessId over sessionStorage
     (editMode && editData?.businessId) || sessionStorage.getItem("selectedBusinessId") || null
@@ -2073,6 +2088,9 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
           const businesses = orgData.businesses || [];
           const orgName = orgs[0].name || 'Organization';
           const orgRole = orgs[0].role || 'member';
+          // Check if user belongs to UrbanHTX org
+          const isUrbanHTX = orgs.some(o => o.name === 'UrbanHTX' || o.platformOwned === true);
+          setIsUrbanHTXOrg(isUrbanHTX);
           const allBiz = [];
           if (orgRole === 'owner') {
             let ownerBizId = userId;
@@ -2248,6 +2266,7 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
         latitude: form.latitude || null,
         longitude: form.longitude || null,
         visibility: form.visibility || "public",
+        testMode: form.testMode || false,
         status: mode === "draft" ? "inactive" : "active",
         isActive: mode !== "draft",
         hasTickets: form.tickType === "tabs" && form.tickets?.length > 0,
@@ -2394,6 +2413,15 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
                     {step > s.n ? "\u2713 " : ""}{s.l}
                   </button>
                 ))}
+                {editMode && eventId && isUrbanHTXOrg && (
+                  <button
+                    className="ecn-step-btn"
+                    style={{ marginLeft: "auto", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", color: "#fff", borderRadius: 8, padding: "6px 14px", fontSize: 12.5, fontWeight: 600, border: "none", cursor: "pointer" }}
+                    onClick={() => navigate(`/admin/my-events/${eventId}/experiences`)}
+                  >
+                    Engagements
+                  </button>
+                )}
               </div>
             </div>
 

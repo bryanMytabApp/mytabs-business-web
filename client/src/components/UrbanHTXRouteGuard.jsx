@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Button, CircularProgress, Alert } from "@mui/material";
+import { Box, Typography, Button, CircularProgress } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import AutorenewIcon from "@mui/icons-material/Autorenew";
 import { useNavigate } from "react-router-dom";
-import useAiAgentEntitlement from "../hooks/useAiAgentEntitlement";
 import { getMyOrganizations } from "../services/organizationService";
 
 /**
- * Route guard wrapper for `/admin/ai-agents/*` routes.
+ * Generic route guard that restricts access to UrbanHTX organization accounts only.
  *
- * Access is restricted to accounts belonging to the UrbanHTX organization only.
- * - If loading: shows a spinner
- * - If not in UrbanHTX org: shows access denied
- * - If in UrbanHTX org: renders children with full access
+ * Use this to wrap any route/page that should only be visible to UrbanHTX
+ * org payers, linked businesses, or members.
+ *
+ * Props:
+ * - children: content to render when access is granted
+ * - featureName: human-readable name of the restricted feature (for the denied message)
  */
-const AiAgentRouteGuard = ({ children }) => {
+const UrbanHTXRouteGuard = ({ children, featureName = "This feature" }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isUrbanHTX, setIsUrbanHTX] = useState(false);
   const navigate = useNavigate();
@@ -31,7 +31,6 @@ const AiAgentRouteGuard = ({ children }) => {
         );
         setIsUrbanHTX(hasUrbanHTX);
       } catch {
-        // If we can't verify org membership, deny access
         setIsUrbanHTX(false);
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -56,7 +55,6 @@ const AiAgentRouteGuard = ({ children }) => {
     );
   }
 
-  // Not in UrbanHTX organization — block access
   if (!isUrbanHTX) {
     return (
       <Box
@@ -80,8 +78,8 @@ const AiAgentRouteGuard = ({ children }) => {
         <Typography
           sx={{ color: "#71727A", mb: 3, maxWidth: 480, lineHeight: 1.6 }}
         >
-          The AI Event Discovery Dashboard is only available to UrbanHTX
-          organization accounts. Contact your administrator for access.
+          {featureName} is only available to UrbanHTX organization accounts.
+          Contact your administrator for access.
         </Typography>
         <Button
           variant="contained"
@@ -103,8 +101,7 @@ const AiAgentRouteGuard = ({ children }) => {
     );
   }
 
-  // UrbanHTX org member — allow full access
   return <>{children}</>;
 };
 
-export default AiAgentRouteGuard;
+export default UrbanHTXRouteGuard;

@@ -118,6 +118,21 @@ const AiAgentSubscribe = lazy(() => import("../views/AiAgents/AiAgentSubscribe")
 const AiAgentDashboard = lazy(() => import("../views/AiAgents/AiAgentDashboard"));
 const AiAgentDetail = lazy(() => import("../views/AiAgents/AiAgentDetail"));
 const AiAgentRouteGuard = lazy(() => import("../components/AiAgentRouteGuard"));
+const UrbanHTXRouteGuard = lazy(() => import("../components/UrbanHTXRouteGuard"));
+
+// Experience views (admin dashboard)
+const ExperiencesDashboard = lazy(() => import("../views/Experiences/ExperiencesDashboard"));
+const AllExperiencesDashboard = lazy(() => import("../views/Experiences/AllExperiencesDashboard"));
+const ExperienceCatalog = lazy(() => import("../views/Experiences/ExperienceCatalog"));
+const RaffleConfig = lazy(() => import("../views/Experiences/RaffleConfig"));
+const RaffleLiveDashboard = lazy(() => import("../views/Experiences/RaffleLiveDashboard"));
+const DrawingHistory = lazy(() => import("../views/Experiences/DrawingHistory"));
+const EntryManagement = lazy(() => import("../views/Experiences/EntryManagement"));
+const FulfillmentManagement = lazy(() => import("../views/Experiences/FulfillmentManagement"));
+const ExperienceAnalytics = lazy(() => import("../views/Experiences/ExperienceAnalytics"));
+const SponsorManagement = lazy(() => import("../views/Experiences/SponsorManagement"));
+const PermissionsPanel = lazy(() => import("../views/Experiences/PermissionsPanel"));
+const CompliancePanel = lazy(() => import("../views/Experiences/CompliancePanel"));
 
 // Other views
 const ShopView = lazy(() => import("../views/Shop/ShopView"));
@@ -300,6 +315,11 @@ const router = createBrowserRouter([
             loader: () => routerHandler(true),
           },
           {
+            path: "experiences",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Tab Engagements across events"><AllExperiencesDashboard /></UrbanHTXRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
             path: "my-events/create",
             element: <LazyRoute><EventCreateNew /></LazyRoute>,
             loader: () => routerHandler(true),
@@ -312,6 +332,61 @@ const router = createBrowserRouter([
           {
             path: "my-events/:eventId",
             element: <LazyRoute><EventEditNew /></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId/experiences",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><ExperiencesDashboard /></UrbanHTXRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId/experiences/catalog",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><ExperienceCatalog /></UrbanHTXRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId/experiences/:experienceId/config",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><RaffleConfig /></UrbanHTXRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId/experiences/:experienceId/live",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><RaffleLiveDashboard /></UrbanHTXRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId/experiences/:experienceId/drawings",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><DrawingHistory /></UrbanHTXRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId/experiences/:experienceId/entries",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><EntryManagement /></UrbanHTXRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId/experiences/:experienceId/fulfillment",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><FulfillmentManagement /></UrbanHTXRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId/experiences/:experienceId/analytics",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><ExperienceAnalytics /></UrbanHTXRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId/experiences/:experienceId/sponsors",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><SponsorManagement /></UrbanHTXRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId/experiences/:experienceId/permissions",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><PermissionsPanel /></UrbanHTXRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId/experiences/:experienceId/compliance",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><CompliancePanel /></UrbanHTXRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {

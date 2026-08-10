@@ -2,6 +2,7 @@ import React, {useEffect, useRef, useState} from "react";
 import {Outlet, redirect, NavLink, useLocation, useNavigate} from "react-router-dom";
 import {ReactSVG} from "react-svg";
 import {getMyServices} from "../services/entitlementService";
+import {getMyOrganizations} from "../services/organizationService";
 import "./HomeView.css";
 import logo from "../assets/menu/HomeviewTab.svg";
 import homeInactiveIcon from "../assets/menu/homeInactive.svg";
@@ -25,6 +26,8 @@ import configurationActiveIcon from "../assets/menu/configurationActive.svg";
 import configurationInactiveIcon from "../assets/menu/configurationInactive.svg";
 import aiDiscoveryActiveIcon from "../assets/menu/aiDiscoveryActive.svg";
 import aiDiscoveryInactiveIcon from "../assets/menu/aiDiscoveryInactive.svg";
+import experiencesActiveIcon from "../assets/menu/experiencesActive.svg";
+import experiencesInactiveIcon from "../assets/menu/experiencesInactive.svg";
 import logout from "../assets/menu/logout.svg";
 
 import {UserDataProvider} from "../utils/UserDataProvider";
@@ -107,6 +110,16 @@ const options = [
       inactive: aiDiscoveryInactiveIcon,
     },
     title: "AI Agents",
+    requiresOrg: "UrbanHTX",
+  },
+  {
+    path: "/admin/experiences",
+    icon: {
+      active: experiencesActiveIcon,
+      inactive: experiencesInactiveIcon,
+    },
+    title: "Experiences",
+    requiresOrg: "UrbanHTX",
   },
   {
     path: "/admin/configuration",
@@ -148,6 +161,7 @@ export default function HomeView() {
   const [headerServices, setHeaderServices] = useState([]);
   const [, setServicesLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [userOrgName, setUserOrgName] = useState(null);
 
   // Local UI metadata for each service (icons, descriptions, paths, etc.)
   // These fields are not returned by the API and are needed for rendering.
@@ -164,6 +178,7 @@ export default function HomeView() {
     "ai_agent_starter": { description: "Automated AI agents that discover, extract, and create draft events from trusted sources 24/7", path: "/admin/ai-agents", icon: aiDiscoveryInactiveIcon, iconBg: "#EBF5FF", pricing: "Free" },
     "ai_agent_pro": { description: "Automated AI agents that discover, extract, and create draft events from trusted sources 24/7", path: "/admin/ai-agents", icon: aiDiscoveryInactiveIcon, iconBg: "#EBF5FF", pricing: "Free" },
     "ai_agent_enterprise": { description: "Automated AI agents that discover, extract, and create draft events from trusted sources 24/7", path: "/admin/ai-agents", icon: aiDiscoveryInactiveIcon, iconBg: "#EBF5FF", pricing: "Free" },
+    "experiences": { description: "Raffles, live polls, trivia, and interactive engagement tools for your events", path: "/admin/experiences", icon: experiencesInactiveIcon, iconBg: "#FFF3E0", pricing: "Included" },
   };
 
   // Fetch entitlements from the API on mount
@@ -237,6 +252,25 @@ export default function HomeView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fetch user's organization to gate org-restricted nav items
+  useEffect(() => {
+    let cancelled = false;
+    const fetchOrg = async () => {
+      try {
+        const res = await getMyOrganizations();
+        if (cancelled) return;
+        const orgs = res?.data?.organizations || res?.data || [];
+        if (orgs.length > 0) {
+          setUserOrgName(orgs[0].name || null);
+        }
+      } catch {
+        // Not in an org — that's fine
+      }
+    };
+    fetchOrg();
+    return () => { cancelled = true; };
+  }, []);
+
   const searchResults = headerSearch.trim()
     ? headerServices.filter((s) =>
         s.name.toLowerCase().includes(headerSearch.toLowerCase()) ||
@@ -298,6 +332,11 @@ export default function HomeView() {
       if (option.requiresServiceId) {
         const svc = headerServices.find(s => s.id === option.requiresServiceId);
         if (!svc || !svc.subscribed) return false;
+      }
+
+      // Hide org-restricted items for users not in the required org
+      if (option.requiresOrg && option.requiresOrg !== userOrgName) {
+        return false;
       }
 
       // Hide other restricted items (should be in bottom section only)
@@ -569,6 +608,7 @@ export default function HomeView() {
                               if (["ticketing", "shop"].includes(s.id)) return "Sales";
                               if (["events", "ai_agents"].includes(s.id)) return "Marketing";
                               if (["analytics", "market-intelligence"].includes(s.id)) return "Insights";
+                              if (["experiences"].includes(s.id)) return "Engagement";
                               return "Settings";
                             }))];
                             const getCategory = (s) => {
@@ -576,6 +616,7 @@ export default function HomeView() {
                               if (["ticketing", "shop"].includes(s.id)) return "Sales";
                               if (["events", "ai_agents"].includes(s.id)) return "Marketing";
                               if (["analytics", "market-intelligence"].includes(s.id)) return "Insights";
+                              if (["experiences"].includes(s.id)) return "Engagement";
                               return "Settings";
                             };
                             return categories.map((cat) => (
