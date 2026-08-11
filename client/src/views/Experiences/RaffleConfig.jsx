@@ -233,7 +233,7 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eve
   const [generatingDesc, setGeneratingDesc] = useState(false);
 
   const generateDescription = async (prizeName) => {
-    if (!prizeName || prizeName.length < 3 || prize.description) return;
+    if (!prizeName || prizeName.length < 3) return;
     setGeneratingDesc(true);
     try {
       const token = localStorage.getItem("idToken");
@@ -243,14 +243,20 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eve
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          prompt: `Write a short, exciting prize description (1-2 sentences, under 120 characters) for a raffle prize called "${prizeName}". Be concise and appealing. Return just the description text, no quotes.`,
-          format: "text"
+          prompt: `Generate a short, exciting prize description (1-2 sentences, under 120 characters) for a raffle prize called "${prizeName}". Return JSON: {"description": "your description here"}`,
         }),
       });
       if (response.ok) {
         const data = await response.json();
-        const desc = (data.data || data.result || data.text || "").trim();
-        if (desc && desc.length > 5) {
+        const result = data.data || data.result || data;
+        // Handle various response shapes
+        const desc = (
+          result.description ||
+          result.raw ||
+          result.text ||
+          (typeof result === 'string' ? result : '')
+        ).replace(/^["']|["']$/g, '').trim();
+        if (desc && desc.length > 3) {
           onUpdate({ ...prize, description: desc });
         }
       }
@@ -279,7 +285,9 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eve
           label="Prize Name"
           value={prize.name}
           onChange={(e) => onUpdate({ ...prize, name: e.target.value })}
-          onBlur={(e) => generateDescription(e.target.value)}
+          onBlur={(e) => {
+            if (!prize.description) generateDescription(e.target.value);
+          }}
           error={!!errors[`prizes[${idx}].name`]}
           helperText={errors[`prizes[${idx}].name`] || `${prize.name.length}/100`}
           inputProps={{ maxLength: 101 }}
@@ -294,28 +302,46 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eve
           placeholder="e.g. 500"
           inputProps={{ min: 0, step: "0.01" }}
         />
-        <TextField
-          fullWidth
-          size="small"
-          label="Prize Description"
-          multiline
-          rows={2}
-          value={prize.description}
-          onChange={(e) => onUpdate({ ...prize, description: e.target.value })}
-          error={!!errors[`prizes[${idx}].description`]}
-          helperText={
-            generatingDesc
-              ? "✨ AI is writing a description..."
-              : (errors[`prizes[${idx}].description`] || `${prize.description.length}/500`)
-          }
-          InputProps={{
-            endAdornment: generatingDesc ? (
-              <Box sx={{ display: "flex", alignItems: "center", pr: 1 }}>
-                <Box sx={{ width: 14, height: 14, border: "2px solid #e0e0e0", borderTopColor: "#00A9D6", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-              </Box>
-            ) : null,
-          }}
-        />
+        <Box sx={{ position: "relative" }}>
+          <TextField
+            fullWidth
+            size="small"
+            label="Prize Description"
+            multiline
+            rows={2}
+            value={prize.description}
+            onChange={(e) => onUpdate({ ...prize, description: e.target.value })}
+            error={!!errors[`prizes[${idx}].description`]}
+            helperText={
+              generatingDesc
+                ? "✨ AI is writing a description..."
+                : (errors[`prizes[${idx}].description`] || `${prize.description.length}/500`)
+            }
+          />
+          {/* Regenerate AI description button */}
+          {prize.name.length >= 3 && !generatingDesc && (
+            <button
+              type="button"
+              onClick={() => generateDescription(prize.name)}
+              title="Generate description with AI"
+              style={{
+                position: "absolute", top: 6, right: 6,
+                background: "none", border: "none", cursor: "pointer",
+                fontSize: 16, padding: 2, borderRadius: 4, lineHeight: 1,
+                opacity: 0.7, transition: "opacity 0.2s",
+              }}
+              onMouseEnter={(e) => { e.target.style.opacity = 1; }}
+              onMouseLeave={(e) => { e.target.style.opacity = 0.7; }}
+            >
+              ✨
+            </button>
+          )}
+          {generatingDesc && (
+            <Box sx={{ position: "absolute", top: 8, right: 8 }}>
+              <Box sx={{ width: 14, height: 14, border: "2px solid #e0e0e0", borderTopColor: "#00A9D6", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            </Box>
+          )}
+        </Box>
         {/* Prize Image Upload */}
         <Box>
           <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#111827", mb: 0.5 }}>Prize Image</Typography>
