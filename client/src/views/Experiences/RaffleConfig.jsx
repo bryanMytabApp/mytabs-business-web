@@ -1912,7 +1912,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
                 } catch (e) {
                   console.warn("Preview: draft save failed, opening with last saved config", e.message);
                 }
-                const previewUrl = `https://experience.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId}&accentColor=${encodeURIComponent(form.accentColor)}&bannerStyle=${encodeURIComponent(form.bannerStyle)}&prizeName=${encodeURIComponent(form.prizes[0]?.name || '')}&infoCollection=${encodeURIComponent(form.infoCollection)}`;
+                const previewUrl = `https://experience.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId}&accentColor=${encodeURIComponent(form.accentColor)}&bannerStyle=${encodeURIComponent(form.bannerStyle)}&prizeName=${encodeURIComponent(form.prizes[0]?.name || '')}&infoCollection=${encodeURIComponent(form.infoCollection)}&prizes=${encodeURIComponent(JSON.stringify(form.prizes.map(p => ({ name: p.name, description: p.description, value: p.value, imageUrl: p.imageUrl || '' }))))}`;
                 setDemoPreviewUrl(previewUrl);
                 setShowDemoPreview(true);
               }}
