@@ -88,6 +88,8 @@ const DEFAULT_FORM = {
   // Step 8: Compliance
   jurisdictions: "",
   complianceAcknowledged: false,
+  requireTermsConsent: true,
+  rulesPreviewedByAdmin: false,
   // Step 9: Review (no extra fields)
 };
 
@@ -197,6 +199,8 @@ function validateStep(step, form) {
       if (form.claimExpirationTemplate && form.claimExpirationTemplate.length > 300)
         errors.claimExpirationTemplate = "Template must be ≤ 300 characters.";
       if (!form.jurisdictions) errors.jurisdictions = "At least one jurisdiction is required.";
+      if (!form.rulesPreviewedByAdmin)
+        errors.rulesPreviewedByAdmin = "You must preview the rules before acknowledging compliance.";
       if (!form.complianceAcknowledged)
         errors.complianceAcknowledged = "You must acknowledge compliance requirements.";
       break;
@@ -296,6 +300,8 @@ const RaffleConfig = () => {
             claimExpirationTemplate: cfg.notifications?.claimExpiration || f.claimExpirationTemplate,
             jurisdictions: Array.isArray(cfg.compliance?.jurisdictions) ? cfg.compliance.jurisdictions.join(', ') : (cfg.jurisdictions || f.jurisdictions),
             complianceAcknowledged: cfg.compliance?.acknowledged || f.complianceAcknowledged,
+            requireTermsConsent: cfg.compliance?.requireTerms !== undefined ? cfg.compliance.requireTerms : true,
+            rulesPreviewedByAdmin: cfg.compliance?.acknowledged || false,
           }));
         }
       } catch (err) {
@@ -454,6 +460,7 @@ const RaffleConfig = () => {
         compliance: {
           jurisdictions: form.jurisdictions.split(",").map((j) => j.trim()).filter(Boolean),
           acknowledged: form.complianceAcknowledged,
+          requireTerms: form.requireTermsConsent,
         },
       };
 
@@ -1443,11 +1450,63 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
           Raffle legality varies by jurisdiction. By acknowledging below, you confirm you have reviewed
           applicable local regulations for the selected jurisdictions.
         </Alert>
+
+        {/* Require Terms Consent Toggle */}
+        <Box sx={{ mb: 2, p: 2, border: "1px solid #E5E7EB", borderRadius: 2, background: "#FAFBFC" }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={form.requireTermsConsent}
+                onChange={(e) => updateField("requireTermsConsent", e.target.checked)}
+              />
+            }
+            label={
+              <Box>
+                <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#111827" }}>
+                  Require attendees to agree to rules before entering
+                </Typography>
+                <Typography sx={{ fontSize: 11.5, color: "#6B7280", mt: 0.25 }}>
+                  When enabled, attendees must review and accept the Official Rules before they can submit an entry.
+                </Typography>
+              </Box>
+            }
+          />
+        </Box>
+
+        {/* Preview Rules Button — admin must preview before acknowledging */}
+        <Box sx={{ mb: 2 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              updateField("rulesPreviewedByAdmin", true);
+              const previewUrl = `https://experience.keeptabs.app/e/${experienceId}/rules?test=true&eventId=${eventId}`;
+              window.open(previewUrl, '_blank', 'width=420,height=750,menubar=no,toolbar=no,location=no,status=no');
+            }}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              fontSize: 13,
+              borderColor: form.rulesPreviewedByAdmin ? "#34c471" : "#00AAD6",
+              color: form.rulesPreviewedByAdmin ? "#34c471" : "#00AAD6",
+              "&:hover": { borderColor: form.rulesPreviewedByAdmin ? "#1f9d55" : "#0088b0", background: form.rulesPreviewedByAdmin ? "#f0fdf4" : "#f0fdff" },
+            }}
+          >
+            {form.rulesPreviewedByAdmin ? "✓ Rules Previewed" : "👁 Preview Rules (Required)"}
+          </Button>
+          {errors.rulesPreviewedByAdmin && (
+            <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5 }}>
+              {errors.rulesPreviewedByAdmin}
+            </Typography>
+          )}
+        </Box>
+
         <FormControlLabel
           control={
             <Switch
               checked={form.complianceAcknowledged}
               onChange={(e) => updateField("complianceAcknowledged", e.target.checked)}
+              disabled={!form.rulesPreviewedByAdmin}
             />
           }
           label="I acknowledge and accept compliance requirements for the selected jurisdictions"
