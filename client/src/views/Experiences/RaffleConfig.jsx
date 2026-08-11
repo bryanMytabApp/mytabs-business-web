@@ -91,6 +91,9 @@ const DEFAULT_FORM = {
   complianceAcknowledged: false,
   requireTermsConsent: true,
   rulesPreviewedByAdmin: false,
+  sponsorLegalName: "",
+  privacyPolicyUrl: "",
+  supportContact: "",
   // Step 9: Review (no extra fields)
 };
 
@@ -200,6 +203,9 @@ function validateStep(step, form) {
       if (form.claimExpirationTemplate && form.claimExpirationTemplate.length > 300)
         errors.claimExpirationTemplate = "Template must be ≤ 300 characters.";
       if (!form.jurisdictions) errors.jurisdictions = "At least one jurisdiction is required.";
+      if (!form.sponsorLegalName) errors.sponsorLegalName = "Sponsor legal name is required for rules generation.";
+      if (!form.privacyPolicyUrl) errors.privacyPolicyUrl = "Privacy policy URL is required.";
+      if (!form.supportContact) errors.supportContact = "Support contact is required.";
       if (!form.rulesPreviewedByAdmin)
         errors.rulesPreviewedByAdmin = "You must preview the rules before acknowledging compliance.";
       if (!form.complianceAcknowledged)
@@ -506,6 +512,9 @@ const RaffleConfig = () => {
             complianceAcknowledged: cfg.compliance?.acknowledged || f.complianceAcknowledged,
             requireTermsConsent: cfg.compliance?.requireTerms !== undefined ? cfg.compliance.requireTerms : true,
             rulesPreviewedByAdmin: cfg.compliance?.acknowledged || false,
+            sponsorLegalName: cfg.compliance?.sponsorLegalName || f.sponsorLegalName,
+            privacyPolicyUrl: cfg.compliance?.privacyPolicyUrl || f.privacyPolicyUrl,
+            supportContact: cfg.compliance?.supportContact || f.supportContact,
           }));
         }
       } catch (err) {
@@ -665,6 +674,9 @@ const RaffleConfig = () => {
           jurisdictions: form.jurisdictions.split(",").map((j) => j.trim()).filter(Boolean),
           acknowledged: form.complianceAcknowledged,
           requireTerms: form.requireTermsConsent,
+          sponsorLegalName: form.sponsorLegalName,
+          privacyPolicyUrl: form.privacyPolicyUrl,
+          supportContact: form.supportContact,
         },
       };
 
@@ -1494,6 +1506,49 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
     return (
       <Box>
         <Typography variant="h6" sx={{ mb: 2 }}>Compliance</Typography>
+
+        {/* Legal Details — required for Official Rules generation */}
+        <Box sx={{ mb: 2.5, p: 2, border: "1px solid #E5E7EB", borderRadius: 2, background: "#FAFBFC" }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#111827", mb: 1.5 }}>
+            📋 Sponsor Legal Details
+          </Typography>
+          <Typography sx={{ fontSize: 11.5, color: "#6B7280", mb: 2 }}>
+            These details will appear in the Official Rules shown to attendees.
+          </Typography>
+          <TextField
+            fullWidth
+            size="small"
+            label="Sponsor Legal Name *"
+            placeholder="e.g. UrbanHTX LLC"
+            value={form.sponsorLegalName}
+            onChange={(e) => updateField("sponsorLegalName", e.target.value)}
+            error={!!errors.sponsorLegalName}
+            helperText={errors.sponsorLegalName}
+            sx={{ mb: 1.5 }}
+          />
+          <TextField
+            fullWidth
+            size="small"
+            label="Privacy Policy URL *"
+            placeholder="https://yoursite.com/privacy"
+            value={form.privacyPolicyUrl}
+            onChange={(e) => updateField("privacyPolicyUrl", e.target.value)}
+            error={!!errors.privacyPolicyUrl}
+            helperText={errors.privacyPolicyUrl}
+            sx={{ mb: 1.5 }}
+          />
+          <TextField
+            fullWidth
+            size="small"
+            label="Support Contact (email or phone) *"
+            placeholder="support@yourbusiness.com"
+            value={form.supportContact}
+            onChange={(e) => updateField("supportContact", e.target.value)}
+            error={!!errors.supportContact}
+            helperText={errors.supportContact}
+          />
+        </Box>
+
         <TextField
           fullWidth
           size="small"
