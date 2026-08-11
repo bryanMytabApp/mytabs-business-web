@@ -14,6 +14,7 @@ import {
   Alert,
   IconButton,
   Chip,
+  Modal,
 } from "@mui/material";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -433,6 +434,8 @@ const RaffleConfig = () => {
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showDemoPreview, setShowDemoPreview] = useState(false);
+  const [demoPreviewUrl, setDemoPreviewUrl] = useState("");
   const [eventData, setEventData] = useState(null);
 
   // Fetch event data to get ticket types
@@ -1910,7 +1913,8 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
                   console.warn("Preview: draft save failed, opening with last saved config", e.message);
                 }
                 const previewUrl = `https://experience.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId}&accentColor=${encodeURIComponent(form.accentColor)}&bannerStyle=${encodeURIComponent(form.bannerStyle)}&prizeName=${encodeURIComponent(form.prizes[0]?.name || '')}&infoCollection=${encodeURIComponent(form.infoCollection)}`;
-                window.open(previewUrl, '_blank', 'width=400,height=750,menubar=no,toolbar=no,location=no,status=no');
+                setDemoPreviewUrl(previewUrl);
+                setShowDemoPreview(true);
               }}
             >
               🎯 Open Demo Preview
@@ -1938,6 +1942,61 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
           )}
         </div>
       </div>
+
+      {/* Phone-frame Preview Modal */}
+      <Modal
+        open={showDemoPreview}
+        onClose={() => setShowDemoPreview(false)}
+        sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        <Box
+          onClick={(e) => e.stopPropagation()}
+          sx={{
+            width: 390,
+            height: 720,
+            borderRadius: "32px",
+            background: "#1A1A1A",
+            p: "12px",
+            position: "relative",
+            boxShadow: "0 25px 60px rgba(0,0,0,0.4)",
+          }}
+        >
+          {/* Phone notch */}
+          <Box sx={{
+            position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)",
+            width: 80, height: 24, background: "#1A1A1A", borderRadius: 12, zIndex: 10,
+          }} />
+          {/* Iframe container */}
+          <Box sx={{
+            width: "100%", height: "100%", borderRadius: "22px", overflow: "hidden",
+            background: "#fff",
+          }}>
+            {demoPreviewUrl && (
+              <iframe
+                src={demoPreviewUrl}
+                title="Raffle Demo Preview"
+                style={{ width: "100%", height: "100%", border: "none" }}
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              />
+            )}
+          </Box>
+          {/* Close button */}
+          <Box
+            component="button"
+            onClick={() => setShowDemoPreview(false)}
+            sx={{
+              position: "absolute", top: -12, right: -12,
+              width: 32, height: 32, borderRadius: "50%",
+              background: "#fff", border: "2px solid #E5E7EB",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#666",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            }}
+          >
+            ✕
+          </Box>
+        </Box>
+      </Modal>
     </div>
   );
 };
