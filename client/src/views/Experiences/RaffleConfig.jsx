@@ -229,7 +229,7 @@ function validateAll(form) {
  * Using React.memo prevents re-renders of sibling prizes when one prize changes.
  * Each text field manages its own value to avoid losing focus.
  */
-const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eventId }) => {
+const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eventId, bannerStyle }) => {
   const [generatingDesc, setGeneratingDesc] = useState(false);
 
   const generateDescription = async (prizeName) => {
@@ -342,7 +342,8 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eve
             </Box>
           )}
         </Box>
-        {/* Prize Image Upload */}
+        {/* Prize Image Upload — only shown when banner style is "Photo Only" */}
+        {bannerStyle === "image" && (
         <Box>
           <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#111827", mb: 0.5 }}>Prize Image</Typography>
           {prize.imagePreview ? (
@@ -385,6 +386,7 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eve
             </label>
           )}
         </Box>
+        )}
       </Box>
       {/* Quantity row */}
       <Box sx={{ display: "flex", gap: 1.5 }}>
@@ -747,6 +749,12 @@ const RaffleConfig = () => {
           ))}
         </Box>
 
+        {form.bannerStyle === "image" && (
+          <Typography sx={{ fontSize: 11.5, color: "#00A9D6", mt: 1, fontWeight: 600 }}>
+            📷 Upload a photo for your first prize on the Prizes tab — it will be used as the banner.
+          </Typography>
+        )}
+
         {/* Accent Color */}
         <Box sx={{ mt: 2 }}>
           <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1, color: "#111827" }}>Accent Color</Typography>
@@ -797,6 +805,7 @@ const RaffleConfig = () => {
           errors={errors}
           canDelete={form.prizes.length > 1}
           eventId={eventId}
+          bannerStyle={form.bannerStyle}
           onUpdate={(updatedPrize) => {
             const updated = [...form.prizes];
             updated[idx] = updatedPrize;
