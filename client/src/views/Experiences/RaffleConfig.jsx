@@ -58,7 +58,7 @@ const DEFAULT_FORM = {
   // Step 2: Prize configuration
   bannerStyle: "gift", // "gift" | "card" | "image"
   accentColor: "#00A9D6", // Tabs Cyan default
-  prizes: [{ name: "", description: "", quantity: 1, winnersPerDrawing: 1 }],
+  prizes: [{ id: "prize-1", name: "", description: "", quantity: 1, winnersPerDrawing: 1 }],
   // Step 3: Schedule
   entryWindowStart: null,
   entryWindowEnd: null,
@@ -278,7 +278,7 @@ const RaffleConfig = () => {
             raffleType: cfg.raffleType || f.raffleType,
             bannerStyle: cfg.bannerStyle || f.bannerStyle,
             accentColor: cfg.accentColor || f.accentColor,
-            prizes: cfg.prizes?.length ? cfg.prizes.map(p => ({ ...p, imagePreview: p.imageUrl || null })) : f.prizes,
+            prizes: cfg.prizes?.length ? cfg.prizes.map((p, i) => ({ ...p, id: p.id || `prize-${i + 1}`, imagePreview: p.imageUrl || null })) : f.prizes,
             entryWindowStart: cfg.entryWindowStart ? dayjs(cfg.entryWindowStart) : f.entryWindowStart,
             entryWindowEnd: cfg.entryWindowEnd ? dayjs(cfg.entryWindowEnd) : f.entryWindowEnd,
             drawingSchedules: cfg.drawingSchedules?.length ? cfg.drawingSchedules.map(s => ({ time: s.time ? dayjs(s.time) : null, winners: s.winners || 1 })) : f.drawingSchedules,
@@ -591,7 +591,7 @@ const RaffleConfig = () => {
       <Typography variant="h6" sx={{ mb: 2 }}>Prizes</Typography>
 
       {form.prizes.map((prize, idx) => (
-        <Box key={idx} sx={{ mb: 2, p: 2, pt: 1.5, border: "1px solid #E5E7EB", borderRadius: 2, background: "#fff" }}>
+        <Box key={prize.id || `prize-${idx}`} sx={{ mb: 2, p: 2, pt: 1.5, border: "1px solid #E5E7EB", borderRadius: 2, background: "#fff" }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 13 }}>Prize {idx + 1}</Typography>
             {form.prizes.length > 1 && (
@@ -737,7 +737,7 @@ const RaffleConfig = () => {
       ))}
       <Button
         startIcon={<AddIcon />}
-        onClick={() => updateField("prizes", [...form.prizes, { name: "", description: "", quantity: 1, winnersPerDrawing: 1 }])}
+        onClick={() => updateField("prizes", [...form.prizes, { id: `prize-${Date.now()}`, name: "", description: "", quantity: 1, winnersPerDrawing: 1 }])}
         sx={{ textTransform: "none" }}
       >
         Add Prize Tier
