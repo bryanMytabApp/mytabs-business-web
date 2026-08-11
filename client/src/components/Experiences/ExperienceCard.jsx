@@ -85,6 +85,7 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
   const { experienceId, name, experienceType, state, entryCount, eventId } = instance;
   const stateStyle = STATE_STYLES[state] || STATE_STYLES.Draft;
   const [showPreview, setShowPreview] = useState(false);
+  const [showConfigure, setShowConfigure] = useState(false);
   const Icon = TYPE_ICONS[experienceType] || DefaultIcon;
 
   const handleCardClick = () => {
@@ -92,6 +93,7 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
   };
 
   const previewUrl = `https://experience.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId || ''}&userToken=${encodeURIComponent(localStorage.getItem('idToken') || '')}`;
+  const configureUrl = `/admin/my-events/${eventId}/experiences/${experienceId}/config?embedded=true`;
 
   return (
     <>
@@ -248,7 +250,13 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
           <Box onClick={(e) => e.stopPropagation()}>
             <LifecycleActions
               state={state}
-              onAction={(action) => onAction && onAction(experienceId, action)}
+              onAction={(action) => {
+                if (action === "configure") {
+                  setShowConfigure(true);
+                } else {
+                  onAction && onAction(experienceId, action);
+                }
+              }}
               onPreview={(e) => {
                 if (e) e.stopPropagation();
                 setShowPreview(true);
@@ -297,6 +305,59 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
           <Box
             component="button"
             onClick={() => setShowPreview(false)}
+            sx={{
+              position: "absolute", top: -12, right: -12,
+              width: 32, height: 32, borderRadius: "50%",
+              background: "#fff", border: "2px solid #E5E7EB",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#666",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            }}
+          >
+            ✕
+          </Box>
+        </Box>
+      </Modal>
+
+      {/* Configure/Edit Modal — same phone-frame style with iframe */}
+      <Modal
+        open={showConfigure}
+        onClose={() => setShowConfigure(false)}
+        sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        <Box
+          onClick={(e) => e.stopPropagation()}
+          sx={{
+            width: 390,
+            height: 720,
+            borderRadius: "32px",
+            background: "#1A1A1A",
+            p: "12px",
+            position: "relative",
+            boxShadow: "0 25px 60px rgba(0,0,0,0.4)",
+          }}
+        >
+          {/* Phone notch */}
+          <Box sx={{
+            position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)",
+            width: 80, height: 24, background: "#1A1A1A", borderRadius: 12, zIndex: 10,
+          }} />
+          {/* Iframe container */}
+          <Box sx={{
+            width: "100%", height: "100%", borderRadius: "22px", overflow: "hidden",
+            background: "#fff",
+          }}>
+            <iframe
+              src={configureUrl}
+              title="Engagement Configure"
+              style={{ width: "100%", height: "100%", border: "none" }}
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            />
+          </Box>
+          {/* Close button */}
+          <Box
+            component="button"
+            onClick={() => setShowConfigure(false)}
             sx={{
               position: "absolute", top: -12, right: -12,
               width: 32, height: 32, borderRadius: "50%",
