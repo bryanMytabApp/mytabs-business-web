@@ -79,7 +79,7 @@ const RaffleLiveDashboard = () => {
 
   // Winners
   const [winners, setWinners] = useState([]);
-  const [winnersLoading, setWinnersLoading] = useState(false);
+  const [, setWinnersLoading] = useState(false);
 
   const fetchStats = useCallback(async (showLoading = false) => {
     if (showLoading) setStatsLoading(true);
@@ -244,6 +244,7 @@ const RaffleLiveDashboard = () => {
     await fetchTimeline();
     // Also refresh winners
     fetchWinners();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId, experienceId, fetchStats, fetchTimeline]);
 
   // Fetch all participants

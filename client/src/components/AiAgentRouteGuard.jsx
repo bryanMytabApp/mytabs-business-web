@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Button, CircularProgress, Alert } from "@mui/material";
+import { Box, Typography, Button, CircularProgress } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import AutorenewIcon from "@mui/icons-material/Autorenew";
 import { useNavigate } from "react-router-dom";
-import useAiAgentEntitlement from "../hooks/useAiAgentEntitlement";
 import { getMyOrganizations } from "../services/organizationService";
 
 /**

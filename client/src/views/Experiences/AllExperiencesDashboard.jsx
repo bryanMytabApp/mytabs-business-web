@@ -12,7 +12,7 @@ import {
 import RefreshIcon from "@mui/icons-material/Refresh";
 import IconButton from "@mui/material/IconButton";
 import { getEventsByUserId } from "../../services/eventService";
-import { listInstances, listAllExperiences } from "../../services/experienceService";
+import { listAllExperiences } from "../../services/experienceService";
 import ExperienceCard from "../../components/Experiences/ExperienceCard";
 
 const ACCENT = "#F09925";

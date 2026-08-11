@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo } from "react";
+import React, { useState, useEffect, memo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -229,7 +229,38 @@ function validateAll(form) {
  * Using React.memo prevents re-renders of sibling prizes when one prize changes.
  * Each text field manages its own value to avoid losing focus.
  */
-const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete }) => {
+const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eventId }) => {
+  const [generatingDesc, setGeneratingDesc] = useState(false);
+
+  const generateDescription = async (prizeName) => {
+    if (!prizeName || prizeName.length < 3 || prize.description) return;
+    setGeneratingDesc(true);
+    try {
+      const token = localStorage.getItem("idToken");
+      // eslint-disable-next-line global-require
+      const baseUrl = require("../../config.json").backendUrl;
+      const response = await fetch(`${baseUrl}v1/events/${eventId}/experiences/generate-text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          prompt: `Write a short, exciting prize description (1-2 sentences, under 120 characters) for a raffle prize called "${prizeName}". Be concise and appealing. Return just the description text, no quotes.`,
+          format: "text"
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const desc = (data.data || data.result || data.text || "").trim();
+        if (desc && desc.length > 5) {
+          onUpdate({ ...prize, description: desc });
+        }
+      }
+    } catch {
+      // Silent fail — user can write manually
+    } finally {
+      setGeneratingDesc(false);
+    }
+  };
+
   return (
     <Box sx={{ mb: 2, p: 2, pt: 1.5, border: "1px solid #E5E7EB", borderRadius: 2, background: "#fff" }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
@@ -248,6 +279,7 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete }) =
           label="Prize Name"
           value={prize.name}
           onChange={(e) => onUpdate({ ...prize, name: e.target.value })}
+          onBlur={(e) => generateDescription(e.target.value)}
           error={!!errors[`prizes[${idx}].name`]}
           helperText={errors[`prizes[${idx}].name`] || `${prize.name.length}/100`}
           inputProps={{ maxLength: 101 }}
@@ -271,7 +303,18 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete }) =
           value={prize.description}
           onChange={(e) => onUpdate({ ...prize, description: e.target.value })}
           error={!!errors[`prizes[${idx}].description`]}
-          helperText={errors[`prizes[${idx}].description`] || `${prize.description.length}/500`}
+          helperText={
+            generatingDesc
+              ? "✨ AI is writing a description..."
+              : (errors[`prizes[${idx}].description`] || `${prize.description.length}/500`)
+          }
+          InputProps={{
+            endAdornment: generatingDesc ? (
+              <Box sx={{ display: "flex", alignItems: "center", pr: 1 }}>
+                <Box sx={{ width: 14, height: 14, border: "2px solid #e0e0e0", borderTopColor: "#00A9D6", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+              </Box>
+            ) : null,
+          }}
         />
         {/* Prize Image Upload */}
         <Box>
@@ -727,6 +770,7 @@ const RaffleConfig = () => {
           idx={idx}
           errors={errors}
           canDelete={form.prizes.length > 1}
+          eventId={eventId}
           onUpdate={(updatedPrize) => {
             const updated = [...form.prizes];
             updated[idx] = updatedPrize;
