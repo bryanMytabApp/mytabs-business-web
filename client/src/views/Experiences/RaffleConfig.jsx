@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -223,6 +223,136 @@ function validateAll(form) {
   }
   return allErrors;
 }
+
+/**
+ * PrizeItem — Isolated component for a single prize entry.
+ * Using React.memo prevents re-renders of sibling prizes when one prize changes.
+ * Each text field manages its own value to avoid losing focus.
+ */
+const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete }) => {
+  return (
+    <Box sx={{ mb: 2, p: 2, pt: 1.5, border: "1px solid #E5E7EB", borderRadius: 2, background: "#fff" }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 13 }}>Prize {idx + 1}</Typography>
+        {canDelete && (
+          <IconButton size="small" onClick={onDelete}>
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        )}
+      </Box>
+      {/* Two-column layout */}
+      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5, mb: 1.5 }}>
+        <TextField
+          fullWidth
+          size="small"
+          label="Prize Name"
+          value={prize.name}
+          onChange={(e) => onUpdate({ ...prize, name: e.target.value })}
+          error={!!errors[`prizes[${idx}].name`]}
+          helperText={errors[`prizes[${idx}].name`] || `${prize.name.length}/100`}
+          inputProps={{ maxLength: 101 }}
+        />
+        <TextField
+          fullWidth
+          size="small"
+          label="Prize Value ($)"
+          type="number"
+          value={prize.value || ""}
+          onChange={(e) => onUpdate({ ...prize, value: e.target.value })}
+          placeholder="e.g. 500"
+          inputProps={{ min: 0, step: "0.01" }}
+        />
+        <TextField
+          fullWidth
+          size="small"
+          label="Prize Description"
+          multiline
+          rows={2}
+          value={prize.description}
+          onChange={(e) => onUpdate({ ...prize, description: e.target.value })}
+          error={!!errors[`prizes[${idx}].description`]}
+          helperText={errors[`prizes[${idx}].description`] || `${prize.description.length}/500`}
+        />
+        {/* Prize Image Upload */}
+        <Box>
+          <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#111827", mb: 0.5 }}>Prize Image</Typography>
+          {prize.imagePreview ? (
+            <Box sx={{ position: "relative", display: "inline-block", width: "100%" }}>
+              <img
+                src={prize.imagePreview}
+                alt="Prize"
+                style={{ width: "100%", maxHeight: 64, objectFit: "cover", borderRadius: 8, border: "1px solid #E5E7EB" }}
+              />
+              <button
+                onClick={() => onUpdate({ ...prize, imagePreview: null, imageFile: null })}
+                style={{
+                  position: "absolute", top: 3, right: 3,
+                  width: 18, height: 18, borderRadius: "50%",
+                  background: "#ef4444", color: "#fff", border: "none",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 9, fontWeight: 700, cursor: "pointer",
+                }}
+              >✕</button>
+            </Box>
+          ) : (
+            <label style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+              padding: "10px 8px", border: "1.5px dashed #E5E7EB", borderRadius: 8,
+              cursor: "pointer", background: "#FAFBFC", textAlign: "center",
+            }}>
+              <span style={{ fontSize: 16 }}>📷</span>
+              <span style={{ fontSize: 11, color: "#6B7280", fontWeight: 600 }}>Upload photo</span>
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    onUpdate({ ...prize, imagePreview: URL.createObjectURL(file), imageFile: file });
+                  }
+                }}
+              />
+            </label>
+          )}
+        </Box>
+      </Box>
+      {/* Quantity row */}
+      <Box sx={{ display: "flex", gap: 1.5 }}>
+        <TextField
+          size="small"
+          label="Quantity"
+          type="number"
+          value={prize.quantity || ""}
+          onChange={(e) => {
+            const val = e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1);
+            onUpdate({ ...prize, quantity: val });
+          }}
+          error={!!errors[`prizes[${idx}].quantity`]}
+          helperText={errors[`prizes[${idx}].quantity`]}
+          inputProps={{ min: 1, max: 1000 }}
+          sx={{ flex: 1 }}
+        />
+        <TextField
+          size="small"
+          label="Winners Per Drawing"
+          type="number"
+          value={prize.winnersPerDrawing || ""}
+          onChange={(e) => {
+            const val = e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1);
+            onUpdate({ ...prize, winnersPerDrawing: val });
+          }}
+          error={!!errors[`prizes[${idx}].winnersPerDrawing`]}
+          helperText={errors[`prizes[${idx}].winnersPerDrawing`]}
+          inputProps={{ min: 1 }}
+          sx={{ flex: 1 }}
+        />
+      </Box>
+    </Box>
+  );
+});
+
+PrizeItem.displayName = 'PrizeItem';
 
 const RaffleConfig = () => {
   const { eventId, experienceId } = useParams();
@@ -591,149 +721,22 @@ const RaffleConfig = () => {
       <Typography variant="h6" sx={{ mb: 2 }}>Prizes</Typography>
 
       {form.prizes.map((prize, idx) => (
-        <Box key={prize.id || `prize-${idx}`} sx={{ mb: 2, p: 2, pt: 1.5, border: "1px solid #E5E7EB", borderRadius: 2, background: "#fff" }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 13 }}>Prize {idx + 1}</Typography>
-            {form.prizes.length > 1 && (
-              <IconButton size="small" onClick={() => {
-                const updated = form.prizes.filter((_, i) => i !== idx);
-                updateField("prizes", updated);
-              }}>
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            )}
-          </Box>
-          {/* Two-column layout */}
-          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5, mb: 1.5 }}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Prize Name"
-              value={prize.name}
-              onChange={(e) => {
-                const updated = [...form.prizes];
-                updated[idx] = { ...updated[idx], name: e.target.value };
-                updateField("prizes", updated);
-              }}
-              error={!!errors[`prizes[${idx}].name`]}
-              helperText={errors[`prizes[${idx}].name`] || `${prize.name.length}/100`}
-              inputProps={{ maxLength: 101 }}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label="Prize Value ($)"
-              type="number"
-              value={prize.value || ""}
-              onChange={(e) => {
-                const updated = [...form.prizes];
-                updated[idx] = { ...updated[idx], value: e.target.value };
-                updateField("prizes", updated);
-              }}
-              placeholder="e.g. 500"
-              inputProps={{ min: 0, step: "0.01" }}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label="Prize Description"
-              multiline
-              rows={2}
-              value={prize.description}
-              onChange={(e) => {
-                const updated = [...form.prizes];
-                updated[idx] = { ...updated[idx], description: e.target.value };
-                updateField("prizes", updated);
-              }}
-              error={!!errors[`prizes[${idx}].description`]}
-              helperText={errors[`prizes[${idx}].description`] || `${prize.description.length}/500`}
-            />
-            {/* Prize Image Upload */}
-            <Box>
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#111827", mb: 0.5 }}>Prize Image</Typography>
-              {prize.imagePreview ? (
-                <Box sx={{ position: "relative", display: "inline-block", width: "100%" }}>
-                  <img
-                    src={prize.imagePreview}
-                    alt="Prize"
-                    style={{ width: "100%", maxHeight: 64, objectFit: "cover", borderRadius: 8, border: "1px solid #E5E7EB" }}
-                  />
-                  <button
-                    onClick={() => {
-                      const updated = [...form.prizes];
-                      updated[idx] = { ...updated[idx], imagePreview: null, imageFile: null };
-                      updateField("prizes", updated);
-                    }}
-                    style={{
-                      position: "absolute", top: 3, right: 3,
-                      width: 18, height: 18, borderRadius: "50%",
-                      background: "#ef4444", color: "#fff", border: "none",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 9, fontWeight: 700, cursor: "pointer",
-                    }}
-                  >✕</button>
-                </Box>
-              ) : (
-                <label style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-                  padding: "10px 8px", border: "1.5px dashed #E5E7EB", borderRadius: 8,
-                  cursor: "pointer", background: "#FAFBFC", textAlign: "center",
-                }}>
-                  <span style={{ fontSize: 16 }}>📷</span>
-                  <span style={{ fontSize: 11, color: "#6B7280", fontWeight: 600 }}>Upload photo</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file) {
-                        const updated = [...form.prizes];
-                        updated[idx] = { ...updated[idx], imagePreview: URL.createObjectURL(file), imageFile: file };
-                        updateField("prizes", updated);
-                      }
-                    }}
-                  />
-                </label>
-              )}
-            </Box>
-          </Box>
-          {/* Quantity row */}
-          <Box sx={{ display: "flex", gap: 1.5 }}>
-            <TextField
-              size="small"
-              label="Quantity"
-              type="number"
-              value={prize.quantity || ""}
-              onChange={(e) => {
-                const updated = [...form.prizes];
-                const val = e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1);
-                updated[idx] = { ...updated[idx], quantity: val };
-                updateField("prizes", updated);
-              }}
-              error={!!errors[`prizes[${idx}].quantity`]}
-              helperText={errors[`prizes[${idx}].quantity`]}
-              inputProps={{ min: 1, max: 1000 }}
-              sx={{ flex: 1 }}
-            />
-            <TextField
-              size="small"
-              label="Winners Per Drawing"
-              type="number"
-              value={prize.winnersPerDrawing || ""}
-              onChange={(e) => {
-                const updated = [...form.prizes];
-                const val = e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1);
-                updated[idx] = { ...updated[idx], winnersPerDrawing: val };
-                updateField("prizes", updated);
-              }}
-              error={!!errors[`prizes[${idx}].winnersPerDrawing`]}
-              helperText={errors[`prizes[${idx}].winnersPerDrawing`]}
-              inputProps={{ min: 1 }}
-              sx={{ flex: 1 }}
-            />
-          </Box>
-        </Box>
+        <PrizeItem
+          key={prize.id || `prize-${idx}`}
+          prize={prize}
+          idx={idx}
+          errors={errors}
+          canDelete={form.prizes.length > 1}
+          onUpdate={(updatedPrize) => {
+            const updated = [...form.prizes];
+            updated[idx] = updatedPrize;
+            updateField("prizes", updated);
+          }}
+          onDelete={() => {
+            const updated = form.prizes.filter((_, i) => i !== idx);
+            updateField("prizes", updated);
+          }}
+        />
       ))}
       <Button
         startIcon={<AddIcon />}
@@ -1569,7 +1572,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
     );
   };
 
-  const PrizeScheduleTabs = ({ renderAppearance, renderPrizeConfig, renderSchedule }) => {
+  const renderPrizeScheduleContent = () => {
     const tabs = ['Appearance', 'Prizes', 'Schedule'];
     return (
       <Box>
@@ -1596,7 +1599,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
     );
   };
 
-  const EntryRulesTabs = ({ renderEligibility, renderInfoCollection, renderTicketPricing }) => {
+  const renderEntryRulesContent = () => {
     const tabs = ['Eligibility', 'Info Collection', 'Ticket Pricing'];
     return (
       <Box>
@@ -1623,7 +1626,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
     );
   };
 
-  const SponsorNotificationsTabs = ({ renderSponsor, renderNotifications, renderCompliance }) => {
+  const renderSponsorNotificationsContent = () => {
     const tabs = ['Sponsor', 'Notifications', 'Compliance'];
     return (
       <Box>
@@ -1653,9 +1656,9 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
   const renderStepContent = (step) => {
     switch (step) {
       case 0: return renderRaffleType();
-      case 1: return <PrizeScheduleTabs renderAppearance={renderAppearance} renderPrizeConfig={renderPrizeConfig} renderSchedule={renderSchedule} />;
-      case 2: return <EntryRulesTabs renderEligibility={renderEligibility} renderInfoCollection={renderInfoCollection} renderTicketPricing={renderTicketPricing} />;
-      case 3: return <SponsorNotificationsTabs renderSponsor={renderSponsor} renderNotifications={renderNotifications} renderCompliance={renderCompliance} />;
+      case 1: return renderPrizeScheduleContent();
+      case 2: return renderEntryRulesContent();
+      case 3: return renderSponsorNotificationsContent();
       case 4: return renderReview();
       default: return null;
     }
