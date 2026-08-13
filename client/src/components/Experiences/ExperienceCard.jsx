@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { Card, CardContent, Box, Typography, Chip, Modal } from "@mui/material";
 import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
 import EmojiEventsOutlinedIcon from "@mui/icons-material/EmojiEventsOutlined";
@@ -82,11 +82,32 @@ const shimmerKeyframes = `
  * - onClick: (instance) => void
  */
 const ExperienceCard = ({ instance, onAction, onClick }) => {
-  const { experienceId, name, experienceType, state, entryCount, eventId } = instance;
+  const { experienceId, name, experienceType, state, entryCount, eventId, eventName } = instance;
   const stateStyle = STATE_STYLES[state] || STATE_STYLES.Draft;
   const [showPreview, setShowPreview] = useState(false);
   const [showConfigure, setShowConfigure] = useState(false);
+  const [previewPos, setPreviewPos] = useState({ x: 0, y: 0 });
+  const dragRef = useRef({ dragging: false, startX: 0, startY: 0, origX: 0, origY: 0 });
   const Icon = TYPE_ICONS[experienceType] || DefaultIcon;
+
+  const onDragStart = useCallback((e) => {
+    // Only drag from the phone frame/notch area, not the iframe
+    if (e.target.tagName === 'IFRAME') return;
+    dragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, origX: previewPos.x, origY: previewPos.y };
+    e.currentTarget.style.cursor = 'grabbing';
+  }, [previewPos]);
+
+  const onDragMove = useCallback((e) => {
+    if (!dragRef.current.dragging) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    setPreviewPos({ x: dragRef.current.origX + dx, y: dragRef.current.origY + dy });
+  }, []);
+
+  const onDragEnd = useCallback((e) => {
+    dragRef.current.dragging = false;
+    if (e.currentTarget) e.currentTarget.style.cursor = 'grab';
+  }, []);
 
   const handleCardClick = () => {
     if (onClick) onClick(instance);
@@ -232,6 +253,8 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
             </Box>
           </Box>
 
+          {/* Event name */}
+
           {/* Stat row */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 2 }}>
             <PeopleOutlineIcon sx={{ color: "#b7bfc7", fontSize: 18 }} />
@@ -251,11 +274,7 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
             <LifecycleActions
               state={state}
               onAction={(action) => {
-                if (action === "configure") {
-                  setShowConfigure(true);
-                } else {
-                  onAction && onAction(experienceId, action);
-                }
+                onAction && onAction(experienceId, action);
               }}
               onPreview={(e) => {
                 if (e) e.stopPropagation();
@@ -266,14 +285,19 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
         </CardContent>
       </Card>
 
-      {/* Mobile Preview Modal */}
+      {/* Mobile Preview Modal — draggable */}
       <Modal
         open={showPreview}
-        onClose={() => setShowPreview(false)}
-        sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+        onClose={() => { setShowPreview(false); setPreviewPos({ x: 0, y: 0 }); }}
+        sx={{ display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}
+        slotProps={{ backdrop: { sx: { pointerEvents: "auto" } } }}
       >
         <Box
           onClick={(e) => e.stopPropagation()}
+          onPointerDown={onDragStart}
+          onPointerMove={onDragMove}
+          onPointerUp={onDragEnd}
+          onPointerLeave={onDragEnd}
           sx={{
             width: 390,
             height: 720,
@@ -281,6 +305,9 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
             background: "#1A1A1A",
             p: "12px",
             position: "relative",
+            pointerEvents: "auto",
+            cursor: "grab",
+            transform: `translate(${previewPos.x}px, ${previewPos.y}px)`,
             boxShadow: "0 25px 60px rgba(0,0,0,0.4)",
           }}
         >
@@ -291,20 +318,20 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
           }} />
           {/* Iframe container */}
           <Box sx={{
-            width: "100%", height: "100%", borderRadius: "22px", overflow: "hidden",
+            width: "100%", height: "100%", borderRadius: "22px", overflow: "auto",
             background: "#fff",
           }}>
             <iframe
               src={previewUrl}
               title="Engagement Preview"
               style={{ width: "100%", height: "100%", border: "none" }}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"
             />
           </Box>
           {/* Close button */}
           <Box
             component="button"
-            onClick={() => setShowPreview(false)}
+            onClick={() => { setShowPreview(false); setPreviewPos({ x: 0, y: 0 }); }}
             sx={{
               position: "absolute", top: -12, right: -12,
               width: 32, height: 32, borderRadius: "50%",
@@ -351,7 +378,7 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
               src={configureUrl}
               title="Engagement Configure"
               style={{ width: "100%", height: "100%", border: "none" }}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"
             />
           </Box>
           {/* Close button */}

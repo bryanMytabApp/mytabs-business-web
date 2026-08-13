@@ -16,6 +16,7 @@ const STATE_ACTIONS = {
     { label: "Go Live", action: "activate", icon: PlayArrowIcon, variant: "golive" },
   ],
   Scheduled: [
+    { label: "Configure", action: "configure", icon: SettingsIcon, variant: "configure" },
     { label: "Activate", action: "activate", icon: PlayArrowIcon, variant: "golive" },
   ],
   Live: [

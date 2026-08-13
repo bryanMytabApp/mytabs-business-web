@@ -73,7 +73,8 @@ const DEFAULT_FORM = {
   infoCollection: "minimum", // "minimum" (name, email, phone) | "full" (+ address)
   // Step 5: Ticket pricing
   entryModel: "free",
-  ticketBundles: [{ quantity: 1, price: 5 }],
+  expectedParticipants: "",
+  ticketBundles: [{ quantity: 1, price: 0, capacity: 10 }],
   // Step 6: Sponsor association
   hasSponsor: false,
   sponsorName: "",
@@ -91,11 +92,130 @@ const DEFAULT_FORM = {
   complianceAcknowledged: false,
   requireTermsConsent: true,
   rulesPreviewedByAdmin: false,
+  rulesStrictness: "standard",
   sponsorLegalName: "",
   privacyPolicyUrl: "",
   supportContact: "",
   // Step 9: Review (no extra fields)
 };
+
+/**
+ * Validates a specific inner tab within a step.
+ * Returns field-level errors for only that inner tab's fields.
+ */
+function validateInnerTab(step, innerTab, form) {
+  const errors = {};
+
+  if (step === 1) {
+    // Step 1 inner tabs: 0=Appearance, 1=Prizes, 2=Schedule
+    if (innerTab === 1) {
+      // Prizes tab validation
+      form.prizes.forEach((prize, idx) => {
+        if (!prize.name) errors[`prizes[${idx}].name`] = "Prize name is required.";
+        else if (prize.name.length > 50)
+          errors[`prizes[${idx}].name`] = "Prize name must be ≤ 50 characters.";
+        if (prize.description && prize.description.length > 150)
+          errors[`prizes[${idx}].description`] = "Description must be ≤ 150 characters.";
+        if (!prize.quantity || prize.quantity < 1 || prize.quantity > 1000)
+          errors[`prizes[${idx}].quantity`] = "Quantity must be between 1 and 1000.";
+        if (!prize.winnersPerDrawing || prize.winnersPerDrawing < 1 || prize.winnersPerDrawing > prize.quantity)
+          errors[`prizes[${idx}].winnersPerDrawing`] = `Winners per drawing must be between 1 and ${prize.quantity || 1}.`;
+      });
+    } else if (innerTab === 2) {
+      // Schedule tab validation
+      if (!form.entryWindowStart) errors.entryWindowStart = "Entry window start is required.";
+      if (!form.entryWindowEnd) errors.entryWindowEnd = "Entry window end is required.";
+      if (form.entryWindowStart && form.entryWindowEnd) {
+        if (form.entryWindowEnd <= form.entryWindowStart)
+          errors.entryWindowEnd = "Entry window end must be after start.";
+      }
+      if (!form.drawingSchedules || form.drawingSchedules.length === 0)
+        errors.drawingSchedules = "At least one drawing schedule is required.";
+      else if (form.drawingSchedules.length > 20)
+        errors.drawingSchedules = "Maximum 20 drawing schedules allowed.";
+      else {
+        const times = [];
+        form.drawingSchedules.forEach((sched, idx) => {
+          if (!sched.time)
+            errors[`drawingSchedules[${idx}].time`] = "Drawing time is required.";
+          else {
+            if (times.includes(sched.time?.valueOf()))
+              errors[`drawingSchedules[${idx}].time`] = "Drawing times must be unique.";
+            times.push(sched.time?.valueOf());
+          }
+          if (!sched.winners || sched.winners < 1)
+            errors[`drawingSchedules[${idx}].winners`] = "Winners must be at least 1.";
+        });
+        for (let i = 1; i < form.drawingSchedules.length; i++) {
+          if (form.drawingSchedules[i].time && form.drawingSchedules[i - 1].time) {
+            if (form.drawingSchedules[i].time <= form.drawingSchedules[i - 1].time)
+              errors[`drawingSchedules[${i}].time`] = "Drawing schedules must be in chronological order.";
+          }
+        }
+        if (form.entryWindowEnd && form.drawingSchedules[0]?.time) {
+          if (form.entryWindowEnd >= form.drawingSchedules[0].time)
+            errors.entryWindowEnd = "Entry window must close before the first drawing time.";
+        }
+        const totalWinners = form.drawingSchedules.reduce((sum, s) => sum + (s.winners || 0), 0);
+        const totalQuantity = form.prizes.reduce((sum, p) => sum + (p.quantity || 0), 0);
+        if (totalWinners > totalQuantity)
+          errors.drawingSchedules = `Total winners (${totalWinners}) exceeds prize quantity (${totalQuantity}).`;
+      }
+    }
+  } else if (step === 2) {
+    // Step 2 inner tabs: 0=Ticket Pricing, 1=Eligibility, 2=Info Collection
+    if (innerTab === 0) {
+      if (form.entryModel === "paid") {
+        if (!form.ticketBundles || form.ticketBundles.length === 0)
+          errors.ticketBundles = "At least one ticket bundle is required.";
+        else if (form.ticketBundles.length > 10)
+          errors.ticketBundles = "Maximum 10 bundle tiers allowed.";
+        else {
+          form.ticketBundles.forEach((bundle, idx) => {
+            if (!bundle.quantity || bundle.quantity < 1)
+              errors[`ticketBundles[${idx}].quantity`] = "Ticket quantity must be at least 1.";
+            if (!bundle.price || bundle.price <= 0)
+              errors[`ticketBundles[${idx}].price`] = "Price must be greater than $0.";
+          });
+        }
+      }
+    } else if (innerTab === 1) {
+      if (form.eligibilityRules.includes("max_entries")) {
+        if (!form.maxEntries || form.maxEntries < 1 || form.maxEntries > 100)
+          errors.maxEntries = "Max entries must be between 1 and 100.";
+      }
+    }
+  } else if (step === 3) {
+    // Step 3 inner tabs: 0=Sponsor, 1=Notifications, 2=Compliance
+    if (innerTab === 0) {
+      if (form.hasSponsor) {
+        if (!form.sponsorName) errors.sponsorName = "Sponsor display name is required.";
+        else if (form.sponsorName.length > 100)
+          errors.sponsorName = "Sponsor name must be ≤ 100 characters.";
+      }
+    } else if (innerTab === 1) {
+      if (form.entryConfirmationTemplate && form.entryConfirmationTemplate.length > 300)
+        errors.entryConfirmationTemplate = "Template must be ≤ 300 characters.";
+      if (form.drawingReminderTemplate && form.drawingReminderTemplate.length > 300)
+        errors.drawingReminderTemplate = "Template must be ≤ 300 characters.";
+      if (form.winnerAnnouncementTemplate && form.winnerAnnouncementTemplate.length > 300)
+        errors.winnerAnnouncementTemplate = "Template must be ≤ 300 characters.";
+      if (form.claimExpirationTemplate && form.claimExpirationTemplate.length > 300)
+        errors.claimExpirationTemplate = "Template must be ≤ 300 characters.";
+    } else if (innerTab === 2) {
+      if (!form.jurisdictions) errors.jurisdictions = "At least one jurisdiction is required.";
+      if (!form.sponsorLegalName) errors.sponsorLegalName = "Sponsor legal name is required for rules generation.";
+      if (!form.privacyPolicyUrl) errors.privacyPolicyUrl = "Privacy policy URL is required.";
+      if (!form.supportContact) errors.supportContact = "Support contact is required.";
+      if (!form.rulesPreviewedByAdmin)
+        errors.rulesPreviewedByAdmin = "You must preview the rules before acknowledging compliance.";
+      if (!form.complianceAcknowledged)
+        errors.complianceAcknowledged = "You must acknowledge compliance requirements.";
+    }
+  }
+
+  return errors;
+}
 
 /**
  * Validates the raffle config form by step.
@@ -113,10 +233,10 @@ function validateStep(step, form) {
       // Prize validation
       form.prizes.forEach((prize, idx) => {
         if (!prize.name) errors[`prizes[${idx}].name`] = "Prize name is required.";
-        else if (prize.name.length > 100)
-          errors[`prizes[${idx}].name`] = "Prize name must be ≤ 100 characters.";
-        if (prize.description && prize.description.length > 500)
-          errors[`prizes[${idx}].description`] = "Description must be ≤ 500 characters.";
+        else if (prize.name.length > 50)
+          errors[`prizes[${idx}].name`] = "Prize name must be ≤ 50 characters.";
+        if (prize.description && prize.description.length > 150)
+          errors[`prizes[${idx}].description`] = "Description must be ≤ 150 characters.";
         if (!prize.quantity || prize.quantity < 1 || prize.quantity > 1000)
           errors[`prizes[${idx}].quantity`] = "Quantity must be between 1 and 1000.";
         if (!prize.winnersPerDrawing || prize.winnersPerDrawing < 1 || prize.winnersPerDrawing > prize.quantity)
@@ -296,8 +416,8 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eve
             if (!prize.description) generateDescription(e.target.value);
           }}
           error={!!errors[`prizes[${idx}].name`]}
-          helperText={errors[`prizes[${idx}].name`] || `${prize.name.length}/100`}
-          inputProps={{ maxLength: 101 }}
+          helperText={errors[`prizes[${idx}].name`] || `${prize.name.length}/50`}
+          inputProps={{ maxLength: 51 }}
         />
         <TextField
           fullWidth
@@ -318,11 +438,12 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eve
             rows={2}
             value={prize.description}
             onChange={(e) => onUpdate({ ...prize, description: e.target.value })}
+            inputProps={{ maxLength: 150 }}
             error={!!errors[`prizes[${idx}].description`]}
             helperText={
               generatingDesc
                 ? "✨ AI is writing a description..."
-                : (errors[`prizes[${idx}].description`] || `${prize.description.length}/500`)
+                : (errors[`prizes[${idx}].description`] || `${prize.description.length}/150`)
             }
           />
           {/* Regenerate AI description button */}
@@ -440,9 +561,36 @@ const RaffleConfig = () => {
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [instanceState, setInstanceState] = useState("Draft");
   const [showDemoPreview, setShowDemoPreview] = useState(false);
   const [demoPreviewUrl, setDemoPreviewUrl] = useState("");
+  const [showRulesPreview, setShowRulesPreview] = useState(false);
   const [eventData, setEventData] = useState(null);
+
+  // Draggable phone frame state
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragOffset = React.useRef({ x: 0, y: 0 });
+
+  const handleDragStart = (e) => {
+    e.preventDefault();
+    setDragging(true);
+    dragOffset.current = { x: e.clientX - dragPos.x, y: e.clientY - dragPos.y };
+  };
+
+  React.useEffect(() => {
+    if (!dragging) return;
+    const handleMove = (e) => {
+      setDragPos({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y });
+    };
+    const handleUp = () => setDragging(false);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [dragging]);
 
   // Fetch event data to get ticket types
   useEffect(() => {
@@ -481,6 +629,7 @@ const RaffleConfig = () => {
       try {
         const res = await getInstance(eventId, experienceId);
         const instance = res.data?.data || res.data;
+        if (instance?.state) setInstanceState(instance.state);
         if (instance?.config && Object.keys(instance.config).length > 0) {
           const cfg = instance.config;
           setForm(f => ({
@@ -491,7 +640,7 @@ const RaffleConfig = () => {
             prizes: cfg.prizes?.length ? cfg.prizes.map((p, i) => ({ ...p, id: p.id || `prize-${i + 1}`, imagePreview: p.imageUrl || null })) : f.prizes,
             entryWindowStart: cfg.entryWindowStart ? dayjs(cfg.entryWindowStart) : f.entryWindowStart,
             entryWindowEnd: cfg.entryWindowEnd ? dayjs(cfg.entryWindowEnd) : f.entryWindowEnd,
-            drawingSchedules: cfg.drawingSchedules?.length ? cfg.drawingSchedules.map(s => ({ time: s.time ? dayjs(s.time) : null, winners: s.winners || 1 })) : f.drawingSchedules,
+            drawingSchedules: cfg.drawingSchedules?.length ? cfg.drawingSchedules.map(s => ({ time: s.time ? dayjs(s.time) : null, winners: s.winners || 1, prizeIndex: s.prizeIndex })) : f.drawingSchedules,
             eligibilityRules: cfg.eligibilityRules || f.eligibilityRules,
             maxEntries: cfg.maxEntries || f.maxEntries,
             accessCodes: Array.isArray(cfg.accessCodes) ? cfg.accessCodes.join(', ') : (cfg.accessCodes || f.accessCodes),
@@ -512,6 +661,7 @@ const RaffleConfig = () => {
             complianceAcknowledged: cfg.compliance?.acknowledged || f.complianceAcknowledged,
             requireTermsConsent: cfg.compliance?.requireTerms !== undefined ? cfg.compliance.requireTerms : true,
             rulesPreviewedByAdmin: cfg.compliance?.acknowledged || false,
+            rulesStrictness: cfg.compliance?.rulesStrictness || f.rulesStrictness,
             sponsorLegalName: cfg.compliance?.sponsorLegalName || f.sponsorLegalName,
             privacyPolicyUrl: cfg.compliance?.privacyPolicyUrl || f.privacyPolicyUrl,
             supportContact: cfg.compliance?.supportContact || f.supportContact,
@@ -552,13 +702,61 @@ const RaffleConfig = () => {
   // Define how many inner tabs each step has (0 = no inner tabs)
   const INNER_TAB_COUNT = { 1: 3, 2: 3, 3: 3 }; // step 1: Appearance/Prizes/Schedule, step 2: Eligibility/Info/Pricing, step 3: Sponsor/Notifications/Compliance
 
+  // Hash tag mapping for each step + inner tab
+  const HASH_MAP = {
+    '0-0': 'raffle-type',
+    '1-0': 'appearance',
+    '1-1': 'prizes',
+    '1-2': 'schedule',
+    '2-0': 'ticket-pricing',
+    '2-1': 'eligibility',
+    '2-2': 'info-collection',
+    '3-0': 'sponsor',
+    '3-1': 'notifications',
+    '3-2': 'compliance',
+    '4-0': 'review',
+  };
+
+  // Reverse lookup: hash → { step, innerTab }
+  const HASH_TO_POSITION = Object.entries(HASH_MAP).reduce((acc, [key, hash]) => {
+    const [step, tab] = key.split('-').map(Number);
+    acc[hash] = { step, tab };
+    return acc;
+  }, {});
+
+  // Update URL hash when step/innerTab changes
+  useEffect(() => {
+    const hash = HASH_MAP[`${activeStep}-${innerTab}`];
+    if (hash) {
+      window.history.replaceState(null, '', `#${hash}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStep, innerTab]);
+
+  // Restore position from URL hash on initial load
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash && HASH_TO_POSITION[hash]) {
+      const { step, tab } = HASH_TO_POSITION[hash];
+      setActiveStep(step);
+      setInnerTab(tab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleNext = () => {
     const tabCount = INNER_TAB_COUNT[activeStep] || 0;
-    // If this step has inner tabs and we're not on the last one, advance inner tab
+    // If this step has inner tabs and we're not on the last one, validate current tab then advance
     if (tabCount > 0 && innerTab < tabCount - 1) {
+      const tabErrors = validateInnerTab(activeStep, innerTab, form);
+      if (Object.keys(tabErrors).length > 0) {
+        setErrors((prev) => ({ ...prev, ...tabErrors }));
+        return;
+      }
       setInnerTab(innerTab + 1);
       return;
     }
+    // On the last inner tab (or no inner tabs), validate the full step
     const stepErrors = validateStep(activeStep, form);
     if (Object.keys(stepErrors).length > 0) {
       setErrors((prev) => ({ ...prev, ...stepErrors }));
@@ -643,6 +841,7 @@ const RaffleConfig = () => {
         drawingSchedules: form.drawingSchedules.map((s) => ({
           time: s.time?.toISOString(),
           winners: s.winners,
+          prizeIndex: s.prizeIndex,
         })),
         eligibilityRules: form.eligibilityRules,
         maxEntries: form.eligibilityRules.includes("max_entries") ? form.maxEntries : undefined,
@@ -674,6 +873,7 @@ const RaffleConfig = () => {
           jurisdictions: form.jurisdictions.split(",").map((j) => j.trim()).filter(Boolean),
           acknowledged: form.complianceAcknowledged,
           requireTerms: form.requireTermsConsent,
+          rulesStrictness: form.rulesStrictness,
           sponsorLegalName: form.sponsorLegalName,
           privacyPolicyUrl: form.privacyPolicyUrl,
           supportContact: form.supportContact,
@@ -682,8 +882,10 @@ const RaffleConfig = () => {
 
       // Save config to instance
       await updateInstance(eventId, experienceId, { config });
-      // Transition from Draft → Scheduled
-      await transitionState(eventId, experienceId, { action: "submit" });
+      // Only transition from Draft → Scheduled; if already Scheduled, just save
+      if (instanceState === "Draft") {
+        await transitionState(eventId, experienceId, { action: "submit" });
+      }
       navigate(`/admin/my-events/${eventId}/experiences`);
     } catch (err) {
       const message =
@@ -885,7 +1087,7 @@ const RaffleConfig = () => {
           </Typography>
         )}
         {form.drawingSchedules.map((sched, idx) => (
-          <Box key={idx} sx={{ display: "flex", gap: 2, mb: 2, alignItems: "flex-start" }}>
+          <Box key={idx} sx={{ display: "flex", gap: 2, mb: 2, alignItems: "flex-start", flexWrap: "wrap" }}>
             <DateTimePicker
               label={`Drawing ${idx + 1} Time`}
               value={sched.time}
@@ -898,7 +1100,7 @@ const RaffleConfig = () => {
                 textField: {
                   error: !!errors[`drawingSchedules[${idx}].time`],
                   helperText: errors[`drawingSchedules[${idx}].time`],
-                  sx: { flex: 2 },
+                  sx: { flex: 2, minWidth: 200 },
                 },
               }}
             />
@@ -915,8 +1117,28 @@ const RaffleConfig = () => {
               error={!!errors[`drawingSchedules[${idx}].winners`]}
               helperText={errors[`drawingSchedules[${idx}].winners`]}
               inputProps={{ min: 1 }}
-              sx={{ flex: 1 }}
+              sx={{ flex: 1, minWidth: 80 }}
             />
+            {form.prizes.length > 1 && (
+              <TextField
+                select
+                label="Prize"
+                value={sched.prizeIndex ?? ""}
+                onChange={(e) => {
+                  const updated = [...form.drawingSchedules];
+                  updated[idx] = { ...updated[idx], prizeIndex: e.target.value === "" ? undefined : parseInt(e.target.value) };
+                  updateField("drawingSchedules", updated);
+                }}
+                SelectProps={{ native: true }}
+                InputLabelProps={{ shrink: true }}
+                sx={{ flex: 1.5, minWidth: 150 }}
+              >
+                <option value="">All Prizes</option>
+                {form.prizes.map((prize, pIdx) => (
+                  <option key={pIdx} value={pIdx}>{prize.name || `Prize ${pIdx + 1}`}</option>
+                ))}
+              </TextField>
+            )}
             {form.drawingSchedules.length > 1 && (
               <IconButton onClick={() => {
                 const updated = form.drawingSchedules.filter((_, i) => i !== idx);
@@ -1126,107 +1348,158 @@ const RaffleConfig = () => {
 
   const renderTicketPricing = () => (
     <Box>
-      <Typography variant="h6" sx={{ mb: 1 }}>How do attendees enter?</Typography>
+      <Typography variant="h6" sx={{ mb: 1 }}>Raffle Software Plan</Typography>
       <Typography variant="body2" sx={{ mb: 3, color: "#71727A", fontSize: 13 }}>
-        Choose whether entry is free or requires purchasing tickets.
+        Select the plan for your event. Free entry is included — this is a fixed software fee, not calculated per participant.
       </Typography>
 
-      <Box sx={{ display: "flex", gap: 1.5, mb: 3 }}>
-        <Box
-          onClick={() => updateField("entryModel", "free")}
-          sx={{
-            flex: 1, p: 2.5, borderRadius: 2, cursor: "pointer", textAlign: "center",
-            border: form.entryModel === "free" ? "2px solid #00AAD6" : "1px solid #E5E7EB",
-            background: form.entryModel === "free" ? "#F0FDFF" : "#fff",
-            transition: "all 0.15s",
-            "&:hover": { borderColor: form.entryModel === "free" ? "#00AAD6" : "#D1D5DB" },
-          }}
-        >
-          <VolunteerActivismOutlinedIcon sx={{ fontSize: 32, mb: 1, color: form.entryModel === "free" ? "#00AAD6" : "#9CA3AF" }} />
-          <Typography sx={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Free Entry</Typography>
-          <Typography sx={{ fontSize: 11, color: "#71727A", mt: 0.5 }}>Anyone eligible can enter at no cost</Typography>
-        </Box>
-        <Box
-          onClick={() => updateField("entryModel", "paid")}
-          sx={{
-            flex: 1, p: 2.5, borderRadius: 2, cursor: "pointer", textAlign: "center",
-            border: form.entryModel === "paid" ? "2px solid #00AAD6" : "1px solid #E5E7EB",
-            background: form.entryModel === "paid" ? "#F0FDFF" : "#fff",
-            transition: "all 0.15s",
-            "&:hover": { borderColor: form.entryModel === "paid" ? "#00AAD6" : "#D1D5DB" },
-          }}
-        >
-          <ConfirmationNumberOutlinedIcon sx={{ fontSize: 32, mb: 1, color: form.entryModel === "paid" ? "#00AAD6" : "#9CA3AF" }} />
-          <Typography sx={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Paid Tickets</Typography>
-          <Typography sx={{ fontSize: 11, color: "#71727A", mt: 0.5 }}>Attendees purchase raffle tickets to enter</Typography>
-        </Box>
-      </Box>
-
-      {form.entryModel === "paid" && (
-        <Box sx={{ border: "1px solid #E5E7EB", borderRadius: 2, p: 2, background: "#FAFBFC" }}>
-          <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#111827", mb: 1.5 }}>
-            Ticket Bundles ({form.ticketBundles.length}/10)
-          </Typography>
-          {errors.ticketBundles && (
-            <Typography variant="caption" color="error" sx={{ mb: 1, display: "block" }}>
+      <Box sx={{ borderRadius: 3, p: 3, background: "linear-gradient(160deg, #f8fafc 0%, #eef6ff 50%, #f0f9ff 100%)", border: "1px solid #E5E7EB" }}>
+        <Typography sx={{ fontSize: 14, fontWeight: 800, color: "#0D1B2A", mb: 0.5, fontFamily: "'GT Ultra', 'GT Ultra fallback', 'Playfair Display', Georgia, serif" }}>
+          Choose your plan
+        </Typography>
+        <Typography sx={{ fontSize: 12, color: "#6B7280", mb: 3 }}>
+          Fixed event fee — not calculated per entry, participant, or raffle proceeds.
+        </Typography>
+        {errors.ticketBundles && (
+            <Typography variant="caption" sx={{ color: "#f87171", mb: 1, display: "block" }}>
               {errors.ticketBundles}
             </Typography>
           )}
-          {form.ticketBundles.map((bundle, idx) => (
-            <Box key={idx} sx={{ display: "flex", gap: 2, mb: 2, alignItems: "flex-start" }}>
-              <TextField
-                label="Tickets"
-                type="number"
-                value={bundle.quantity || ""}
-                onChange={(e) => {
-                  const updated = [...form.ticketBundles];
-                  const val = e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1);
-                  updated[idx] = { ...updated[idx], quantity: val };
-                  updateField("ticketBundles", updated);
-                }}
-                error={!!errors[`ticketBundles[${idx}].quantity`]}
-                helperText={errors[`ticketBundles[${idx}].quantity`]}
-                inputProps={{ min: 1 }}
-                size="small"
-                sx={{ flex: 1 }}
-              />
-              <TextField
-                label="Price ($)"
-                value={bundle.price || ""}
-                onChange={(e) => {
-                  const updated = [...form.ticketBundles];
-                  const raw = e.target.value.replace(/[^0-9.]/g, '');
-                  updated[idx] = { ...updated[idx], price: raw };
-                  updateField("ticketBundles", updated);
-                }}
-                error={!!errors[`ticketBundles[${idx}].price`]}
-                helperText={errors[`ticketBundles[${idx}].price`]}
-                inputProps={{ inputMode: "decimal" }}
-                size="small"
-                sx={{ flex: 1 }}
-              />
-              {form.ticketBundles.length > 1 && (
-                <IconButton size="small" onClick={() => {
-                  const updated = form.ticketBundles.filter((_, i) => i !== idx);
-                  updateField("ticketBundles", updated);
-                }}>
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              )}
-            </Box>
-          ))}
-          {form.ticketBundles.length < 10 && (
-            <Button
-              startIcon={<AddIcon />}
-              size="small"
-              onClick={() => updateField("ticketBundles", [...form.ticketBundles, { quantity: 1, price: 5 }])}
-              sx={{ textTransform: "none", fontWeight: 600, color: "#00AAD6" }}
-            >
-              Add Bundle
-            </Button>
-          )}
+
+          {/* Pricing cards */}
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(3, 1fr)" }, gap: 2, mb: 2 }}>
+            {[
+              {
+                capacity: 10, price: 0, tier: "FREE", headline: "Everything you need.",
+                priceDisplay: "$0", fee: "0 platform fee", cta: "Get started free",
+                note: "Best for testing your setup — zero cost, zero risk.",
+                features: ["Up to 10 raffle entries", "1 prize", "Basic entry form", "QR code confirmation"],
+                color: "#2dd4bf",
+              },
+              {
+                capacity: 500, price: 39, tier: "COMMUNITY", headline: "Local events.",
+                priceDisplay: "$39", fee: "per event", cta: "Select plan",
+                note: "Meetups, church events, small fundraisers.",
+                features: ["Up to 500 entries", "Up to 3 prizes", "Custom entry form", "Email confirmation"],
+                color: "#2dd4bf",
+              },
+              {
+                capacity: 2000, price: 99, tier: "GROWTH", headline: "Mid-size events.",
+                priceDisplay: "$99", fee: "per event", cta: "Select plan",
+                note: "Concerts, galas, school fundraisers.",
+                features: ["Up to 2,000 entries", "Up to 5 prizes", "Info collection", "Multi-draw scheduling"],
+                color: "#2dd4bf", popular: true,
+              },
+              {
+                capacity: 10000, price: 249, tier: "PROFESSIONAL", headline: "Built to scale.",
+                priceDisplay: "$249", fee: "per event", cta: "Select plan",
+                note: "Conferences, festivals, multi-day events.",
+                features: ["Up to 10,000 entries", "Unlimited prizes", "Terms & compliance", "Per-prize drawings"],
+                color: "#2dd4bf",
+              },
+              {
+                capacity: 50000, price: 499, tier: "LARGE EVENT", headline: "Stadium scale.",
+                priceDisplay: "$499", fee: "per event", cta: "Select plan",
+                note: "Stadiums, citywide events, major festivals.",
+                features: ["Up to 50,000 entries", "Unlimited prizes", "Custom branding", "Sponsor integration"],
+                color: "#2dd4bf",
+              },
+              {
+                capacity: 1000000, price: 1000, tier: "ENTERPRISE", headline: "Full control.",
+                priceDisplay: "Custom", fee: "starting at $1,000/event", cta: "Contact us",
+                note: "For organizations operating at scale with full visibility and control.",
+                features: ["Unlimited entries", "Custom integrations", "SLA guarantee", "Concierge support"],
+                color: "#2dd4bf",
+              },
+            ].map((tier) => {
+              const isSelected = form.ticketBundles[0]?.capacity === tier.capacity;
+              return (
+                <Box
+                  key={tier.capacity}
+                  onClick={() => updateField("ticketBundles", [{ quantity: 1, price: tier.price, capacity: tier.capacity }])}
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 2.5,
+                    cursor: "pointer",
+                    background: "#fff",
+                    border: isSelected ? `2.5px solid ${tier.color}` : "2.5px solid transparent",
+                    boxShadow: isSelected ? `0 0 0 4px ${tier.color}30` : tier.popular ? "0 8px 24px rgba(0,0,0,0.2)" : "0 2px 8px rgba(0,0,0,0.12)",
+                    transition: "all 0.18s",
+                    position: "relative",
+                    "&:hover": { boxShadow: `0 8px 24px rgba(0,0,0,0.2)`, transform: "translateY(-1px)" },
+                  }}
+                >
+                  {tier.popular && !isSelected && (
+                    <Box sx={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: tier.color, color: "#0D1B2A", fontSize: 9, fontWeight: 800, px: 1.5, py: 0.3, borderRadius: 999, whiteSpace: "nowrap" }}>
+                      MOST POPULAR
+                    </Box>
+                  )}
+
+                  {/* Tier name */}
+                  <Typography sx={{ fontSize: 10, fontWeight: 800, color: tier.color, letterSpacing: 1.2, mb: 0.25, fontFamily: "'GT Ultra', 'GT Ultra fallback', 'Playfair Display', Georgia, serif" }}>
+                    {tier.tier}
+                  </Typography>
+
+                  {/* Headline */}
+                  <Typography sx={{ fontSize: 16, fontWeight: 700, color: "#0D1B2A", mb: 1.5, fontFamily: "'GT Ultra', 'GT Ultra fallback', 'Playfair Display', Georgia, serif" }}>
+                    {tier.headline}
+                  </Typography>
+
+                  {/* Price */}
+                  <Typography sx={{ fontSize: 32, fontWeight: 900, color: "#0D1B2A", lineHeight: 1, mb: 0.25, fontFamily: "'GT Ultra', 'GT Ultra fallback', 'Playfair Display', Georgia, serif" }}>
+                    {tier.priceDisplay}
+                  </Typography>
+                  <Typography sx={{ fontSize: 11, fontWeight: 700, color: tier.color, mb: 1.5 }}>
+                    {tier.fee}
+                  </Typography>
+
+                  {/* CTA */}
+                  <Box
+                    sx={{
+                      width: "100%", py: 1.2, borderRadius: 2, textAlign: "center", fontSize: 13, fontWeight: 700,
+                      background: isSelected ? tier.color : "#f1f5f9",
+                      color: isSelected ? "#0D1B2A" : "#374151",
+                      mb: 1, cursor: "pointer", transition: "all 0.15s",
+                      "&:hover": { background: isSelected ? tier.color : "#e2e8f0" },
+                    }}
+                  >
+                    {isSelected ? "✓ Selected" : tier.cta}
+                  </Box>
+
+                  {/* Note */}
+                  <Typography sx={{ fontSize: 10.5, color: "#6B7280", mb: 1.5, lineHeight: 1.4, textAlign: "center" }}>
+                    {tier.note}
+                  </Typography>
+
+                  {/* Divider */}
+                  <Box sx={{ height: "1px", background: "#E5E7EB", mb: 1.5 }} />
+
+                  {/* Features */}
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.6 }}>
+                    {tier.features.map((f, i) => (
+                      <Box key={i} sx={{ display: "flex", alignItems: "flex-start", gap: 0.8 }}>
+                        <Typography sx={{ color: tier.color, fontSize: 12, lineHeight: 1.4, flexShrink: 0 }}>✓</Typography>
+                        <Typography sx={{ fontSize: 11.5, color: "#374151", lineHeight: 1.4 }}>{f}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              );
+            })}
+          </Box>
+
+          {/* Footer note */}
+          <Box sx={{ textAlign: "center" }}>
+            <Typography sx={{ fontSize: 11, color: "#9CA3AF", mb: 0.5 }}>
+              Fixed platform fee per event. No per-entry or per-participant charges.
+            </Typography>
+            {form.ticketBundles[0]?.capacity && form.ticketBundles[0].capacity < 1000000 && form.ticketBundles[0].price > 0 && (
+              <Typography sx={{ fontSize: 11, color: "#92400E", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 1.5, px: 1.5, py: 0.75, display: "inline-block", mt: 1 }}>
+                ⚠️ Overage: $0.05/entry if your plan limit is exceeded. Upgrade anytime before the drawing.
+              </Typography>
+            )}
+          </Box>
         </Box>
-      )}
     </Box>
   );
 
@@ -1450,12 +1723,46 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
   );
 
   const renderCompliance = () => {
+    // State name → abbreviation mapping for normalization
+    const STATE_ABBREVS = {
+      'ALABAMA': 'AL', 'ALASKA': 'AK', 'ARIZONA': 'AZ', 'ARKANSAS': 'AR', 'CALIFORNIA': 'CA',
+      'COLORADO': 'CO', 'CONNECTICUT': 'CT', 'DELAWARE': 'DE', 'FLORIDA': 'FL', 'GEORGIA': 'GA',
+      'HAWAII': 'HI', 'IDAHO': 'ID', 'ILLINOIS': 'IL', 'INDIANA': 'IN', 'IOWA': 'IA',
+      'KANSAS': 'KS', 'KENTUCKY': 'KY', 'LOUISIANA': 'LA', 'MAINE': 'ME', 'MARYLAND': 'MD',
+      'MASSACHUSETTS': 'MA', 'MICHIGAN': 'MI', 'MINNESOTA': 'MN', 'MISSISSIPPI': 'MS', 'MISSOURI': 'MO',
+      'MONTANA': 'MT', 'NEBRASKA': 'NE', 'NEVADA': 'NV', 'NEW HAMPSHIRE': 'NH', 'NEW JERSEY': 'NJ',
+      'NEW MEXICO': 'NM', 'NEW YORK': 'NY', 'NORTH CAROLINA': 'NC', 'NORTH DAKOTA': 'ND', 'OHIO': 'OH',
+      'OKLAHOMA': 'OK', 'OREGON': 'OR', 'PENNSYLVANIA': 'PA', 'RHODE ISLAND': 'RI', 'SOUTH CAROLINA': 'SC',
+      'SOUTH DAKOTA': 'SD', 'TENNESSEE': 'TN', 'TEXAS': 'TX', 'UTAH': 'UT', 'VERMONT': 'VT',
+      'VIRGINIA': 'VA', 'WASHINGTON': 'WA', 'WEST VIRGINIA': 'WV', 'WISCONSIN': 'WI', 'WYOMING': 'WY',
+    };
+
     // Auto-fill jurisdiction from event location if not already set
     const eventState = eventData?.state || eventData?.location?.state || eventData?.venue?.state || '';
-    const autoJurisdiction = eventState ? `US-${eventState.toUpperCase().replace(/^US-/, '')}` : '';
-    if (autoJurisdiction && !form.jurisdictions) {
-      setTimeout(() => updateField("jurisdictions", autoJurisdiction), 0);
+    if (eventState && !form.jurisdictions) {
+      const stateUpper = eventState.toUpperCase().replace(/^US-/, '');
+      const abbrev = STATE_ABBREVS[stateUpper] || (stateUpper.length === 2 ? stateUpper : '');
+      if (abbrev) {
+        setTimeout(() => updateField("jurisdictions", `US-${abbrev}`), 0);
+      }
     }
+
+    // Normalize jurisdiction input (e.g. "US-TEXAS" → "US-TX")
+    const normalizeJurisdiction = (val) => {
+      return val.split(',').map(j => {
+        const trimmed = j.trim().toUpperCase();
+        const match = trimmed.match(/^US-(.+)$/);
+        if (match) {
+          const stateInput = match[1];
+          // If it's already a 2-letter code, keep it
+          if (stateInput.length === 2) return `US-${stateInput}`;
+          // Otherwise try to resolve the full name
+          const abbrev = STATE_ABBREVS[stateInput];
+          if (abbrev) return `US-${abbrev}`;
+        }
+        return trimmed;
+      }).join(', ');
+    };
 
     // State-specific rules summaries
     const RULES_BY_STATE = {
@@ -1555,8 +1862,14 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
           label="Jurisdictions (country-state codes, comma-separated)"
           value={form.jurisdictions}
           onChange={(e) => updateField("jurisdictions", e.target.value)}
+          onBlur={(e) => {
+            const normalized = normalizeJurisdiction(e.target.value);
+            if (normalized !== form.jurisdictions) {
+              updateField("jurisdictions", normalized);
+            }
+          }}
           error={!!errors.jurisdictions}
-          helperText={errors.jurisdictions || "e.g. US-TX, US-CA, US-NY"}
+          helperText={errors.jurisdictions || "e.g. US-TX, US-CA, US-NY (full state names like US-TEXAS also work)"}
           sx={{ mb: 2 }}
         />
 
@@ -1581,9 +1894,49 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
         )}
 
         {selectedStates.length > 0 && matchedRules.length === 0 && (
-          <Alert severity="warning" sx={{ mb: 2, fontSize: 12 }}>
-            No specific rules preview available for the selected jurisdiction(s). Please review local regulations independently.
-          </Alert>
+          <Box sx={{ mb: 2, p: 2, border: "1px solid #E5E7EB", borderRadius: 2, background: "#FAFBFC" }}>
+            <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#111827", mb: 1 }}>
+              📋 Rules Template
+            </Typography>
+            <Typography sx={{ fontSize: 11.5, color: "#6B7280", mb: 1.5 }}>
+              No state-specific rules template found for your jurisdiction. Choose a rules level below — this determines how strict the Official Rules shown to attendees will be.
+            </Typography>
+            <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
+              {[
+                { value: "standard", label: "Standard", desc: "Basic compliance — no purchase necessary, random selection, prize disclosure" },
+                { value: "restrictive", label: "Restrictive", desc: "Stricter rules — age verification, residency requirements, detailed eligibility" },
+                { value: "permissive", label: "Permissive", desc: "Minimal rules — open entry, fewer restrictions, broad eligibility" },
+              ].map((option) => (
+                <Box
+                  key={option.value}
+                  onClick={() => updateField("rulesStrictness", option.value)}
+                  sx={{
+                    flex: 1, minWidth: 150, p: 1.5, cursor: "pointer", borderRadius: 2,
+                    border: form.rulesStrictness === option.value ? "2px solid #00AAD6" : "1px solid #E5E7EB",
+                    background: form.rulesStrictness === option.value ? "#f0fdff" : "#fff",
+                    transition: "all 0.15s",
+                    "&:hover": { borderColor: "#00AAD6" },
+                  }}
+                >
+                  <Typography sx={{ fontWeight: 700, fontSize: 12, color: form.rulesStrictness === option.value ? "#00AAD6" : "#111827" }}>
+                    {option.label}
+                  </Typography>
+                  <Typography sx={{ fontSize: 10.5, color: "#6B7280", mt: 0.5, lineHeight: 1.4 }}>
+                    {option.desc}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+            {form.rulesStrictness && (
+              <Box sx={{ mt: 1.5, p: 1.5, background: form.rulesStrictness === 'restrictive' ? '#FEF3C7' : form.rulesStrictness === 'permissive' ? '#D1FAE5' : '#EFF6FF', borderRadius: 1.5 }}>
+                <Typography sx={{ fontSize: 11, color: "#374151", lineHeight: 1.5 }}>
+                  {form.rulesStrictness === 'standard' && '📋 Standard: Includes no-purchase-necessary clause, random selection disclosure, prize details, and basic eligibility (18+).'}
+                  {form.rulesStrictness === 'restrictive' && '⚠️ Restrictive: Adds residency requirements, government ID verification, void-where-prohibited clause, and federal/state/local law compliance.'}
+                  {form.rulesStrictness === 'permissive' && '✅ Permissive: Minimal restrictions — open to all attendees, no residency or ID requirements, simplified conditions.'}
+                </Typography>
+              </Box>
+            )}
+          </Box>
         )}
 
         <Alert severity="info" sx={{ mb: 2, fontSize: 12 }}>
@@ -1620,8 +1973,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
             size="small"
             onClick={() => {
               updateField("rulesPreviewedByAdmin", true);
-              const previewUrl = `https://experience.keeptabs.app/e/${experienceId}/rules?test=true&eventId=${eventId}`;
-              window.open(previewUrl, '_blank', 'width=420,height=750,menubar=no,toolbar=no,location=no,status=no');
+              setShowRulesPreview(true);
             }}
             sx={{
               textTransform: "none",
@@ -1737,7 +2089,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
   };
 
   const renderEntryRulesContent = () => {
-    const tabs = ['Eligibility', 'Info Collection', 'Ticket Pricing'];
+    const tabs = ['Management Cost', 'Eligibility', 'Info Collection'];
     return (
       <Box>
         <Box sx={{ display: "flex", gap: 0, mb: 3, borderBottom: "2px solid #E5E7EB" }}>
@@ -1756,9 +2108,9 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
             </Box>
           ))}
         </Box>
-        {innerTab === 0 && renderEligibility()}
-        {innerTab === 1 && renderInfoCollection()}
-        {innerTab === 2 && renderTicketPricing()}
+        {innerTab === 0 && renderTicketPricing()}
+        {innerTab === 1 && renderEligibility()}
+        {innerTab === 2 && renderInfoCollection()}
       </Box>
     );
   };
@@ -1849,7 +2201,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div className="ecn-header">
           <h1 className="ecn-pg-h">Configure Raffle</h1>
-          <p className="ecn-pg-s">Complete all steps to schedule your raffle. Submitting transitions this raffle from Draft to Scheduled.</p>
+          <p className="ecn-pg-s">{instanceState === "Draft" ? "Complete all steps to schedule your raffle. Submitting transitions this raffle from Draft to Scheduled." : "Edit your raffle configuration. Changes are saved immediately."}</p>
 
           <div className="ecn-steps" style={{ marginBottom: 24 }}>
             <button className="ecn-bb" onClick={() => navigate(`/admin/my-events/${eventId}/experiences`)} style={{ margin: 0 }}>
@@ -1916,7 +2268,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
               {form.drawingSchedules.length > 1 ? ` (+${form.drawingSchedules.length - 1} more)` : ''}
             </div>
             <div className="ecn-fdv" />
-            <div className="ecn-fee"><span>Entry:</span><span>{form.entryModel === "paid" ? `$${form.ticketBundles[0]?.price || 0}` : "Free"}</span></div>
+            <div className="ecn-fee"><span>Software Fee:</span><span>{form.entryModel === "paid" ? `$${form.ticketBundles[0]?.price || 0}` : "Free"}</span></div>
             <div className="ecn-fee"><span>Eligibility:</span><span>{form.eligibilityRules.length === 0 ? "Open" : form.eligibilityRules.length + " rules"}</span></div>
             {form.hasSponsor && form.sponsorName && (
               <div className="ecn-fee"><span>Sponsor:</span><span>{form.sponsorName}</span></div>
@@ -1961,13 +2313,18 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
                     compliance: {
                       jurisdictions: (form.jurisdictions || "").split(",").map((j) => j.trim()).filter(Boolean),
                       acknowledged: form.complianceAcknowledged,
+                      rulesStrictness: form.rulesStrictness,
+                      requireTerms: form.requireTermsConsent,
+                      sponsorLegalName: form.sponsorLegalName,
+                      privacyPolicyUrl: form.privacyPolicyUrl,
+                      supportContact: form.supportContact,
                     },
                   };
                   await updateInstance(eventId, experienceId, { config });
                 } catch (e) {
                   console.warn("Preview: draft save failed, opening with last saved config", e.message);
                 }
-                const previewUrl = `https://experience.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId}&accentColor=${encodeURIComponent(form.accentColor)}&bannerStyle=${encodeURIComponent(form.bannerStyle)}&prizeName=${encodeURIComponent(form.prizes[0]?.name || '')}&infoCollection=${encodeURIComponent(form.infoCollection)}&prizes=${encodeURIComponent(JSON.stringify(form.prizes.map(p => ({ name: p.name, description: p.description, value: p.value, imageUrl: p.imageUrl || '' }))))}`;
+                const previewUrl = `https://experience.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId}&eventName=${encodeURIComponent(eventData?.name || '')}&accentColor=${encodeURIComponent(form.accentColor)}&bannerStyle=${encodeURIComponent(form.bannerStyle)}&prizeName=${encodeURIComponent(form.prizes[0]?.name || '')}&infoCollection=${encodeURIComponent(form.infoCollection)}&prizes=${encodeURIComponent(JSON.stringify(form.prizes.map(p => ({ name: p.name, description: p.description, value: p.value, imageUrl: p.imageUrl || '' }))))}`;
                 setDemoPreviewUrl(previewUrl);
                 setShowDemoPreview(true);
               }}
@@ -1988,7 +2345,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
           </button>
           {activeStep === STEPS.length - 1 ? (
             <button className="ecn-bn" onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "Submitting..." : "Submit & Schedule →"}
+              {submitting ? "Saving..." : instanceState === "Draft" ? "Submit & Schedule →" : "Save Changes →"}
             </button>
           ) : (
             <button className="ecn-bn" onClick={handleNext}>
@@ -2001,8 +2358,9 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
       {/* Phone-frame Preview Modal */}
       <Modal
         open={showDemoPreview}
-        onClose={() => setShowDemoPreview(false)}
-        sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+        onClose={() => { setShowDemoPreview(false); setDragPos({ x: 0, y: 0 }); }}
+        sx={{ display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}
+        slotProps={{ backdrop: { sx: { pointerEvents: "auto" } } }}
       >
         <Box
           onClick={(e) => e.stopPropagation()}
@@ -2014,8 +2372,19 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
             p: "12px",
             position: "relative",
             boxShadow: "0 25px 60px rgba(0,0,0,0.4)",
+            pointerEvents: "auto",
+            transform: `translate(${dragPos.x}px, ${dragPos.y}px)`,
+            cursor: dragging ? "grabbing" : "default",
           }}
         >
+          {/* Drag handle — phone notch area */}
+          <Box
+            onMouseDown={handleDragStart}
+            sx={{
+              position: "absolute", top: 0, left: 0, right: 0, height: 40,
+              cursor: dragging ? "grabbing" : "grab", zIndex: 11, borderRadius: "32px 32px 0 0",
+            }}
+          />
           {/* Phone notch */}
           <Box sx={{
             position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)",
@@ -2052,6 +2421,144 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
           </Box>
         </Box>
       </Modal>
+      {/* Phone-frame Rules Preview Modal */}
+      {showRulesPreview && (
+      <Modal
+        open={showRulesPreview}
+        onClose={() => { setShowRulesPreview(false); setDragPos({ x: 0, y: 0 }); }}
+        sx={{ display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}
+        slotProps={{ backdrop: { sx: { pointerEvents: "auto" } } }}
+      >
+        <Box
+          onClick={(e) => e.stopPropagation()}
+          data-reader-ignore="true"
+          sx={{
+            width: 390,
+            height: 720,
+            borderRadius: "32px",
+            background: "#1A1A1A",
+            p: "12px",
+            position: "relative",
+            boxShadow: "0 25px 60px rgba(0,0,0,0.4)",
+            pointerEvents: "auto",
+            transform: `translate(${dragPos.x}px, ${dragPos.y}px)`,
+            cursor: dragging ? "grabbing" : "default",
+          }}
+        >
+          {/* Drag handle — phone notch area */}
+          <Box
+            onMouseDown={handleDragStart}
+            sx={{
+              position: "absolute", top: 0, left: 0, right: 0, height: 40,
+              cursor: dragging ? "grabbing" : "grab", zIndex: 11, borderRadius: "32px 32px 0 0",
+            }}
+          />
+          {/* Phone notch */}
+          <Box sx={{
+            position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)",
+            width: 80, height: 24, background: "#1A1A1A", borderRadius: 12, zIndex: 10,
+          }} />
+          {/* Content container */}
+          <Box sx={{
+            width: "100%", height: "100%", borderRadius: "22px", overflow: "auto",
+            background: "#fff", p: 2.5, pt: 4,
+          }}>
+            <Typography sx={{ fontWeight: 800, fontSize: 16, color: "#111827", mb: 0.5, textAlign: "center" }}>
+              OFFICIAL RULES
+            </Typography>
+            <Typography sx={{ fontSize: 10, color: "#6B7280", mb: 2, textAlign: "center" }}>
+              {form.sponsorLegalName || '[Sponsor Name]'} — Promotion Period: {form.entryWindowStart?.format?.('MMM D, YYYY') || '[Start Date]'} through {form.entryWindowEnd?.format?.('MMM D, YYYY') || '[End Date]'}
+            </Typography>
+
+            <Typography sx={{ fontWeight: 700, fontSize: 11, color: "#111827", mb: 0.5 }}>1. NO PURCHASE NECESSARY</Typography>
+            <Typography sx={{ fontSize: 10.5, color: "#4B5563", mb: 1.5, lineHeight: 1.6 }}>
+              NO PURCHASE OR PAYMENT OF ANY KIND IS NECESSARY TO ENTER OR WIN. A purchase will not improve your chances of winning. Void where prohibited by law.
+            </Typography>
+
+            <Typography sx={{ fontWeight: 700, fontSize: 11, color: "#111827", mb: 0.5 }}>2. SPONSOR</Typography>
+            <Typography sx={{ fontSize: 10.5, color: "#4B5563", mb: 1.5, lineHeight: 1.6 }}>
+              This promotion ("Promotion") is sponsored by {form.sponsorLegalName || '[Sponsor Legal Name]'} ("Sponsor").{form.supportContact ? ` Contact: ${form.supportContact}.` : ''}
+            </Typography>
+
+            <Typography sx={{ fontWeight: 700, fontSize: 11, color: "#111827", mb: 0.5 }}>3. ELIGIBILITY</Typography>
+            <Typography sx={{ fontSize: 10.5, color: "#4B5563", mb: 1.5, lineHeight: 1.6 }}>
+              {form.rulesStrictness === 'permissive'
+                ? 'This Promotion is open to all attendees of the event. No minimum age, residency, or purchase requirements apply. Employees of the Sponsor and their immediate families are not eligible.'
+                : form.rulesStrictness === 'restrictive'
+                  ? `This Promotion is open to legal residents of ${form.jurisdictions || 'the applicable jurisdiction(s)'} who are at least eighteen (18) years of age at the time of entry. Proof of eligibility (valid government-issued photo identification) may be required to claim a prize. Employees, officers, and directors of the Sponsor, and their respective parent companies, subsidiaries, affiliates, agents, and members of their immediate families (spouse, parents, children, siblings) and persons living in the same household, whether related or not, are not eligible to participate.`
+                  : 'This Promotion is open to all attendees of the event who are at least eighteen (18) years of age at the time of entry. Employees of the Sponsor and their immediate families (spouse, parents, children, siblings) are not eligible to participate.'
+              }
+            </Typography>
+
+            <Typography sx={{ fontWeight: 700, fontSize: 11, color: "#111827", mb: 0.5 }}>4. PROMOTION PERIOD</Typography>
+            <Typography sx={{ fontSize: 10.5, color: "#4B5563", mb: 1.5, lineHeight: 1.6 }}>
+              The Promotion begins on {form.entryWindowStart?.format?.('MMMM D, YYYY [at] h:mm A') || '[Start Date/Time]'} and ends on {form.entryWindowEnd?.format?.('MMMM D, YYYY [at] h:mm A') || '[End Date/Time]'} ("Promotion Period"). All entries must be received during the Promotion Period. The Sponsor's computer shall be the official timekeeping device.
+            </Typography>
+
+            <Typography sx={{ fontWeight: 700, fontSize: 11, color: "#111827", mb: 0.5 }}>5. HOW TO ENTER</Typography>
+            <Typography sx={{ fontSize: 10.5, color: "#4B5563", mb: 1.5, lineHeight: 1.6 }}>
+              To enter, navigate to the Promotion entry page and complete the required entry form. {form.entryModel === 'paid' ? `Entry requires purchase of raffle ticket(s) at $${form.ticketBundles[0]?.price || '0'} per ticket.` : 'Entry is free of charge.'} Limit one (1) entry per person unless otherwise stated. Multiple entries from the same individual beyond the stated limit will be void. All entries become the property of the Sponsor and will not be returned.
+            </Typography>
+
+            <Typography sx={{ fontWeight: 700, fontSize: 11, color: "#111827", mb: 0.5 }}>6. PRIZE(S)</Typography>
+            <Typography sx={{ fontSize: 10.5, color: "#4B5563", mb: 1.5, lineHeight: 1.6 }}>
+              {form.prizes.map((p, i) => `(${i + 1}) ${p.name || '[Prize Name]'}${p.value ? ` — Approximate Retail Value ("ARV"): $${p.value}` : ''}${p.quantity > 1 ? ` (Qty: ${p.quantity})` : ''}`).join('; ')}. Total ARV of all prizes: ${form.prizes.reduce((sum, p) => sum + (parseFloat(p.value) || 0) * (p.quantity || 1), 0) || '[TBD]'}. Prizes are non-transferable and no substitution or cash equivalent is permitted, except at Sponsor's sole discretion. Sponsor reserves the right to substitute a prize of equal or greater value. All federal, state, and local taxes on prizes are the sole responsibility of the winner(s).
+            </Typography>
+
+            <Typography sx={{ fontWeight: 700, fontSize: 11, color: "#111827", mb: 0.5 }}>7. WINNER SELECTION & NOTIFICATION</Typography>
+            <Typography sx={{ fontSize: 10.5, color: "#4B5563", mb: 1.5, lineHeight: 1.6 }}>
+              Winner(s) will be selected by random drawing from among all eligible entries received during the Promotion Period. Drawing(s) will be conducted on {form.drawingSchedules?.[0]?.time?.format?.('MMMM D, YYYY [at] h:mm A') || '[Drawing Date/Time]'}{form.drawingSchedules?.length > 1 ? ` and ${form.drawingSchedules.length - 1} additional drawing(s)` : ''}. Odds of winning depend on the number of eligible entries received. Winner(s) will be notified via the contact information provided at entry. If a potential winner cannot be contacted within forty-eight (48) hours of the drawing, the prize will be forfeited and an alternate winner may be selected.
+            </Typography>
+
+            <Typography sx={{ fontWeight: 700, fontSize: 11, color: "#111827", mb: 0.5 }}>8. GENERAL CONDITIONS</Typography>
+            <Typography sx={{ fontSize: 10.5, color: "#4B5563", mb: 1.5, lineHeight: 1.6 }}>
+              By entering, each entrant agrees to be bound by these Official Rules and the decisions of the Sponsor, which are final and binding in all respects. Sponsor reserves the right, in its sole discretion, to disqualify any entrant who tampers with the entry process or violates these Official Rules. Sponsor further reserves the right to cancel, terminate, or modify this Promotion if it is not capable of completion as planned due to fraud, technical failures, or any other factor beyond Sponsor's reasonable control.
+              {form.rulesStrictness === 'restrictive' && ' Void where prohibited or restricted by law. All federal, state, and local laws and regulations apply. Any dispute arising from this Promotion shall be governed by the laws of the applicable jurisdiction without regard to conflict of law principles.'}
+            </Typography>
+
+            <Typography sx={{ fontWeight: 700, fontSize: 11, color: "#111827", mb: 0.5 }}>9. LIMITATION OF LIABILITY</Typography>
+            <Typography sx={{ fontSize: 10.5, color: "#4B5563", mb: 1.5, lineHeight: 1.6 }}>
+              By entering, entrants release and hold harmless Sponsor, its parent companies, subsidiaries, affiliates, and their respective officers, directors, employees, and agents from any and all liability for injuries, losses, or damages of any kind arising from participation in this Promotion or acceptance, use, or misuse of any prize.
+            </Typography>
+
+            <Typography sx={{ fontWeight: 700, fontSize: 11, color: "#111827", mb: 0.5 }}>10. PRIVACY</Typography>
+            <Typography sx={{ fontSize: 10.5, color: "#4B5563", mb: 1.5, lineHeight: 1.6 }}>
+              Information collected from entrants is subject to Sponsor's Privacy Policy{form.privacyPolicyUrl ? ` available at ${form.privacyPolicyUrl}` : ''}. Personal information will be used for the purpose of administering this Promotion and will not be sold to third parties.
+            </Typography>
+
+            {form.rulesStrictness === 'restrictive' && (
+              <>
+                <Typography sx={{ fontWeight: 700, fontSize: 11, color: "#111827", mb: 0.5 }}>11. DISPUTE RESOLUTION</Typography>
+                <Typography sx={{ fontSize: 10.5, color: "#4B5563", mb: 1.5, lineHeight: 1.6 }}>
+                  Except where prohibited by law, as a condition of participating in this Promotion, each entrant agrees that any and all disputes which cannot be resolved between the parties shall be resolved individually, without resort to any form of class action. Any claim or cause of action arising out of or related to this Promotion must be filed within one (1) year after such claim or cause of action arose.
+                </Typography>
+              </>
+            )}
+
+            <Box sx={{ mt: 2, p: 1.5, background: "#F3F4F6", borderRadius: 1.5 }}>
+              <Typography sx={{ fontSize: 9.5, color: "#6B7280", lineHeight: 1.5 }}>
+                🔒 PLATFORM DISCLOSURE: Tabs provides technology that enables the Promotion Sponsor to create and operate this experience. Tabs is not the sponsor, administrator, merchant, prize provider, judge, or promoter unless expressly identified otherwise. The Promotion Sponsor is solely responsible for the experience, its Official Rules, legal compliance, participant communications, prizes, winner selection, and fulfillment.
+              </Typography>
+            </Box>
+          </Box>
+          {/* Close button */}
+          <Box
+            component="button"
+            onClick={() => setShowRulesPreview(false)}
+            sx={{
+              position: "absolute", top: -12, right: -12,
+              width: 32, height: 32, borderRadius: "50%",
+              background: "#fff", border: "2px solid #E5E7EB",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#666",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            }}
+          >
+            ✕
+          </Box>
+        </Box>
+      </Modal>
+      )}
     </div>
   );
 };

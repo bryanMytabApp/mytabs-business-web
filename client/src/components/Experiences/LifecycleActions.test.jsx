@@ -14,8 +14,9 @@ describe("LifecycleActions", () => {
     expect(screen.getByText("Configure")).toBeInTheDocument();
   });
 
-  it("renders Activate for Scheduled state", () => {
+  it("renders Configure and Activate for Scheduled state", () => {
     render(<LifecycleActions state="Scheduled" />);
+    expect(screen.getByText("Configure")).toBeInTheDocument();
     expect(screen.getByText("Activate")).toBeInTheDocument();
   });
 

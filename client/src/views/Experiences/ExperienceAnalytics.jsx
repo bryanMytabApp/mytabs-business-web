@@ -119,7 +119,7 @@ const ExperienceAnalytics = () => {
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h5" sx={{ fontWeight: 800, color: "#0d1b35" }}>
-          Experience <span style={{ color: ACCENT }}>Analytics</span>
+          Engagement <span style={{ color: ACCENT }}>Analytics</span>
         </Typography>
         <Button
           variant="contained"

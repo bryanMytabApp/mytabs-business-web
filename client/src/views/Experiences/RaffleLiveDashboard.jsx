@@ -13,24 +13,29 @@ import {
   Divider,
   Button,
   Collapse,
+  Modal,
+  TextField,
 } from "@mui/material";
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
 import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
-import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
 import HourglassBottomOutlinedIcon from "@mui/icons-material/HourglassBottomOutlined";
+import HourglassTopOutlinedIcon from "@mui/icons-material/HourglassTopOutlined";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import EmojiEventsOutlinedIcon from "@mui/icons-material/EmojiEventsOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import {
   getLiveStats,
   triggerDraw,
   getEntries,
   getTimeline,
   getDrawings,
+  updateInstance,
+  getInstance,
 } from "../../services/experienceService";
 import PotTicker from "../../components/Experiences/PotTicker";
 import DrawingControls from "../../components/Experiences/DrawingControls";
@@ -64,9 +69,10 @@ const RaffleLiveDashboard = () => {
   const [timeline, setTimeline] = useState([]);
   const [timelineLoading, setTimelineLoading] = useState(true);
 
-  // Countdown
-  const [countdown, setCountdown] = useState("");
-  const countdownRef = useRef(null);
+  // Raffle starts countdown
+  const [startsCountdown, setStartsCountdown] = useState("");
+  const startsCountdownRef = useRef(null);
+  const [hasStarted, setHasStarted] = useState(false);
 
   // Raffle ends countdown
   const [endsCountdown, setEndsCountdown] = useState("");
@@ -80,6 +86,102 @@ const RaffleLiveDashboard = () => {
   // Winners
   const [winners, setWinners] = useState([]);
   const [, setWinnersLoading] = useState(false);
+
+  // Quick Edit modal
+  const [showQuickEdit, setShowQuickEdit] = useState(false);
+  const [quickEditForm, setQuickEditForm] = useState({
+    name: "",
+    entryWindowStart: "",
+    entryWindowEnd: "",
+    drawingTimes: [],
+  });
+  const [quickEditSaving, setQuickEditSaving] = useState(false);
+  const [quickEditError, setQuickEditError] = useState(null);
+
+  // View Config modal (read-only)
+  const [showViewConfig, setShowViewConfig] = useState(false);
+  const [viewConfigData, setViewConfigData] = useState(null);
+  const [viewConfigLoading, setViewConfigLoading] = useState(false);
+
+  const openViewConfig = async () => {
+    setViewConfigLoading(true);
+    setShowViewConfig(true);
+    try {
+      const res = await getInstance(eventId, experienceId);
+      const instance = res.data?.data || res.data;
+      setViewConfigData(instance);
+    } catch (err) {
+      setViewConfigData({ error: err.message || 'Failed to load configuration' });
+    } finally {
+      setViewConfigLoading(false);
+    }
+  };
+
+  const openQuickEdit = async () => {
+    try {
+      const res = await getInstance(eventId, experienceId);
+      const instance = res.data?.data || res.data;
+      const config = instance?.config || {};
+      // Convert UTC ISO string to local datetime-local format (YYYY-MM-DDTHH:mm)
+      const utcToLocal = (iso) => {
+        if (!iso) return "";
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return "";
+        const offset = d.getTimezoneOffset();
+        const local = new Date(d.getTime() - offset * 60000);
+        return local.toISOString().slice(0, 16);
+      };
+      setQuickEditForm({
+        name: instance?.name || "",
+        entryWindowStart: utcToLocal(config.entryWindowStart),
+        entryWindowEnd: utcToLocal(config.entryWindowEnd),
+        drawingTimes: (config.drawingSchedules || []).map(s => ({
+          time: utcToLocal(s.time),
+          winners: s.winners || 1,
+          prizeIndex: s.prizeIndex,
+        })),
+      });
+      setShowQuickEdit(true);
+      setQuickEditError(null);
+    } catch (err) {
+      setStatsError("Failed to load config for editing");
+    }
+  };
+
+  const saveQuickEdit = async () => {
+    setQuickEditSaving(true);
+    setQuickEditError(null);
+    try {
+      const config = {
+        entryWindowStart: quickEditForm.entryWindowStart ? new Date(quickEditForm.entryWindowStart).toISOString() : undefined,
+        entryWindowEnd: quickEditForm.entryWindowEnd ? new Date(quickEditForm.entryWindowEnd).toISOString() : undefined,
+        drawingSchedules: quickEditForm.drawingTimes.map(s => ({
+          time: s.time ? new Date(s.time).toISOString() : undefined,
+          winners: s.winners,
+          prizeIndex: s.prizeIndex,
+        })),
+      };
+      const updates = { config };
+      if (quickEditForm.name) updates.name = quickEditForm.name;
+      await updateInstance(eventId, experienceId, updates);
+      setShowQuickEdit(false);
+      // Clear ETag to force fresh fetch after config change
+      etagRef.current = null;
+      // Update startsAt directly from the saved form data
+      const savedStartsAt = quickEditForm.entryWindowStart ? new Date(quickEditForm.entryWindowStart).toISOString() : null;
+      const savedEndsAt = quickEditForm.entryWindowEnd ? new Date(quickEditForm.entryWindowEnd).toISOString() : null;
+      setStats((prev) => ({
+        ...prev,
+        startsAt: savedStartsAt,
+        endsAt: savedEndsAt,
+      }));
+      fetchStats(false);
+    } catch (err) {
+      setQuickEditError(err.response?.data?.message || err.message || "Failed to save");
+    } finally {
+      setQuickEditSaving(false);
+    }
+  };
 
   const fetchStats = useCallback(async (showLoading = false) => {
     if (showLoading) setStatsLoading(true);
@@ -97,7 +199,14 @@ const RaffleLiveDashboard = () => {
       }
       const etag = res.headers?.etag || res.headers?.["etag"];
       if (etag) etagRef.current = etag;
-      setStats(res.data?.data || res.data);
+      const newStats = res.data?.data || res.data;
+      // Preserve startsAt from instance config if live-stats doesn't provide it yet
+      setStats((prev) => {
+        if (!newStats.startsAt && prev?.startsAt) {
+          return { ...newStats, startsAt: prev.startsAt };
+        }
+        return newStats;
+      });
     } catch (err) {
       if (err.response?.status !== 304) {
         setStatsError(err.response?.data?.message || "Failed to load stats");
@@ -123,7 +232,21 @@ const RaffleLiveDashboard = () => {
   useEffect(() => {
     fetchStats(true);
     fetchTimeline();
-  }, [fetchStats, fetchTimeline]);
+    // Also fetch instance config to get startsAt if live-stats doesn't provide it
+    (async () => {
+      try {
+        const res = await getInstance(eventId, experienceId);
+        const instance = res.data?.data || res.data;
+        const cfg = instance?.config || {};
+        const derivedStartsAt = instance?.startsAt || instance?.startDate || cfg.startDate || cfg.entryWindowStart || null;
+        if (derivedStartsAt) {
+          setStats((prev) => prev && !prev.startsAt ? { ...prev, startsAt: derivedStartsAt } : prev);
+        }
+      } catch {
+        // Non-critical — live-stats will provide it once backend is deployed
+      }
+    })();
+  }, [fetchStats, fetchTimeline, eventId, experienceId]);
 
   // Polling every 5s
   useEffect(() => {
@@ -137,50 +260,63 @@ const RaffleLiveDashboard = () => {
     };
   }, [fetchStats, fetchTimeline]);
 
-  // Countdown timer
+  // Raffle starts countdown timer
   useEffect(() => {
-    const nextDrawing = stats?.nextDrawingAt;
-    if (!nextDrawing) {
-      setCountdown("—");
+    const startsAt = stats?.startsAt;
+    if (!startsAt) {
+      setStartsCountdown("—");
+      setHasStarted(true); // If no start time, treat as already started
       return;
     }
 
-    const updateCountdown = () => {
+    const updateStartsCountdown = () => {
       const now = Date.now();
-      const target = new Date(nextDrawing).getTime();
+      const target = new Date(startsAt).getTime();
       const diff = target - now;
 
       if (diff <= 0) {
-        setCountdown("Now");
+        setStartsCountdown("Started");
+        setHasStarted(true);
+        if (startsCountdownRef.current) clearInterval(startsCountdownRef.current);
         return;
       }
 
-      const hours = Math.floor(diff / 3600000);
+      setHasStarted(false);
+      const days = Math.floor(diff / 86400000);
+      const hours = Math.floor((diff % 86400000) / 3600000);
       const minutes = Math.floor((diff % 3600000) / 60000);
       const seconds = Math.floor((diff % 60000) / 1000);
 
-      if (hours > 0) {
-        setCountdown(`${hours}h ${minutes}m ${seconds}s`);
+      if (days > 0) {
+        setStartsCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      } else if (hours > 0) {
+        setStartsCountdown(`${hours}h ${minutes}m ${seconds}s`);
       } else if (minutes > 0) {
-        setCountdown(`${minutes}m ${seconds}s`);
+        setStartsCountdown(`${minutes}m ${seconds}s`);
       } else {
-        setCountdown(`${seconds}s`);
+        setStartsCountdown(`${seconds}s`);
       }
     };
 
-    updateCountdown();
-    countdownRef.current = setInterval(updateCountdown, 1000);
+    updateStartsCountdown();
+    startsCountdownRef.current = setInterval(updateStartsCountdown, 1000);
 
     return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current);
+      if (startsCountdownRef.current) clearInterval(startsCountdownRef.current);
     };
-  }, [stats?.nextDrawingAt]);
+  }, [stats?.startsAt]);
 
   // Raffle ends countdown timer
   useEffect(() => {
     const endsAt = stats?.endsAt;
     if (!endsAt) {
       setEndsCountdown("—");
+      return;
+    }
+
+    // Don't start the ends countdown until the raffle has started
+    if (!hasStarted) {
+      setEndsCountdown("Waiting…");
       return;
     }
 
@@ -214,7 +350,7 @@ const RaffleLiveDashboard = () => {
     return () => {
       if (endsCountdownRef.current) clearInterval(endsCountdownRef.current);
     };
-  }, [stats?.endsAt]);
+  }, [stats?.endsAt, hasStarted]);
 
   // Entry search handler
   const handleSearch = useCallback(
@@ -310,10 +446,10 @@ const RaffleLiveDashboard = () => {
       color: "#7C4DFF",
     },
     {
-      label: "Next Drawing",
-      value: countdown,
-      icon: TimerOutlinedIcon,
-      color: ACCENT,
+      label: "Raffle Starts",
+      value: startsCountdown,
+      icon: HourglassTopOutlinedIcon,
+      color: "#4CAF50",
     },
     {
       label: "Raffle Ends",
@@ -348,6 +484,25 @@ const RaffleLiveDashboard = () => {
           <Typography sx={{ color: "#71727A", fontSize: 13 }}>
             {stats?.experienceName || "Raffle"} — Real-time monitoring
           </Typography>
+        </Box>
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <Button
+            variant="text"
+            size="small"
+            onClick={openViewConfig}
+            sx={{ fontWeight: 600, textTransform: "none", borderRadius: 2, color: "#71727A", fontSize: 12, "&:hover": { background: "#f5f5f5" } }}
+          >
+            View Config
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<EditOutlinedIcon />}
+            onClick={openQuickEdit}
+            sx={{ fontWeight: 700, textTransform: "none", borderRadius: 2, borderColor: ACCENT, color: ACCENT, "&:hover": { borderColor: ACCENT, background: `${ACCENT}10` } }}
+          >
+            Quick Edit
+          </Button>
         </Box>
         <Chip
           label="LIVE"
@@ -425,6 +580,8 @@ const RaffleLiveDashboard = () => {
           );
         })}
       </Grid>
+
+
 
       {/* Pot Ticker (for 50/50 and Progressive types) */}
       {stats?.potAmount != null && stats.potAmount > 0 && (
@@ -688,8 +845,210 @@ const RaffleLiveDashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Quick Edit Modal */}
+      <Modal open={showQuickEdit} onClose={() => setShowQuickEdit(false)} sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Box sx={{ background: "#fff", borderRadius: 3, p: 3, maxWidth: 420, width: "90%", boxShadow: 24 }}>
+          <Typography sx={{ fontSize: 18, fontWeight: 800, color: "#1D1B20", mb: 2 }}>Quick Edit</Typography>
+          
+          {/* Quick action buttons */}
+          <Box sx={{ display: "flex", gap: 1.5, mb: 2.5 }}>
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={() => {
+                const startIn1min = new Date(Date.now() + 60000);
+                const endIn1h = new Date(Date.now() + 60000 + 3600000);
+                const drawAt = new Date(endIn1h.getTime() + 3600000); // 1 hour after entry window end
+                const toLocal = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                setQuickEditForm(d => ({
+                  ...d,
+                  entryWindowStart: toLocal(startIn1min),
+                  entryWindowEnd: toLocal(endIn1h),
+                  drawingTimes: d.drawingTimes.length > 0
+                    ? d.drawingTimes.map((dt, i) => i === 0 ? { ...dt, time: toLocal(drawAt) } : dt)
+                    : [{ time: toLocal(drawAt), winners: 1 }],
+                }));
+              }}
+              sx={{ background: "linear-gradient(135deg, #4CAF50, #2E7D32)", fontWeight: 700, textTransform: "none", borderRadius: 2, py: 1.2, fontSize: 13, "&:hover": { background: "linear-gradient(135deg, #388E3C, #1B5E20)" } }}
+            >
+              Start Now
+            </Button>
+
+            {(stats?.state === "Live" || stats?.state === "Paused") && (stats?.uniqueParticipants || 0) === 0 && (
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={async () => {
+                  setQuickEditSaving(true);
+                  setQuickEditError(null);
+                  try {
+                    // Save config updates + set state back to Scheduled in one call
+                    const config = {
+                      entryWindowStart: quickEditForm.entryWindowStart ? new Date(quickEditForm.entryWindowStart).toISOString() : undefined,
+                      entryWindowEnd: quickEditForm.entryWindowEnd ? new Date(quickEditForm.entryWindowEnd).toISOString() : undefined,
+                      drawingSchedules: quickEditForm.drawingTimes.map(s => ({
+                        time: s.time ? new Date(s.time).toISOString() : undefined,
+                        winners: s.winners,
+                        prizeIndex: s.prizeIndex,
+                      })),
+                    };
+                    const updates = { config, state: "Scheduled" };
+                    if (quickEditForm.name) updates.name = quickEditForm.name;
+                    await updateInstance(eventId, experienceId, updates);
+
+                    setShowQuickEdit(false);
+                    etagRef.current = null;
+                    fetchStats(false);
+                  } catch (err) {
+                    setQuickEditError(err.response?.data?.message || err.message || "Failed to reschedule");
+                  } finally {
+                    setQuickEditSaving(false);
+                  }
+                }}
+                disabled={quickEditSaving}
+                sx={{ borderColor: "#FF9800", color: "#E65100", fontWeight: 700, textTransform: "none", borderRadius: 2, py: 1.2, fontSize: 13, "&:hover": { borderColor: "#E65100", background: "#FFF3E0" } }}
+              >
+                Reschedule
+              </Button>
+            )}
+          </Box>
+
+          <TextField
+            fullWidth size="small" label="Raffle Name" value={quickEditForm.name}
+            onChange={(e) => setQuickEditForm(d => ({ ...d, name: e.target.value }))}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth size="small" label="Entry Window Start" type="datetime-local"
+            value={quickEditForm.entryWindowStart}
+            onChange={(e) => setQuickEditForm(d => ({ ...d, entryWindowStart: e.target.value }))}
+            InputLabelProps={{ shrink: true }}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth size="small" label="Entry Window End" type="datetime-local"
+            value={quickEditForm.entryWindowEnd}
+            onChange={(e) => setQuickEditForm(d => ({ ...d, entryWindowEnd: e.target.value }))}
+            InputLabelProps={{ shrink: true }}
+            sx={{ mb: 2 }}
+          />
+          {quickEditForm.drawingTimes?.map((dt, idx) => (
+            <TextField
+              key={idx}
+              fullWidth size="small" label={`Drawing ${idx + 1} Time`} type="datetime-local"
+              value={dt.time}
+              onChange={(e) => {
+                const updated = [...quickEditForm.drawingTimes];
+                updated[idx] = { ...updated[idx], time: e.target.value };
+                setQuickEditForm(d => ({ ...d, drawingTimes: updated }));
+              }}
+              InputLabelProps={{ shrink: true }}
+              sx={{ mb: 2 }}
+            />
+          ))}
+          {quickEditError && <Typography sx={{ color: "#ef4444", fontSize: 12, mb: 1 }}>{quickEditError}</Typography>}
+          <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end" }}>
+            <Button onClick={() => setShowQuickEdit(false)} sx={{ textTransform: "none", fontWeight: 600 }}>Cancel</Button>
+            <Button variant="contained" onClick={saveQuickEdit} disabled={quickEditSaving} sx={{ background: ACCENT, textTransform: "none", fontWeight: 700, "&:hover": { background: "#D4820F" } }}>
+              {quickEditSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
+
+      {/* View Config Modal (Read-Only) */}
+      <Modal open={showViewConfig} onClose={() => setShowViewConfig(false)} sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Box sx={{ background: "#fff", borderRadius: 3, p: 3, maxWidth: 520, width: "92%", boxShadow: 24, maxHeight: "85vh", overflow: "auto" }}>
+          <Typography sx={{ fontSize: 18, fontWeight: 800, color: "#1D1B20", mb: 2 }}>Raffle Configuration</Typography>
+          
+          {viewConfigLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress size={28} sx={{ color: ACCENT }} />
+            </Box>
+          ) : viewConfigData?.error ? (
+            <Alert severity="error" sx={{ mb: 2 }}>{viewConfigData.error}</Alert>
+          ) : viewConfigData ? (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {/* General */}
+              <Box>
+                <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#71727A", textTransform: "uppercase", letterSpacing: 1, mb: 0.5 }}>General</Typography>
+                <Box sx={{ background: "#F8F9FA", borderRadius: 2, p: 1.5 }}>
+                  <ConfigRow label="Name" value={viewConfigData.name} />
+                  <ConfigRow label="State" value={viewConfigData.state} />
+                  <ConfigRow label="Type" value={viewConfigData.experienceType} />
+                  <ConfigRow label="Created" value={viewConfigData.createdAt ? new Date(viewConfigData.createdAt).toLocaleString() : "—"} />
+                </Box>
+              </Box>
+
+              {/* Schedule */}
+              <Box>
+                <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#71727A", textTransform: "uppercase", letterSpacing: 1, mb: 0.5 }}>Schedule</Typography>
+                <Box sx={{ background: "#F8F9FA", borderRadius: 2, p: 1.5 }}>
+                  <ConfigRow label="Entry Window Start" value={viewConfigData.config?.entryWindowStart ? new Date(viewConfigData.config.entryWindowStart).toLocaleString() : "—"} />
+                  <ConfigRow label="Entry Window End" value={viewConfigData.config?.entryWindowEnd ? new Date(viewConfigData.config.entryWindowEnd).toLocaleString() : "—"} />
+                  {(viewConfigData.config?.drawingSchedules || []).map((s, i) => (
+                    <ConfigRow key={i} label={`Drawing ${i + 1}`} value={s.time ? `${new Date(s.time).toLocaleString()} (${s.winners || 1} winner${(s.winners || 1) > 1 ? 's' : ''})` : "—"} />
+                  ))}
+                </Box>
+              </Box>
+
+              {/* Prizes */}
+              {viewConfigData.config?.prizes?.length > 0 && (
+                <Box>
+                  <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#71727A", textTransform: "uppercase", letterSpacing: 1, mb: 0.5 }}>Prizes</Typography>
+                  <Box sx={{ background: "#F8F9FA", borderRadius: 2, p: 1.5 }}>
+                    {viewConfigData.config.prizes.map((p, i) => (
+                      <Box key={i} sx={{ mb: i < viewConfigData.config.prizes.length - 1 ? 1 : 0 }}>
+                        <ConfigRow label={`Prize ${i + 1}`} value={p.name || "Unnamed"} />
+                        {p.description && <ConfigRow label="  Description" value={p.description} />}
+                        {p.value && <ConfigRow label="  Value" value={`$${p.value}`} />}
+                        {p.quantity && <ConfigRow label="  Quantity" value={p.quantity} />}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Settings */}
+              <Box>
+                <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#71727A", textTransform: "uppercase", letterSpacing: 1, mb: 0.5 }}>Settings</Typography>
+                <Box sx={{ background: "#F8F9FA", borderRadius: 2, p: 1.5 }}>
+                  <ConfigRow label="Raffle Type" value={viewConfigData.config?.raffleType || "standard"} />
+                  <ConfigRow label="Currency" value={viewConfigData.config?.currency || "USD"} />
+                  <ConfigRow label="Accent Color" value={viewConfigData.config?.accentColor || "#00A9D6"} />
+                  <ConfigRow label="Banner Style" value={viewConfigData.config?.bannerStyle || "gift"} />
+                  <ConfigRow label="Info Collection" value={viewConfigData.config?.infoCollection || "minimum"} />
+                  <ConfigRow label="Requires Terms" value={viewConfigData.config?.compliance?.requireTerms ? "Yes" : "No"} />
+                </Box>
+              </Box>
+
+              {/* IDs */}
+              <Box>
+                <Typography sx={{ fontSize: 11, fontWeight: 700, color: "#71727A", textTransform: "uppercase", letterSpacing: 1, mb: 0.5 }}>Identifiers</Typography>
+                <Box sx={{ background: "#F8F9FA", borderRadius: 2, p: 1.5 }}>
+                  <ConfigRow label="Experience ID" value={viewConfigData.experienceId} mono />
+                  <ConfigRow label="Event ID" value={viewConfigData.eventId} mono />
+                </Box>
+              </Box>
+            </Box>
+          ) : null}
+
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+            <Button onClick={() => setShowViewConfig(false)} sx={{ textTransform: "none", fontWeight: 600 }}>Close</Button>
+          </Box>
+        </Box>
+      </Modal>
     </Box>
   );
 };
+
+/** Read-only config row */
+const ConfigRow = ({ label, value, mono }) => (
+  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", py: 0.4 }}>
+    <Typography sx={{ fontSize: 12, color: "#71727A", fontWeight: 500, minWidth: 120 }}>{label}</Typography>
+    <Typography sx={{ fontSize: 12, color: "#1D1B20", fontWeight: 600, textAlign: "right", wordBreak: "break-all", ...(mono && { fontFamily: "monospace", fontSize: 10 }) }}>{value || "—"}</Typography>
+  </Box>
+);
 
 export default RaffleLiveDashboard;
