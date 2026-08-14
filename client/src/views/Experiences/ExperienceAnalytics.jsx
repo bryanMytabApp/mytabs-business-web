@@ -28,7 +28,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { getAnalytics, exportAnalytics } from "../../services/experienceService";
+import { getAnalytics, exportAnalytics, getDrawStatus } from "../../services/experienceService";
+import DrawStatusCard from "./DrawStatusCard";
 
 const ACCENT = "#F09925";
 const CHART_COLORS = ["#F09925", "#4DD9E0", "#A78BFA", "#34D399", "#F97316", "#60A5FA"];
@@ -46,6 +47,7 @@ const ExperienceAnalytics = () => {
   const [error, setError] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [analytics, setAnalytics] = useState(null);
+  const [drawStatus, setDrawStatus] = useState(null);
 
   const fetchAnalytics = useCallback(async () => {
     try {
@@ -63,6 +65,18 @@ const ExperienceAnalytics = () => {
   useEffect(() => {
     fetchAnalytics();
   }, [fetchAnalytics]);
+
+  useEffect(() => {
+    const drawType =
+      analytics?.config?.drawType ||
+      analytics?.drawType ||
+      analytics?.experience?.config?.drawType;
+    if (drawType === "provably-fair") {
+      getDrawStatus(eventId, experienceId)
+        .then((res) => setDrawStatus(res.data?.data || res.data || null))
+        .catch(() => setDrawStatus(null));
+    }
+  }, [analytics, eventId, experienceId]);
 
   const handleExportCsv = async () => {
     try {
@@ -165,6 +179,17 @@ const ExperienceAnalytics = () => {
       </Box>
 
       <Divider sx={{ mb: 4 }} />
+
+      {/* Provably Fair Draw Status */}
+      {(analytics?.config?.drawType === "provably-fair" ||
+        analytics?.drawType === "provably-fair" ||
+        analytics?.experience?.config?.drawType === "provably-fair") && (
+        <DrawStatusCard
+          drawStatus={drawStatus}
+          drawType="provably-fair"
+          drawId={drawStatus?.drawId || analytics?.drawId}
+        />
+      )}
 
       {/* Charts Grid */}
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" }, gap: 3 }}>

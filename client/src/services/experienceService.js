@@ -198,6 +198,16 @@ export const exportAnalytics = (eventId, experienceId, params) =>
     responseType: "blob",
   });
 
+// ─── Draw Status ───────────────────────────────────────────────────────────────
+
+/**
+ * Gets the provably fair draw status for an experience.
+ * @param {string} eventId
+ * @param {string} experienceId
+ */
+export const getDrawStatus = (eventId, experienceId) =>
+  http.get(`v1/events/${eventId}/experiences/${experienceId}/draw/status`);
+
 // ─── Fulfillment ───────────────────────────────────────────────────────────────
 
 /**
