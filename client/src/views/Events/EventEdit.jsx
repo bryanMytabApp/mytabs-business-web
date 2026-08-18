@@ -23,6 +23,19 @@ const countryCode = 'US';
 let userId
 let eventOwnerUserId // The userId to use for event API calls (may differ from logged-in user)
 
+// Safely parse date values from the API — handles JS Date .toString() format
+// that moment() alone can misparse (e.g. "Sat Aug 16 2026 12:00:00 GMT-0500")
+const toMoment = (val) => {
+  if (!val) return null;
+  if (val instanceof Date) return moment(val);
+  if (typeof val === 'number') return moment(val);
+  if (typeof val === 'string') {
+    const isoLike = /^\d{4}-\d{2}-\d{2}/.test(val);
+    return isoLike ? moment(val) : moment(new Date(val));
+  }
+  return moment(val);
+};
+
 const eventVisibilityOptions = [
   { id: 'public', label: 'Public', desc: 'Visible to all Tabs users' },
   { id: 'organization', label: 'Organization', desc: 'Visible to organization members only' },
@@ -130,16 +143,30 @@ const EventEdit = () => {
     console.log('🔍 EventEdit - FINAL apiUserId for event fetch:', apiUserId);
     eventOwnerUserId = apiUserId;
     
-    // Fetch event data using the correct owner's userId
+    // Fetch event data — try apiUserId first, fall back to logged-in userId
     getEvent(apiUserId, eventId)
       .then(res => {
+        if (!res.data) throw new Error('No data');
         let item = res.data
-        item.startDate = moment(item.startDate)
-        item.endDate = moment(item.endDate)
+        item.startDate = toMoment(item.startDate)
+        item.endDate = toMoment(item.endDate)
         setItem(item)
         setTickets(item.tickets || [])
       })
-      .catch(err => console.error(err))
+      .catch(() => {
+        // Fallback: try with logged-in userId if apiUserId failed
+        if (apiUserId !== userId) {
+          getEvent(userId, eventId)
+            .then(res => {
+              let item = res.data
+              item.startDate = toMoment(item.startDate)
+              item.endDate = toMoment(item.endDate)
+              setItem(item)
+              setTickets(item.tickets || [])
+            })
+            .catch(err => console.error('Event fetch failed with both userIds:', err))
+        }
+      })
     
     // Fetch business data for address and tax calculation
     getBusiness(apiUserId)
@@ -305,8 +332,8 @@ const EventEdit = () => {
         console.log('🔄 Server returned tickets in this order:', data.tickets.map((t, i) => ({ index: i, type: t.type, option: t.option })));
         // Update local state with server response to maintain order
         let updatedItem = { ...item };
-        updatedItem.startDate = moment(data.startDate);
-        updatedItem.endDate = moment(data.endDate);
+        updatedItem.startDate = toMoment(data.startDate);
+        updatedItem.endDate = toMoment(data.endDate);
         setItem(updatedItem);
         setTickets(data.tickets || []);
       }

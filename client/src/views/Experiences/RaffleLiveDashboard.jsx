@@ -185,7 +185,6 @@ const RaffleLiveDashboard = () => {
 
   const fetchStats = useCallback(async (showLoading = false) => {
     if (showLoading) setStatsLoading(true);
-    setStatsError(null);
     try {
       const config = {};
       if (etagRef.current) {
@@ -200,6 +199,7 @@ const RaffleLiveDashboard = () => {
       const etag = res.headers?.etag || res.headers?.["etag"];
       if (etag) etagRef.current = etag;
       const newStats = res.data?.data || res.data;
+      setStatsError(null);
       // Preserve startsAt from instance config if live-stats doesn't provide it yet
       setStats((prev) => {
         if (!newStats.startsAt && prev?.startsAt) {
@@ -217,7 +217,6 @@ const RaffleLiveDashboard = () => {
   }, [eventId, experienceId]);
 
   const fetchTimeline = useCallback(async () => {
-    setTimelineLoading(true);
     try {
       const res = await getTimeline(eventId, experienceId, { limit: 20 });
       setTimeline(res.data?.data || res.data?.items || []);
@@ -484,6 +483,9 @@ const RaffleLiveDashboard = () => {
           <Typography sx={{ color: "#71727A", fontSize: 13 }}>
             {stats?.experienceName || "Raffle"} — Real-time monitoring
           </Typography>
+          <Typography sx={{ color: "#9E9E9E", fontSize: 11, fontFamily: "monospace", mt: 0.25 }}>
+            {stats?.engagementCode || `ENG-${experienceId?.replace(/-/g, "").substring(0, 4).toUpperCase()}-${experienceId?.replace(/-/g, "").substring(4, 8).toUpperCase()}`}
+          </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
           <Button
@@ -499,9 +501,10 @@ const RaffleLiveDashboard = () => {
             size="small"
             startIcon={<EditOutlinedIcon />}
             onClick={openQuickEdit}
-            sx={{ fontWeight: 700, textTransform: "none", borderRadius: 2, borderColor: ACCENT, color: ACCENT, "&:hover": { borderColor: ACCENT, background: `${ACCENT}10` } }}
+            disabled={(stats?.uniqueParticipants || 0) > 0}
+            sx={{ fontWeight: 700, textTransform: "none", borderRadius: 2, borderColor: ACCENT, color: ACCENT, "&:hover": { borderColor: ACCENT, background: `${ACCENT}10` }, "&.Mui-disabled": { borderColor: "#ccc", color: "#999" } }}
           >
-            Quick Edit
+            {(stats?.uniqueParticipants || 0) > 0 ? "Locked" : "Quick Edit"}
           </Button>
         </Box>
         <Chip

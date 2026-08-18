@@ -134,4 +134,37 @@ describe("DrawingHistory", () => {
       expect(screen.getByText("Load More")).toBeInTheDocument();
     });
   });
+
+  it("renders Export Draw Report button", async () => {
+    getDrawings.mockResolvedValue({ data: { items: [] } });
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText("Export Draw Report")).toBeInTheDocument();
+    });
+    const btn = screen.getByText("Export Draw Report");
+    expect(btn.closest("button")).toHaveAttribute("type", "button");
+  });
+
+  it("navigates to draw-report page on Export Draw Report click", async () => {
+    getDrawings.mockResolvedValue({ data: { items: [] } });
+    const { container } = render(
+      <MemoryRouter initialEntries={["/admin/my-events/evt-123/experiences/exp-456/drawings"]}>
+        <Routes>
+          <Route path="/admin/my-events/:eventId/experiences/:experienceId/drawings" element={<DrawingHistory />} />
+          <Route path="/admin/my-events/:eventId/experiences/:experienceId/draw-report" element={<div data-testid="draw-report-page">Report</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Export Draw Report")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Export Draw Report"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("draw-report-page")).toBeInTheDocument();
+    });
+  });
 });

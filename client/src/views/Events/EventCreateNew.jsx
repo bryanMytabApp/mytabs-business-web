@@ -2260,7 +2260,7 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
         description: form.desc || "",
         startDate: startMoment.toString(),
         endDate: endMoment.toString(),
-        userId,
+        userId: (editMode && form.ownerUserId) ? form.ownerUserId : userId,
         city: form.city || "",
         state: parsedState,
         address1: form.loc === "new" ? form.addr : "",

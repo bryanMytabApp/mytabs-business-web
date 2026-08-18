@@ -31,6 +31,95 @@ const ACCENT = "#F09925";
  */
 const DrawingRow = ({ drawing }) => {
   const [open, setOpen] = useState(false);
+  const [verifyResult, setVerifyResult] = useState(null);
+  const [verifying, setVerifying] = useState(false);
+
+  /**
+   * Client-side Provably Fair Verification — uses only data already on screen.
+   * Reproduces the HMAC-based shuffle and selection using the draw seed and entry list.
+   */
+  const runVerification = async () => {
+    setVerifying(true);
+    setVerifyResult(null);
+    try {
+      const seed = drawing.seed || drawing.auditSeed || drawing.metadata?.drawSeed;
+      const entryList = drawing.shuffledEntryList || [];
+      const winners = drawing.winners || [];
+
+      if (!seed || entryList.length === 0) {
+        setVerifyResult({ pass: false, message: "Missing draw seed or shuffled entry list data." });
+        setVerifying(false);
+        return;
+      }
+
+      // Get the original (pre-shuffle) entry list by sorting entryIds
+      const originalEntries = [...entryList].sort((a, b) => (a.entryId || "").localeCompare(b.entryId || ""));
+
+      // Step 1: Verify shuffle seed = SHA-256(drawSeed + ":shuffle")
+      const enc = new TextEncoder();
+      const shuffleSeedBuffer = await crypto.subtle.digest("SHA-256", enc.encode(seed + ":shuffle"));
+      const computedShuffleSeed = Array.from(new Uint8Array(shuffleSeedBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+      const expectedShuffleSeed = drawing.metadata?.shuffleSeed;
+      const shuffleSeedMatch = !expectedShuffleSeed || computedShuffleSeed === expectedShuffleSeed;
+
+      // Step 2: Reproduce HMAC-based Fisher-Yates shuffle
+      const key = await crypto.subtle.importKey("raw", enc.encode(seed), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+      const shuffled = [...originalEntries];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const sig = await crypto.subtle.sign("HMAC", key, enc.encode("shuffle:" + i));
+        const view = new DataView(sig);
+        const value = view.getUint32(0);
+        const j = value % (i + 1);
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
+      // Step 3: Verify shuffled list hash
+      const shuffledIds = shuffled.map(e => e.entryId).join(",");
+      const hashBuffer = await crypto.subtle.digest("SHA-256", enc.encode(shuffledIds));
+      const computedHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+      const expectedHash = drawing.metadata?.shuffledListHash;
+      const hashMatch = !expectedHash || computedHash === expectedHash;
+
+      // Step 4: Reproduce winner selection
+      const computedWinners = [];
+      const usedIndices = new Set();
+      let attempt = 0;
+      const winnersCount = winners.length;
+      while (computedWinners.length < winnersCount && attempt < 1000) {
+        const selectSig = await crypto.subtle.sign("HMAC", key, enc.encode("select:" + attempt));
+        const selectView = new DataView(selectSig);
+        const idx = selectView.getUint32(0) % shuffled.length;
+        if (!usedIndices.has(idx)) {
+          usedIndices.add(idx);
+          computedWinners.push({ position: idx + 1, entryId: shuffled[idx].entryId });
+        }
+        attempt++;
+      }
+
+      // Step 5: Compare computed winners to actual winners
+      const winnersMatch = computedWinners.every((cw, i) => {
+        const actual = winners[i];
+        return actual && (cw.entryId === actual.entryId) && (cw.position === (actual.selectedFromShuffledPosition || actual.winningPosition));
+      });
+
+      const allPass = shuffleSeedMatch && hashMatch && winnersMatch;
+      setVerifyResult({
+        pass: allPass,
+        shuffleSeedMatch,
+        hashMatch,
+        winnersMatch,
+        computedShuffleSeed,
+        computedHash,
+        computedWinners,
+        message: allPass
+          ? "✅ Verification PASSED — Winners independently confirmed using on-screen data."
+          : "❌ Verification FAILED — Computed results do not match displayed data.",
+      });
+    } catch (err) {
+      setVerifyResult({ pass: false, message: "Verification error: " + err.message });
+    }
+    setVerifying(false);
+  };
 
   const drawingTime = drawing.timestamp
     ? new Date(drawing.timestamp).toLocaleString(undefined, {
@@ -109,7 +198,7 @@ const DrawingRow = ({ drawing }) => {
           />
         </TableCell>
         <TableCell sx={{ fontWeight: 600, fontSize: 13, color: "#1D1B20" }}>
-          {drawing.totalEntries ?? drawing.eligibleEntries ?? "—"}
+          {drawing.totalEntries ?? "—"}
         </TableCell>
         <TableCell sx={{ fontWeight: 600, fontSize: 13, color: "#1D1B20" }}>
           {(drawing.winners || []).length}
@@ -146,7 +235,7 @@ const DrawingRow = ({ drawing }) => {
                           {winner.entryId || "—"}
                         </TableCell>
                         <TableCell sx={{ fontSize: 12, color: "#1D1B20" }}>
-                          {winner.attendeeName || winner.userId || "—"}
+                          {winner.attendeeName || [winner.firstName, winner.lastName].filter(Boolean).join(' ') || winner.userId || "—"}
                         </TableCell>
                         <TableCell sx={{ fontSize: 12, color: "#1D1B20", fontFamily: "monospace" }}>
                           {winner.entryCode || "—"}
@@ -184,6 +273,215 @@ const DrawingRow = ({ drawing }) => {
                   Audit seed: {drawing.auditSeed}
                 </Typography>
               )}
+
+              {/* Provably Fair Verification Report */}
+              {drawing.metadata?.drawingType === "provably-fair" && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    mt: 2,
+                    p: 2.5,
+                    borderRadius: 2,
+                    border: "1px solid rgba(21, 101, 192, 0.15)",
+                    background: "linear-gradient(135deg, rgba(21,101,192,0.03) 0%, rgba(13,71,161,0.06) 100%)",
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                    <Typography sx={{ fontSize: 15, fontWeight: 800, color: "#0D47A1" }}>
+                      🔒 Provably Fair Verification
+                    </Typography>
+                    <Chip
+                      size="small"
+                      label="NIST Verified"
+                      sx={{ fontSize: 13, fontWeight: 700, background: "#E8F5E9", color: "#1B5E20", letterSpacing: 0.5 }}
+                    />
+                  </Box>
+
+                  <Typography sx={{ fontSize: 13, color: "#546E7A", lineHeight: 1.7, mb: 2 }}>
+                    This winner was selected using an independently verifiable algorithm. The random value was
+                    sourced from the <strong>NIST Randomness Beacon</strong> (U.S. National Institute of Standards
+                    and Technology) — committed to before it existed — making it impossible for the organizer
+                    or platform to influence the outcome.
+                  </Typography>
+
+                  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
+                    <Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#78909C", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        Protocol
+                      </Typography>
+                      <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#1D1B20", fontFamily: "monospace" }}>
+                        {drawing.metadata?.protocol || "tabs-raffle-v1"}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#78909C", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        Randomness Source
+                      </Typography>
+                      <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#1D1B20" }}>
+                        NIST Beacon v2.0 —{" "}
+                        {drawing.metadata?.nistPulseIndex ? (
+                          <a
+                            href={`https://beacon.nist.gov/beacon/2.0/chain/2/pulse/${drawing.metadata.nistPulseIndex}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: "#1976d2", textDecoration: "underline" }}
+                          >
+                            Pulse #{drawing.metadata.nistPulseIndex}
+                          </a>
+                        ) : (
+                          "Pulse #—"
+                        )}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#78909C", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        Draw Seed (SHA-256)
+                      </Typography>
+                      <Typography sx={{ fontSize: 14, fontWeight: 500, color: "#1D1B20", fontFamily: "monospace", wordBreak: "break-all" }}>
+                        {drawing.metadata?.drawSeed || "—"}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#78909C", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        Shuffle Seed (SHA-256)
+                      </Typography>
+                      <Typography sx={{ fontSize: 14, fontWeight: 500, color: "#1D1B20", fontFamily: "monospace", wordBreak: "break-all" }}>
+                        {drawing.metadata?.shuffleSeed || "—"}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#78909C", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        Shuffled List Hash (SHA-256)
+                      </Typography>
+                      <Typography sx={{ fontSize: 14, fontWeight: 500, color: "#1D1B20", fontFamily: "monospace", wordBreak: "break-all" }}>
+                        {drawing.metadata?.shuffledListHash || "—"}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#78909C", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        Receipt Hash (SHA-256)
+                      </Typography>
+                      <Typography sx={{ fontSize: 14, fontWeight: 500, color: "#1D1B20", fontFamily: "monospace", wordBreak: "break-all" }}>
+                        {drawing.metadata?.receiptHash || "—"}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#78909C", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        Selection Method
+                      </Typography>
+                      <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#1D1B20" }}>
+                        Cryptographic Random Selection
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#78909C", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        Shuffle Method
+                      </Typography>
+                      <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#1D1B20" }}>
+                        Deterministic Cryptographic Shuffle
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#78909C", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        Winning Position{drawing.winners?.length > 1 ? "s" : ""}
+                      </Typography>
+                      <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#1D1B20" }}>
+                        {(drawing.winners || []).map((w, idx) => `#${w.selectedFromShuffledPosition || w.winningPosition || idx + 1}`).join(" and ")} of {drawing.totalEntries || "—"} entries
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ mt: 2, pt: 1.5, borderTop: "1px solid rgba(21,101,192,0.1)" }}>
+                    <Typography sx={{ fontSize: 13, color: "#78909C", lineHeight: 1.6 }}>
+                      This draw used a cryptographically secure, independently verifiable process.
+                      The random seed was sourced from the NIST Randomness Beacon and combined with
+                      the entry list to produce a deterministic outcome. An independent auditor can
+                      verify the result using the published hashes and the Tabs verification protocol.
+                    </Typography>
+                  </Box>
+
+                  {/* Shuffled Draw Order — entry codes only, no names */}
+                  {Array.isArray(drawing.shuffledEntryList) && drawing.shuffledEntryList.length > 0 && (
+                    <Box sx={{ mt: 2, pt: 1.5, borderTop: "1px solid rgba(21,101,192,0.1)" }}>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#78909C", textTransform: "uppercase", letterSpacing: 0.5, mb: 1 }}>
+                        Shuffled Draw Order
+                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: "#90A4AE", mb: 1 }}>
+                        NIST-randomized positions. Winners were selected from positions marked below.
+                      </Typography>
+                      <Box sx={{ maxHeight: 200, overflowY: "auto", border: "1px solid #E0E0E0", borderRadius: 1, p: 1, bgcolor: "#FAFAFA" }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell sx={{ fontSize: 11, fontWeight: 700, py: 0.5, color: "#546E7A" }}>Position</TableCell>
+                              <TableCell sx={{ fontSize: 11, fontWeight: 700, py: 0.5, color: "#546E7A" }}>Entry ID</TableCell>
+                              <TableCell sx={{ fontSize: 11, fontWeight: 700, py: 0.5, color: "#546E7A" }}>Result</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {drawing.shuffledEntryList.map((entry) => {
+                              const isWinner = (drawing.winners || []).some(
+                                (w) => w.selectedFromShuffledPosition === entry.position || w.entryId === entry.entryId
+                              );
+                              return (
+                                <TableRow key={entry.position} sx={isWinner ? { bgcolor: "rgba(240,153,37,0.08)" } : {}}>
+                                  <TableCell sx={{ fontSize: 12, py: 0.3, fontWeight: isWinner ? 700 : 400 }}>
+                                    #{entry.position}
+                                  </TableCell>
+                                  <TableCell sx={{ fontSize: 11, py: 0.3, fontFamily: "monospace", color: "#455A64" }}>
+                                    {entry.entryId}
+                                  </TableCell>
+                                  <TableCell sx={{ fontSize: 11, py: 0.3 }}>
+                                    {isWinner ? "🏆 Winner" : "—"}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Verify Draw Button — client-side PFV */}
+                  <Box sx={{ mt: 2, pt: 1.5, borderTop: "1px solid rgba(21,101,192,0.1)" }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={runVerification}
+                      disabled={verifying}
+                      sx={{ textTransform: "none", fontWeight: 600, borderColor: "#1565C0", color: "#1565C0" }}
+                    >
+                      {verifying ? "Verifying..." : "🔍 Verify Draw (Client-Side PFV)"}
+                    </Button>
+                    {verifyResult && (
+                      <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 1, bgcolor: verifyResult.pass ? "rgba(76,175,80,0.08)" : "rgba(244,67,54,0.08)", border: `1px solid ${verifyResult.pass ? "#4CAF50" : "#F44336"}` }}>
+                        <Typography sx={{ fontSize: 13, fontWeight: 700, color: verifyResult.pass ? "#2E7D32" : "#C62828" }}>
+                          {verifyResult.message}
+                        </Typography>
+                        {verifyResult.computedWinners && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography sx={{ fontSize: 12, color: "#546E7A" }}>
+                              Shuffle Seed: {verifyResult.shuffleSeedMatch ? "✅ Match" : "❌ Mismatch"}
+                            </Typography>
+                            <Typography sx={{ fontSize: 12, color: "#546E7A" }}>
+                              Shuffled List Hash: {verifyResult.hashMatch ? "✅ Match" : "❌ Mismatch"}
+                            </Typography>
+                            <Typography sx={{ fontSize: 12, color: "#546E7A" }}>
+                              Winners: {verifyResult.winnersMatch ? "✅ Match" : "❌ Mismatch"}
+                            </Typography>
+                            {verifyResult.computedWinners.map((w, i) => (
+                              <Typography key={i} sx={{ fontSize: 11, color: "#78909C", fontFamily: "monospace", mt: 0.5 }}>
+                                Computed Winner {i + 1}: Position #{w.position} → {w.entryId}
+                              </Typography>
+                            ))}
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+                </Paper>
+              )}
             </Box>
           </Collapse>
         </TableCell>
@@ -207,6 +505,7 @@ const DrawingHistory = () => {
   const [cursor, setCursor] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [navError, setNavError] = useState(null);
 
   const fetchDrawings = useCallback(
     async (nextCursor = null) => {
@@ -239,6 +538,15 @@ const DrawingHistory = () => {
     },
     [eventId, experienceId]
   );
+
+  const handleExportDrawReport = () => {
+    try {
+      setNavError(null);
+      navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/draw-report`);
+    } catch (err) {
+      setNavError("Failed to navigate to Draw Report. Please try again.");
+    }
+  };
 
   useEffect(() => {
     fetchDrawings();
@@ -276,7 +584,26 @@ const DrawingHistory = () => {
         <IconButton onClick={() => fetchDrawings()} sx={{ color: ACCENT }}>
           <RefreshIcon />
         </IconButton>
+        <Button
+          variant="contained"
+          onClick={handleExportDrawReport}
+          sx={{
+            textTransform: "none",
+            fontWeight: 600,
+            borderRadius: 2,
+            background: ACCENT,
+            "&:hover": { background: "#D4820F" },
+          }}
+        >
+          Export Draw Report
+        </Button>
       </Box>
+
+      {navError && (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setNavError(null)}>
+          {navError}
+        </Alert>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>

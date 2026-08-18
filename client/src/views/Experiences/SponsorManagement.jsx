@@ -16,10 +16,14 @@ import DialogActions from "@mui/material/DialogActions";
 import Divider from "@mui/material/Divider";
 import InputAdornment from "@mui/material/InputAdornment";
 import IconButton from "@mui/material/IconButton";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
+import Tooltip from "@mui/material/Tooltip";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 import LinkOffIcon from "@mui/icons-material/LinkOff";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { getInstance, updateInstance } from "../../services/experienceService";
 
 const ACCENT = "#F09925";
@@ -73,6 +77,8 @@ const SponsorManagement = () => {
   const [monetizationModel, setMonetizationModel] = useState("sponsor-funded");
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [existingSponsor, setExistingSponsor] = useState(null);
+  const [anonymous, setAnonymous] = useState(false);
+  const [legalNoticeOptOut, setLegalNoticeOptOut] = useState(false);
 
   // Validation
   const [errors, setErrors] = useState({});
@@ -93,6 +99,8 @@ const SponsorManagement = () => {
         setPaymentStatus(sponsor.paymentStatus || null);
         setLogoPreview(sponsor.logoUrl || null);
         setExistingSponsor(sponsor);
+        setAnonymous(sponsor.anonymous === true);
+        setLegalNoticeOptOut(sponsor.legalNoticeOptOut === true);
       }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load experience data.");
@@ -182,6 +190,8 @@ const SponsorManagement = () => {
           brandColors,
           placement,
           monetizationModel,
+          anonymous,
+          legalNoticeOptOut,
         },
       };
 
@@ -224,6 +234,8 @@ const SponsorManagement = () => {
       setMonetizationModel("sponsor-funded");
       setPaymentStatus(null);
       setExistingSponsor(null);
+      setAnonymous(false);
+      setLegalNoticeOptOut(false);
       setSuccess("Sponsor disassociated successfully.");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to disassociate sponsor.");
@@ -429,6 +441,65 @@ const SponsorManagement = () => {
             </MenuItem>
           ))}
         </TextField>
+
+        <Divider sx={{ my: 3 }} />
+
+        {/* Privacy & Legal Controls */}
+        <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, color: "#0d1b35" }}>
+          Privacy & Legal
+        </Typography>
+
+        <Box sx={{ mb: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={anonymous}
+                  onChange={(e) => setAnonymous(e.target.checked)}
+                  sx={{ "& .MuiSwitch-switchBase.Mui-checked": { color: ACCENT }, "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { bgcolor: ACCENT } }}
+                />
+              }
+              label="Anonymous Sponsor"
+              sx={{ mr: 1 }}
+            />
+            <Tooltip title="Sponsor data will be stored internally but will NOT appear in any external outputs — compliance reports, public sponsor lists, or third-party API responses." arrow>
+              <InfoOutlinedIcon fontSize="small" sx={{ color: "#6a7f9a", cursor: "help" }} />
+            </Tooltip>
+          </Box>
+          <Typography variant="caption" sx={{ color: "#6a7f9a", ml: 4.5 }}>
+            Record is kept for internal use only. Data does not leave the system of record.
+          </Typography>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={legalNoticeOptOut}
+                  onChange={(e) => setLegalNoticeOptOut(e.target.checked)}
+                  sx={{ "& .MuiSwitch-switchBase.Mui-checked": { color: ACCENT }, "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { bgcolor: ACCENT } }}
+                />
+              }
+              label="Opt Out of Legal Notices"
+              sx={{ mr: 1 }}
+            />
+            <Tooltip title="Sponsor will not appear on legal disclosures or compliance reports (e.g., raffle draw reports). They may still appear in other non-legal contexts unless also marked anonymous." arrow>
+              <InfoOutlinedIcon fontSize="small" sx={{ color: "#6a7f9a", cursor: "help" }} />
+            </Tooltip>
+          </Box>
+          <Typography variant="caption" sx={{ color: "#6a7f9a", ml: 4.5 }}>
+            Excludes sponsor from legal notices and compliance documents only.
+          </Typography>
+        </Box>
+
+        {(anonymous || legalNoticeOptOut) && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            {anonymous
+              ? "This sponsor's information will only be visible to admins within this system. It will not appear on any public-facing output or external report."
+              : "This sponsor's information will be excluded from legal notices and compliance reports but may appear in other contexts."}
+          </Alert>
+        )}
 
         {/* Save Button */}
         <Button

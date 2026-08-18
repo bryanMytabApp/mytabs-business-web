@@ -46,6 +46,26 @@ const EVENT_CONFIG = {
     color: "#F44336",
     label: "Entry Invalidated",
   },
+  ENTRY_WINDOW_OPENED: {
+    icon: PlayCircleOutlineIcon,
+    color: "#4CAF50",
+    label: "Entries Open",
+  },
+  ENTRY_WINDOW_CLOSED: {
+    icon: StopCircleOutlinedIcon,
+    color: "#F44336",
+    label: "Entries Closed",
+  },
+  STATE_TRANSITION: {
+    icon: PlayCircleOutlineIcon,
+    color: "#2196F3",
+    label: "State Change",
+  },
+  DRAW_EXECUTED: {
+    icon: CasinoOutlinedIcon,
+    color: ACCENT,
+    label: "Draw Executed",
+  },
 };
 
 /**

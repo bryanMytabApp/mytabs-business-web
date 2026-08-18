@@ -133,6 +133,7 @@ const ExperienceAnalytics = lazy(() => import("../views/Experiences/ExperienceAn
 const SponsorManagement = lazy(() => import("../views/Experiences/SponsorManagement"));
 const PermissionsPanel = lazy(() => import("../views/Experiences/PermissionsPanel"));
 const CompliancePanel = lazy(() => import("../views/Experiences/CompliancePanel"));
+const DrawComplianceReport = lazy(() => import("../views/Experiences/DrawComplianceReport"));
 
 // Other views
 const ShopView = lazy(() => import("../views/Shop/ShopView"));
@@ -357,6 +358,11 @@ const router = createBrowserRouter([
           {
             path: "my-events/:eventId/experiences/:experienceId/drawings",
             element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><DrawingHistory /></UrbanHTXRouteGuard></LazyRoute>,
+            loader: () => routerHandler(true),
+          },
+          {
+            path: "my-events/:eventId/experiences/:experienceId/draw-report",
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><DrawComplianceReport /></UrbanHTXRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {

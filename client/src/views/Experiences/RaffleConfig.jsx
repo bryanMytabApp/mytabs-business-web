@@ -25,8 +25,6 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import CardGiftcardOutlinedIcon from "@mui/icons-material/CardGiftcardOutlined";
 import PieChartOutlinedIcon from "@mui/icons-material/PieChartOutlined";
 import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
-import VolunteerActivismOutlinedIcon from "@mui/icons-material/VolunteerActivismOutlined";
-import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
 import { updateInstance, transitionState, getInstance } from "../../services/experienceService";
 import { getEvent } from "../../services/eventService";
 import { parseJwt } from "../../utils/common";
@@ -116,6 +114,8 @@ function validateInnerTab(step, innerTab, form) {
           errors[`prizes[${idx}].name`] = "Prize name must be ≤ 50 characters.";
         if (prize.description && prize.description.length > 150)
           errors[`prizes[${idx}].description`] = "Description must be ≤ 150 characters.";
+        if (parseFloat(prize.value) > 75000)
+          errors[`prizes[${idx}].value`] = "Prize value exceeds $75,000 statutory limit (Texas Charitable Raffle Enabling Act).";
         if (!prize.quantity || prize.quantity < 1 || prize.quantity > 1000)
           errors[`prizes[${idx}].quantity`] = "Quantity must be between 1 and 1000.";
         if (!prize.winnersPerDrawing || prize.winnersPerDrawing < 1 || prize.winnersPerDrawing > prize.quantity)
@@ -163,23 +163,8 @@ function validateInnerTab(step, innerTab, form) {
       }
     }
   } else if (step === 2) {
-    // Step 2 inner tabs: 0=Ticket Pricing, 1=Eligibility, 2=Info Collection
+    // Step 2 inner tabs: 0=Eligibility, 1=Info Collection (pricing removed - all free)
     if (innerTab === 0) {
-      if (form.entryModel === "paid") {
-        if (!form.ticketBundles || form.ticketBundles.length === 0)
-          errors.ticketBundles = "At least one ticket bundle is required.";
-        else if (form.ticketBundles.length > 10)
-          errors.ticketBundles = "Maximum 10 bundle tiers allowed.";
-        else {
-          form.ticketBundles.forEach((bundle, idx) => {
-            if (!bundle.quantity || bundle.quantity < 1)
-              errors[`ticketBundles[${idx}].quantity`] = "Ticket quantity must be at least 1.";
-            if (!bundle.price || bundle.price <= 0)
-              errors[`ticketBundles[${idx}].price`] = "Price must be greater than $0.";
-          });
-        }
-      }
-    } else if (innerTab === 1) {
       if (form.eligibilityRules.includes("max_entries")) {
         if (!form.maxEntries || form.maxEntries < 1 || form.maxEntries > 100)
           errors.maxEntries = "Max entries must be between 1 and 100.";
@@ -237,6 +222,8 @@ function validateStep(step, form) {
           errors[`prizes[${idx}].name`] = "Prize name must be ≤ 50 characters.";
         if (prize.description && prize.description.length > 150)
           errors[`prizes[${idx}].description`] = "Description must be ≤ 150 characters.";
+        if (parseFloat(prize.value) > 75000)
+          errors[`prizes[${idx}].value`] = "Prize value exceeds $75,000 statutory limit (Texas Charitable Raffle Enabling Act).";
         if (!prize.quantity || prize.quantity < 1 || prize.quantity > 1000)
           errors[`prizes[${idx}].quantity`] = "Quantity must be between 1 and 1000.";
         if (!prize.winnersPerDrawing || prize.winnersPerDrawing < 1 || prize.winnersPerDrawing > prize.quantity)
@@ -427,7 +414,9 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eve
           value={prize.value || ""}
           onChange={(e) => onUpdate({ ...prize, value: e.target.value })}
           placeholder="e.g. 500"
-          inputProps={{ min: 0, step: "0.01" }}
+          inputProps={{ min: 0, max: 75000, step: "0.01" }}
+          error={parseFloat(prize.value) > 75000}
+          helperText={parseFloat(prize.value) > 75000 ? "Texas Charitable Raffle Enabling Act limits purchased prizes to $75,000 each" : ""}
         />
         <Box sx={{ position: "relative" }}>
           <TextField
@@ -700,7 +689,7 @@ const RaffleConfig = () => {
   const [innerTab, setInnerTab] = useState(0);
 
   // Define how many inner tabs each step has (0 = no inner tabs)
-  const INNER_TAB_COUNT = { 1: 3, 2: 3, 3: 3 }; // step 1: Appearance/Prizes/Schedule, step 2: Eligibility/Info/Pricing, step 3: Sponsor/Notifications/Compliance
+  const INNER_TAB_COUNT = { 1: 3, 2: 2, 3: 3 }; // step 1: Appearance/Prizes/Schedule, step 2: Eligibility/Info Collection, step 3: Sponsor/Notifications/Compliance
 
   // Hash tag mapping for each step + inner tab
   const HASH_MAP = {
@@ -1346,163 +1335,6 @@ const RaffleConfig = () => {
     </Box>
   );
 
-  const renderTicketPricing = () => (
-    <Box>
-      <Typography variant="h6" sx={{ mb: 1 }}>Raffle Software Plan</Typography>
-      <Typography variant="body2" sx={{ mb: 3, color: "#71727A", fontSize: 13 }}>
-        Select the plan for your event. Free entry is included — this is a fixed software fee, not calculated per participant.
-      </Typography>
-
-      <Box sx={{ borderRadius: 3, p: 3, background: "linear-gradient(160deg, #f8fafc 0%, #eef6ff 50%, #f0f9ff 100%)", border: "1px solid #E5E7EB" }}>
-        <Typography sx={{ fontSize: 14, fontWeight: 800, color: "#0D1B2A", mb: 0.5, fontFamily: "'GT Ultra', 'GT Ultra fallback', 'Playfair Display', Georgia, serif" }}>
-          Choose your plan
-        </Typography>
-        <Typography sx={{ fontSize: 12, color: "#6B7280", mb: 3 }}>
-          Fixed event fee — not calculated per entry, participant, or raffle proceeds.
-        </Typography>
-        {errors.ticketBundles && (
-            <Typography variant="caption" sx={{ color: "#f87171", mb: 1, display: "block" }}>
-              {errors.ticketBundles}
-            </Typography>
-          )}
-
-          {/* Pricing cards */}
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", lg: "repeat(3, 1fr)" }, gap: 2, mb: 2 }}>
-            {[
-              {
-                capacity: 10, price: 0, tier: "FREE", headline: "Everything you need.",
-                priceDisplay: "$0", fee: "0 platform fee", cta: "Get started free",
-                note: "Best for testing your setup — zero cost, zero risk.",
-                features: ["Up to 10 raffle entries", "1 prize", "Basic entry form", "QR code confirmation"],
-                color: "#2dd4bf",
-              },
-              {
-                capacity: 500, price: 39, tier: "COMMUNITY", headline: "Local events.",
-                priceDisplay: "$39", fee: "per event", cta: "Select plan",
-                note: "Meetups, church events, small fundraisers.",
-                features: ["Up to 500 entries", "Up to 3 prizes", "Custom entry form", "Email confirmation"],
-                color: "#2dd4bf",
-              },
-              {
-                capacity: 2000, price: 99, tier: "GROWTH", headline: "Mid-size events.",
-                priceDisplay: "$99", fee: "per event", cta: "Select plan",
-                note: "Concerts, galas, school fundraisers.",
-                features: ["Up to 2,000 entries", "Up to 5 prizes", "Info collection", "Multi-draw scheduling"],
-                color: "#2dd4bf", popular: true,
-              },
-              {
-                capacity: 10000, price: 249, tier: "PROFESSIONAL", headline: "Built to scale.",
-                priceDisplay: "$249", fee: "per event", cta: "Select plan",
-                note: "Conferences, festivals, multi-day events.",
-                features: ["Up to 10,000 entries", "Unlimited prizes", "Terms & compliance", "Per-prize drawings"],
-                color: "#2dd4bf",
-              },
-              {
-                capacity: 50000, price: 499, tier: "LARGE EVENT", headline: "Stadium scale.",
-                priceDisplay: "$499", fee: "per event", cta: "Select plan",
-                note: "Stadiums, citywide events, major festivals.",
-                features: ["Up to 50,000 entries", "Unlimited prizes", "Custom branding", "Sponsor integration"],
-                color: "#2dd4bf",
-              },
-              {
-                capacity: 1000000, price: 1000, tier: "ENTERPRISE", headline: "Full control.",
-                priceDisplay: "Custom", fee: "starting at $1,000/event", cta: "Contact us",
-                note: "For organizations operating at scale with full visibility and control.",
-                features: ["Unlimited entries", "Custom integrations", "SLA guarantee", "Concierge support"],
-                color: "#2dd4bf",
-              },
-            ].map((tier) => {
-              const isSelected = form.ticketBundles[0]?.capacity === tier.capacity;
-              return (
-                <Box
-                  key={tier.capacity}
-                  onClick={() => updateField("ticketBundles", [{ quantity: 1, price: tier.price, capacity: tier.capacity }])}
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 2.5,
-                    cursor: "pointer",
-                    background: "#fff",
-                    border: isSelected ? `2.5px solid ${tier.color}` : "2.5px solid transparent",
-                    boxShadow: isSelected ? `0 0 0 4px ${tier.color}30` : tier.popular ? "0 8px 24px rgba(0,0,0,0.2)" : "0 2px 8px rgba(0,0,0,0.12)",
-                    transition: "all 0.18s",
-                    position: "relative",
-                    "&:hover": { boxShadow: `0 8px 24px rgba(0,0,0,0.2)`, transform: "translateY(-1px)" },
-                  }}
-                >
-                  {tier.popular && !isSelected && (
-                    <Box sx={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: tier.color, color: "#0D1B2A", fontSize: 9, fontWeight: 800, px: 1.5, py: 0.3, borderRadius: 999, whiteSpace: "nowrap" }}>
-                      MOST POPULAR
-                    </Box>
-                  )}
-
-                  {/* Tier name */}
-                  <Typography sx={{ fontSize: 10, fontWeight: 800, color: tier.color, letterSpacing: 1.2, mb: 0.25, fontFamily: "'GT Ultra', 'GT Ultra fallback', 'Playfair Display', Georgia, serif" }}>
-                    {tier.tier}
-                  </Typography>
-
-                  {/* Headline */}
-                  <Typography sx={{ fontSize: 16, fontWeight: 700, color: "#0D1B2A", mb: 1.5, fontFamily: "'GT Ultra', 'GT Ultra fallback', 'Playfair Display', Georgia, serif" }}>
-                    {tier.headline}
-                  </Typography>
-
-                  {/* Price */}
-                  <Typography sx={{ fontSize: 32, fontWeight: 900, color: "#0D1B2A", lineHeight: 1, mb: 0.25, fontFamily: "'GT Ultra', 'GT Ultra fallback', 'Playfair Display', Georgia, serif" }}>
-                    {tier.priceDisplay}
-                  </Typography>
-                  <Typography sx={{ fontSize: 11, fontWeight: 700, color: tier.color, mb: 1.5 }}>
-                    {tier.fee}
-                  </Typography>
-
-                  {/* CTA */}
-                  <Box
-                    sx={{
-                      width: "100%", py: 1.2, borderRadius: 2, textAlign: "center", fontSize: 13, fontWeight: 700,
-                      background: isSelected ? tier.color : "#f1f5f9",
-                      color: isSelected ? "#0D1B2A" : "#374151",
-                      mb: 1, cursor: "pointer", transition: "all 0.15s",
-                      "&:hover": { background: isSelected ? tier.color : "#e2e8f0" },
-                    }}
-                  >
-                    {isSelected ? "✓ Selected" : tier.cta}
-                  </Box>
-
-                  {/* Note */}
-                  <Typography sx={{ fontSize: 10.5, color: "#6B7280", mb: 1.5, lineHeight: 1.4, textAlign: "center" }}>
-                    {tier.note}
-                  </Typography>
-
-                  {/* Divider */}
-                  <Box sx={{ height: "1px", background: "#E5E7EB", mb: 1.5 }} />
-
-                  {/* Features */}
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.6 }}>
-                    {tier.features.map((f, i) => (
-                      <Box key={i} sx={{ display: "flex", alignItems: "flex-start", gap: 0.8 }}>
-                        <Typography sx={{ color: tier.color, fontSize: 12, lineHeight: 1.4, flexShrink: 0 }}>✓</Typography>
-                        <Typography sx={{ fontSize: 11.5, color: "#374151", lineHeight: 1.4 }}>{f}</Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              );
-            })}
-          </Box>
-
-          {/* Footer note */}
-          <Box sx={{ textAlign: "center" }}>
-            <Typography sx={{ fontSize: 11, color: "#9CA3AF", mb: 0.5 }}>
-              Fixed platform fee per event. No per-entry or per-participant charges.
-            </Typography>
-            {form.ticketBundles[0]?.capacity && form.ticketBundles[0].capacity < 1000000 && form.ticketBundles[0].price > 0 && (
-              <Typography sx={{ fontSize: 11, color: "#92400E", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 1.5, px: 1.5, py: 0.75, display: "inline-block", mt: 1 }}>
-                ⚠️ Overage: $0.05/entry if your plan limit is exceeded. Upgrade anytime before the drawing.
-              </Typography>
-            )}
-          </Box>
-        </Box>
-    </Box>
-  );
-
   const renderSponsor = () => (
     <Box>
       <Typography variant="h6" sx={{ mb: 1 }}>Is this raffle sponsored?</Typography>
@@ -2089,7 +1921,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
   };
 
   const renderEntryRulesContent = () => {
-    const tabs = ['Management Cost', 'Eligibility', 'Info Collection'];
+    const tabs = ['Eligibility', 'Info Collection'];
     return (
       <Box>
         <Box sx={{ display: "flex", gap: 0, mb: 3, borderBottom: "2px solid #E5E7EB" }}>
@@ -2108,9 +1940,8 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
             </Box>
           ))}
         </Box>
-        {innerTab === 0 && renderTicketPricing()}
-        {innerTab === 1 && renderEligibility()}
-        {innerTab === 2 && renderInfoCollection()}
+        {innerTab === 0 && renderEligibility()}
+        {innerTab === 1 && renderInfoCollection()}
       </Box>
     );
   };

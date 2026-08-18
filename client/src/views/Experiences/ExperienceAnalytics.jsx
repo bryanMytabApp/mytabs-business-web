@@ -28,7 +28,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { getAnalytics, exportAnalytics, getDrawStatus } from "../../services/experienceService";
+import { getAnalytics, exportAnalytics, getDrawings, getInstance } from "../../services/experienceService";
 import DrawStatusCard from "./DrawStatusCard";
 
 const ACCENT = "#F09925";
@@ -48,6 +48,7 @@ const ExperienceAnalytics = () => {
   const [exporting, setExporting] = useState(false);
   const [analytics, setAnalytics] = useState(null);
   const [drawStatus, setDrawStatus] = useState(null);
+  const [engagementCode, setEngagementCode] = useState(null);
 
   const fetchAnalytics = useCallback(async () => {
     try {
@@ -67,16 +68,33 @@ const ExperienceAnalytics = () => {
   }, [fetchAnalytics]);
 
   useEffect(() => {
-    const drawType =
-      analytics?.config?.drawType ||
-      analytics?.drawType ||
-      analytics?.experience?.config?.drawType;
-    if (drawType === "provably-fair") {
-      getDrawStatus(eventId, experienceId)
-        .then((res) => setDrawStatus(res.data?.data || res.data || null))
-        .catch(() => setDrawStatus(null));
-    }
-  }, [analytics, eventId, experienceId]);
+    // Fetch instance to get engagementCode
+    getInstance(eventId, experienceId)
+      .then((res) => {
+        const instance = res.data?.data || res.data;
+        if (instance?.engagementCode) {
+          setEngagementCode(instance.engagementCode);
+        }
+      })
+      .catch(() => {});
+  }, [eventId, experienceId]);
+
+  useEffect(() => {
+    // Fetch existing drawings data
+    if (!eventId || !experienceId) return;
+    getDrawings(eventId, experienceId)
+      .then((res) => {
+        console.log('📊 Drawings response:', res.data);
+        const drawings = res.data?.data || res.data || [];
+        if (Array.isArray(drawings) && drawings.length > 0) {
+          setDrawStatus({ drawings, drawState: "DRAW_COMPLETE" });
+        }
+      })
+      .catch((err) => {
+        console.error('📊 Drawings fetch error:', err.message, err.response?.status);
+        setDrawStatus(null);
+      });
+  }, [eventId, experienceId]);
 
   const handleExportCsv = async () => {
     try {
@@ -132,9 +150,14 @@ const ExperienceAnalytics = () => {
     <Box sx={{ p: 3, fontFamily: "'Outfit', sans-serif" }}>
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: "#0d1b35" }}>
-          Engagement <span style={{ color: ACCENT }}>Analytics</span>
-        </Typography>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: "#0d1b35" }}>
+            Engagement <span style={{ color: ACCENT }}>Analytics</span>
+          </Typography>
+          <Typography sx={{ color: "#9E9E9E", fontSize: 11, fontFamily: "monospace", mt: 0.25 }}>
+            {engagementCode || `ENG-${experienceId?.replace(/-/g, "").substring(0, 4).toUpperCase()}-${experienceId?.replace(/-/g, "").substring(4, 8).toUpperCase()}`}
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           startIcon={<FileDownloadOutlinedIcon />}
@@ -179,6 +202,54 @@ const ExperienceAnalytics = () => {
       </Box>
 
       <Divider sx={{ mb: 4 }} />
+
+      {/* Draw Results Quick Link — shown when drawings exist */}
+      {drawStatus?.drawings?.length > 0 && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.5,
+            mb: 3,
+            borderRadius: 3,
+            border: "1px solid rgba(40,167,69,0.2)",
+            background: "rgba(40,167,69,0.04)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Box sx={{ fontSize: 24 }}>🏆</Box>
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#0d1b35" }}>
+                Draw Complete
+              </Typography>
+              <Typography variant="caption" sx={{ color: "#6a7f9a" }}>
+                {drawStatus.drawings[0]?.winners?.[0]?.attendeeName || drawStatus.drawings[0]?.winners?.[0]?.entryCode || "Winner selected"}
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              // Navigate to the drawings tab for this experience
+              window.location.href = `/admin/my-events/${eventId}/experiences/${experienceId}/drawings`;
+            }}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              borderColor: "#28a745",
+              color: "#28a745",
+              borderRadius: 2,
+              "&:hover": { borderColor: "#1e7e34", backgroundColor: "rgba(40,167,69,0.08)" },
+            }}
+          >
+            View Draw Results
+          </Button>
+        </Paper>
+      )}
 
       {/* Provably Fair Draw Status */}
       {(analytics?.config?.drawType === "provably-fair" ||

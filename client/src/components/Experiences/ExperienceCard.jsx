@@ -82,7 +82,7 @@ const shimmerKeyframes = `
  * - onClick: (instance) => void
  */
 const ExperienceCard = ({ instance, onAction, onClick }) => {
-  const { experienceId, name, experienceType, state, entryCount, eventId, eventName } = instance;
+  const { experienceId, name, experienceType, state, entryCount, eventId } = instance;
   const stateStyle = STATE_STYLES[state] || STATE_STYLES.Draft;
   const [showPreview, setShowPreview] = useState(false);
   const [showConfigure, setShowConfigure] = useState(false);

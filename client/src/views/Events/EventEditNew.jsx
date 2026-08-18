@@ -17,6 +17,18 @@ const parseJwt = (token) => {
   } catch { return null; }
 };
 
+// Safely parse date values — handles JS Date .toString() format that moment() misparses
+const toMoment = (val) => {
+  if (!val) return null;
+  if (val instanceof Date) return moment(val);
+  if (typeof val === 'number') return moment(val);
+  if (typeof val === 'string') {
+    const isoLike = /^\d{4}-\d{2}-\d{2}/.test(val);
+    return isoLike ? moment(val) : moment(new Date(val));
+  }
+  return moment(val);
+};
+
 const EventEditNew = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
@@ -97,9 +109,9 @@ const EventEditNew = () => {
           adType: ev.showDates?.length > 0 ? "shows" : "event",
           name: ev.name || "",
           cat: ev.category || ev.cat || "Athletics",
-          date: ev.startDate ? moment(ev.startDate).format("YYYY-MM-DD") : "",
-          t1: ev.startDate ? moment(ev.startDate).format("HH:mm") : "",
-          t2: ev.endDate ? moment(ev.endDate).format("HH:mm") : "",
+          date: ev.startDate ? toMoment(ev.startDate).format("YYYY-MM-DD") : "",
+          t1: ev.startDate ? toMoment(ev.startDate).format("HH:mm") : "",
+          t2: ev.endDate ? toMoment(ev.endDate).format("HH:mm") : "",
           cap: ev.capacity || "",
           desc: ev.description || "",
           venue: ev.venue || "",
@@ -144,6 +156,7 @@ const EventEditNew = () => {
           createdByAi: ev.createdByAi || false,
           sourceUrl: ev.sourceUrl || "",
           agentId: ev.agentId || "",
+          ownerUserId: ev.userId || "",
         };
 
         setEventData(formData);
