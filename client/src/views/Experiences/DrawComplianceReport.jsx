@@ -95,6 +95,24 @@ const DrawComplianceReport = () => {
   // ─── Derived: charitablePurpose ──────────────────────────────────────────────
   const charitablePurpose = raffleConfig.data?.charitablePurpose || null;
 
+  // ─── Derived: integrityHash ──────────────────────────────────────────────────
+  const [integrityHash, setIntegrityHash] = useState(null);
+
+  useEffect(() => {
+    if (!allLoaded) return;
+    const reportContent = {
+      event: eventInfo.data || {},
+      raffleConfiguration: raffleConfig.data || {},
+      participants: participants.data || [],
+      winners,
+      cryptographicProof: drawStatus.data || {},
+      auditTrail: timeline.data || [],
+    };
+    computeIntegrityHash(reportContent)
+      .then(setIntegrityHash)
+      .catch(() => setIntegrityHash(null));
+  }, [allLoaded, eventInfo.data, raffleConfig.data, participants.data, winners, drawStatus.data, timeline.data]);
+
   // ─── Export handlers ─────────────────────────────────────────────────────────
 
   const handlePrint = useCallback(async () => {
@@ -345,7 +363,7 @@ const DrawComplianceReport = () => {
       {/* § 7. Legal Attestation */}
       <LegalAttestationSection
         generatedAt={generatedAt}
-        integrityHash={null}
+        integrityHash={integrityHash}
         charitablePurpose={charitablePurpose}
       />
     </Box>

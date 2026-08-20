@@ -73,6 +73,9 @@ const G = `
 .ecn-fi,.ecn-fs,.ecn-fta{width:100%;padding:10px 14px;background:#FFFFFF;border:1px solid #E5E7EB;border-radius:8px;font-size:14px;font-weight:500;color:var(--tx);font-family:'Outfit','Nunito',sans-serif;transition:all var(--tr);outline:none;appearance:none;box-sizing:border-box}
 .ecn-fi:focus,.ecn-fs:focus,.ecn-fta:focus{border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,.1);background:#fff}
 .ecn-fi::placeholder{color:#9CA3AF}
+.ecn-fi.ferr,.ecn-fs.ferr,.ecn-fta.ferr{border-color:#ef4444;background:#fff5f5}
+.ecn-fi.ferr:focus,.ecn-fs.ferr:focus,.ecn-fta.ferr:focus{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.12)}
+.ecn-ferr{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:#dc2626;margin-top:5px}
 .ecn-fta{resize:none;min-height:60px;line-height:1.6}
 .ecn-fr{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .ecn-fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
@@ -101,6 +104,10 @@ const G = `
 .ecn-trow{display:flex;align-items:center;gap:9px;padding:11px 13px;background:#fff;border:1.5px solid var(--ibr);border-radius:11px;cursor:pointer;transition:all var(--tr)}
 .ecn-trow:hover{border-color:rgba(91,184,193,.4)}
 .ecn-trow.tsel{border-color:var(--te);box-shadow:0 0 0 2px rgba(91,184,193,.12)}
+.ecn-trow.terr{border-color:#ef4444;background:#fff5f5}
+.ecn-trow.terr.tsel{box-shadow:0 0 0 2px rgba(239,68,68,.14)}
+.ecn-trow.terr .ecn-tm{color:#dc2626;font-weight:700}
+.ecn-terr-dot{flex:0 0 auto;width:16px;height:16px;border-radius:50%;background:#ef4444;color:#fff;font-size:11px;font-weight:900;line-height:16px;text-align:center}
 .ecn-tn{font-size:13px;font-weight:700;color:var(--tx);flex:1}
 .ecn-tm{font-size:11px;color:var(--mu)}
 .ecn-tdel{width:24px;height:24px;border-radius:6px;background:rgba(239,68,68,.08);border:none;color:#ef4444;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background var(--tr)}
@@ -908,6 +915,32 @@ function P_Media({ f, u, next, back, steps, stepNum }) {
   );
 }
 
+// ─── NUMERIC INPUT SANITIZERS ─────────────────────────────────────────────────
+// <input type="number"> still accepts "01", "-5" and "1e5", so sanitize what lands in state.
+
+// Whole numbers only: strips signs, decimals and leading zeros ("01" -> "1", "-5" -> "5").
+// A lone "0" is kept so the validator can explain the minimum instead of the field going blank.
+const intOnly = v => {
+  const d = String(v ?? "").replace(/\D/g, "");
+  return d.replace(/^0+(?=\d)/, "");
+};
+
+// Positive decimals only: one decimal point, max 2 places, no sign ("-05.999" -> "5.99").
+const decOnly = v => {
+  let s = String(v ?? "").replace(/[^\d.]/g, "");
+  const dot = s.indexOf(".");
+  if (dot !== -1) s = s.slice(0, dot + 1) + s.slice(dot + 1).replace(/\./g, "");
+  s = s.replace(/^0+(?=\d)/, "");
+  if (s.startsWith(".")) s = "0" + s;
+  const [whole, frac] = s.split(".");
+  return frac !== undefined ? `${whole}.${frac.slice(0, 2)}` : whole;
+};
+
+// Stops "-", "+" and exponent keys before the browser turns the field into an unreadable value.
+const blockNonNumericKeys = allowDecimal => e => {
+  if (["e", "E", "+", "-"].includes(e.key) || (!allowDecimal && e.key === ".")) e.preventDefault();
+};
+
 // ─── TICKETING ────────────────────────────────────────────────────────────────
 function P_Ticketing({ f, u, next, back, steps, stepNum }) {
   const TT = [
@@ -919,11 +952,52 @@ function P_Ticketing({ f, u, next, back, steps, stepNum }) {
   const [act, setAct] = useState(0);
   const [showTestModal, setShowTestModal] = useState(false);
   const [testPurchaseUrl, setTestPurchaseUrl] = useState('');
+  // Per-ticket, per-field validation errors: { [ticketId]: { type, customName, price, qty } }
+  const [tixErrs, setTixErrs] = useState({});
   const sy = t => { setTix(t); u("tickets", t); };
   const add = () => { const t = [...tix, { id: uid(), type: "", price: "", qty: "", max: "10", desc: "", showDateId: "all" }]; sy(t); setAct(t.length - 1); };
-  const del = i => { if (tix.length === 1) return; const t = tix.filter((_, j) => j !== i); sy(t); setAct(Math.min(act, t.length - 1)); };
-  const upd = (i, k, v) => sy(tix.map((ti, j) => j === i ? { ...ti, [k]: v } : ti));
+  const del = i => { const rm = tix[i]; if (tix.length === 1) return; const t = tix.filter((_, j) => j !== i); sy(t); setAct(Math.min(act, t.length - 1)); if (rm?.id) setTixErrs(p => { const n = { ...p }; delete n[rm.id]; return n; }); };
+  const upd = (i, k, v) => {
+    const id = tix[i]?.id;
+    sy(tix.map((ti, j) => j === i ? { ...ti, [k]: v } : ti));
+    // Clear the field's error as soon as the user edits it
+    if (id && tixErrs[id]?.[k]) setTixErrs(p => { const fe = { ...p[id] }; delete fe[k]; const n = { ...p }; if (Object.keys(fe).length) n[id] = fe; else delete n[id]; return n; });
+  };
   const tk = tix[act] || {};
+  const ae = tixErrs[tk.id] || {};
+  const ticketLabel = (t, i) => (t.type === "Custom" && t.customName ? t.customName : (t.type || `Ticket ${i + 1}`));
+
+  // Validate every ticket and return { errors, firstBadIndex, summary }
+  const validateTix = () => {
+    const errors = {};
+    tix.forEach(t => {
+      const fe = {};
+      if (!t.type) fe.type = "Select a ticket title";
+      if (t.type === "Custom" && !t.customName?.trim()) fe.customName = "Enter a name for this custom ticket";
+      if (t.price === "" || t.price === null || t.price === undefined) fe.price = "Price is required";
+      else if (isNaN(parseFloat(t.price)) || parseFloat(t.price) <= 0) fe.price = "Price must be greater than $0";
+      if (t.qty === "" || t.qty === null || t.qty === undefined) fe.qty = "Quantity is required";
+      else if (isNaN(parseInt(t.qty, 10)) || parseInt(t.qty, 10) <= 0) fe.qty = "Quantity must be at least 1";
+      const maxN = parseInt(t.max, 10);
+      if (t.max === "" || t.max === null || t.max === undefined) fe.max = "Max per customer is required";
+      else if (isNaN(maxN) || maxN <= 0) fe.max = "Max per customer must be at least 1";
+      else if (!fe.qty && maxN > parseInt(t.qty, 10)) fe.max = `Cannot exceed the ${parseInt(t.qty, 10)} tickets available`;
+      if (Object.keys(fe).length) errors[t.id] = fe;
+    });
+    const firstBadIndex = tix.findIndex(t => errors[t.id]);
+    const bad = firstBadIndex >= 0 ? tix[firstBadIndex] : null;
+    const FIELD_NAMES = { type: "title", customName: "custom name", price: "price", qty: "quantity", max: "max per customer" };
+    let summary = "";
+    if (bad) {
+      const badFields = Object.keys(errors[bad.id]);
+      const who = `"${ticketLabel(bad, firstBadIndex)}" (ticket ${firstBadIndex + 1} of ${tix.length})`;
+      // One problem reads better as the exact message; several reads better as a field list
+      summary = badFields.length === 1
+        ? `${who}: ${errors[bad.id][badFields[0]]}`
+        : `${who} needs attention: ${badFields.map(k => FIELD_NAMES[k]).join(", ")}`;
+    }
+    return { errors, firstBadIndex, summary, count: Object.keys(errors).length };
+  };
   const p = parseFloat(tk.price) || 0;
   const tax = p * 0.0082;
   const s2 = p + tax;
@@ -1006,12 +1080,17 @@ function P_Ticketing({ f, u, next, back, steps, stepNum }) {
             <div style={{ fontSize: 10.5, fontWeight: 800, color: "var(--mu)", letterSpacing: ".7px", textTransform: "uppercase", marginBottom: 9 }}>Tickets ({tix.length})</div>
             <div className="ecn-tc">
               {tix.map((t, i) => (
-                <div key={t.id} className={`ecn-trow${act === i ? " tsel" : ""}`} onClick={() => setAct(i)}>
-                  <I n="tkt" s={14} c={act === i ? "var(--te)" : "var(--mu)"} w={1.7} />
+                <div key={t.id} className={`ecn-trow${act === i ? " tsel" : ""}${tixErrs[t.id] ? " terr" : ""}`} onClick={() => setAct(i)}>
+                  <I n="tkt" s={14} c={tixErrs[t.id] ? "#ef4444" : (act === i ? "var(--te)" : "var(--mu)")} w={1.7} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="ecn-tn">{t.type === "Custom" && t.customName ? t.customName : (t.type || `Ticket ${i + 1}`)}</div>
-                    <div className="ecn-tm">{isShows ? getShowLabel(t.showDateId) : (t.price ? `$${t.price}` : "No price")}</div>
+                    <div className="ecn-tn">{ticketLabel(t, i)}</div>
+                    <div className="ecn-tm">
+                      {tixErrs[t.id]
+                        ? `${Object.keys(tixErrs[t.id]).length} issue${Object.keys(tixErrs[t.id]).length > 1 ? "s" : ""} to fix`
+                        : (isShows ? getShowLabel(t.showDateId) : (t.price ? `$${t.price}` : "No price"))}
+                    </div>
                   </div>
+                  {tixErrs[t.id] && <span className="ecn-terr-dot" title="This ticket has missing fields" aria-hidden="true">!</span>}
                   {tix.length > 1 && <button className="ecn-tdel" onClick={e => { e.stopPropagation(); del(i); }}>{"\u2715"}</button>}
                 </div>
               ))}
@@ -1025,10 +1104,11 @@ function P_Ticketing({ f, u, next, back, steps, stepNum }) {
               <div className="ecn-fg"><label className="ecn-fl">Ticket title</label>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   {(tk.type === "Custom" || (tk.type && !TKTS.includes(tk.type))) && (
-                    <input className="ecn-fi" style={{ flex: 1 }} placeholder="Custom ticket name" value={tk.customName || (TKTS.includes(tk.type) ? "" : tk.type) || ""} onChange={e => upd(act, "customName", e.target.value)} />
+                    <input className={`ecn-fi${ae.customName ? " ferr" : ""}`} style={{ flex: 1 }} placeholder="Custom ticket name" aria-invalid={!!ae.customName} value={tk.customName || (TKTS.includes(tk.type) ? "" : tk.type) || ""} onChange={e => upd(act, "customName", e.target.value)} />
                   )}
-                  <div className="ecn-sw" style={{ flex: (tk.type === "Custom" || (tk.type && !TKTS.includes(tk.type))) ? "0 0 160px" : "1" }}><select className="ecn-fs" value={TKTS.includes(tk.type) ? tk.type : (tk.type ? "Custom" : "")} onChange={e => upd(act, "type", e.target.value)}><option value="">Select type</option>{TKTS.map(t => <option key={t}>{t}</option>)}</select></div>
+                  <div className="ecn-sw" style={{ flex: (tk.type === "Custom" || (tk.type && !TKTS.includes(tk.type))) ? "0 0 160px" : "1" }}><select className={`ecn-fs${ae.type ? " ferr" : ""}`} aria-invalid={!!ae.type} value={TKTS.includes(tk.type) ? tk.type : (tk.type ? "Custom" : "")} onChange={e => upd(act, "type", e.target.value)}><option value="">Select type</option>{TKTS.map(t => <option key={t}>{t}</option>)}</select></div>
                 </div>
+                {(ae.type || ae.customName) && <div className="ecn-ferr" role="alert">{"\u26A0"} {ae.type || ae.customName}</div>}
               </div>
               {isShows && (
                 <div className="ecn-fg">
@@ -1043,10 +1123,10 @@ function P_Ticketing({ f, u, next, back, steps, stepNum }) {
                   </div>
                 </div>
               )}
-              <div className="ecn-fg"><label className="ecn-fl">Price (USD)</label><input className="ecn-fi" type="number" placeholder="0.00" value={tk.price} onChange={e => upd(act, "price", e.target.value)} /></div>
+              <div className="ecn-fg"><label className="ecn-fl">Price (USD)</label><input className={`ecn-fi${ae.price ? " ferr" : ""}`} type="number" min="0" step="0.01" inputMode="decimal" placeholder="0.00" aria-invalid={!!ae.price} value={tk.price} onKeyDown={blockNonNumericKeys(true)} onChange={e => upd(act, "price", decOnly(e.target.value))} />{ae.price && <div className="ecn-ferr" role="alert">{"\u26A0"} {ae.price}</div>}</div>
               <div className="ecn-fr">
-                <div className="ecn-fg" style={{ marginBottom: 0 }}><label className="ecn-fl">Qty available</label><input className="ecn-fi" type="number" placeholder="100" value={tk.qty} onChange={e => upd(act, "qty", e.target.value)} /></div>
-                <div className="ecn-fg" style={{ marginBottom: 0 }}><label className="ecn-fl">Max per customer</label><input className="ecn-fi" type="number" placeholder="10" value={tk.max} onChange={e => upd(act, "max", e.target.value)} /></div>
+                <div className="ecn-fg" style={{ marginBottom: 0 }}><label className="ecn-fl">Qty available</label><input className={`ecn-fi${ae.qty ? " ferr" : ""}`} type="number" min="1" step="1" inputMode="numeric" placeholder="100" aria-invalid={!!ae.qty} value={tk.qty} onKeyDown={blockNonNumericKeys(false)} onChange={e => upd(act, "qty", intOnly(e.target.value))} />{ae.qty && <div className="ecn-ferr" role="alert">{"\u26A0"} {ae.qty}</div>}</div>
+                <div className="ecn-fg" style={{ marginBottom: 0 }}><label className="ecn-fl">Max per customer</label><input className={`ecn-fi${ae.max ? " ferr" : ""}`} type="number" min="1" step="1" inputMode="numeric" placeholder="10" aria-invalid={!!ae.max} value={tk.max} onKeyDown={blockNonNumericKeys(false)} onChange={e => upd(act, "max", intOnly(e.target.value))} />{ae.max && <div className="ecn-ferr" role="alert">{"\u26A0"} {ae.max}</div>}</div>
               </div>
               <div className="ecn-fg" style={{ marginTop: 13, marginBottom: 0 }}>
                 <label className="ecn-fl">Description <span style={{ color: "var(--mu)", fontWeight: 500 }}>(optional)</span></label>
@@ -1164,12 +1244,16 @@ function P_Ticketing({ f, u, next, back, steps, stepNum }) {
         <button className="ecn-bn" onClick={() => {
           if (!f.tickType) { toast.error("Please select a ticketing type"); return; }
           if (f.tickType === "tabs") {
-            const invalid = tix.some(t => !t.type || !t.price || !t.qty);
-            if (invalid) { toast.error("Each ticket needs a title, price, and quantity"); return; }
-            const invalidPrice = tix.some(t => isNaN(t.price) || parseFloat(t.price) <= 0);
-            if (invalidPrice) { toast.error("Ticket price must be greater than $0"); return; }
-            const invalidCustom = tix.some(t => t.type === "Custom" && !t.customName);
-            if (invalidCustom) { toast.error("Please enter a name for custom tickets"); return; }
+            const { errors, firstBadIndex, summary, count } = validateTix();
+            if (firstBadIndex >= 0) {
+              setTixErrs(errors);
+              setAct(firstBadIndex);          // jump to the offending ticket
+              toast.error(count > 1 ? `${summary} — ${count - 1} other ticket${count > 2 ? "s" : ""} also need${count === 2 ? "s" : ""} attention` : summary);
+              // Scroll the highlighted field into view once the panel re-renders
+              setTimeout(() => document.querySelector(".ecn-tform .ferr")?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+              return;
+            }
+            setTixErrs({});
           }
           if (f.tickType === "ext" && !f.extUrl) { toast.error("Please enter an external ticketing URL"); return; }
           next();

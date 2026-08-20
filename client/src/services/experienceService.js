@@ -70,12 +70,71 @@ export const listInstances = (eventId, params) =>
   http.get(`v1/events/${eventId}/experiences`, { params });
 
 /**
- * Fetches all experiences across multiple events in a single batch request.
- * @param {string[]} eventIds - Array of event IDs
- * @returns {Promise} - { data: { events: [{ eventId, eventName, instances: [...] }] } }
+ * Normalizes the varying shapes the list endpoint can return into an array.
+ * @param {object} res - Axios response
+ * @returns {object[]}
  */
-export const listAllExperiences = (eventIds) =>
-  http.post(`v1/events/_batch/experiences`, { eventIds });
+const extractInstances = (res) => {
+  const data =
+    res?.data?.data?.instances ||
+    res?.data?.data ||
+    res?.data?.instances ||
+    res?.data ||
+    [];
+  return Array.isArray(data) ? data : [];
+};
+
+/**
+ * Fetches all experiences across multiple events in a single batch request.
+ * Uses the batch endpoint: POST /v1/events/_batch/experiences
+ * Falls back to per-event fan-out if the batch call fails.
+ *
+ * @param {string[]} eventIds - Array of event IDs
+ * @returns {Promise<{events: Array<{eventId: string, instances: object[], error?: string}>}>}
+ */
+export const listAllExperiences = async (eventIds = []) => {
+  const ids = (eventIds || []).filter(Boolean);
+  if (ids.length === 0) return { events: [] };
+
+  try {
+    // Primary path: batch endpoint
+    const res = await http.post(`v1/events/_batch/experiences`, { eventIds: ids });
+    console.log("📋 [experienceService] batch response:", { status: res?.status, dataKeys: Object.keys(res?.data || {}), innerDataKeys: Object.keys(res?.data?.data || {}) });
+    const batchData = res?.data?.data?.events || res?.data?.events || [];
+    return { events: batchData.map(r => ({ eventId: r.eventId, instances: r.instances || [] })) };
+  } catch (batchErr) {
+    console.warn("📋 [experienceService] batch endpoint failed, falling back to per-event:", batchErr.response?.status, batchErr.message);
+
+    // Fallback: fan out per event
+    const events = [];
+    const concurrency = 6;
+    let cursor = 0;
+
+    const worker = async () => {
+      while (cursor < ids.length) {
+        const eventId = ids[cursor++];
+        try {
+          const res = await listInstances(eventId);
+          const instances = extractInstances(res);
+          console.log(`📋 [experienceService] event=${eventId} → ${instances.length} instances`, { status: res?.status, dataKeys: Object.keys(res?.data || {}) });
+          events.push({ eventId, instances });
+        } catch (err) {
+          const errMsg = err.response?.data?.message || err.message || "Failed to load";
+          console.warn(`📋 [experienceService] event=${eventId} FAILED:`, { status: err.response?.status, message: errMsg, url: err.config?.url });
+          events.push({ eventId, instances: [], error: errMsg });
+        }
+      }
+    };
+
+    await Promise.all(Array.from({ length: Math.min(concurrency, ids.length) }, worker));
+
+    // Preserve event ordering
+    const order = new Map(ids.map((id, i) => [id, i]));
+    events.sort((a, b) => order.get(a.eventId) - order.get(b.eventId));
+
+    return { events };
+  }
+};
 
 // ─── Lifecycle ─────────────────────────────────────────────────────────────────
 

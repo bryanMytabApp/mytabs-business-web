@@ -21,8 +21,6 @@ import { getEvent } from "../../services/eventService";
 import { parseJwt } from "../../utils/common";
 import ExperienceCard from "../../components/Experiences/ExperienceCard";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
-import CheckBoxIcon from "@mui/icons-material/CheckBox";
 
 const ACCENT = "#F09925";
 
@@ -143,10 +141,8 @@ const ExperiencesDashboard = () => {
     const { experienceId, state } = instance;
     if (state === "Draft" || state === "Scheduled") {
       navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/config`);
-    } else if (state === "Live" || state === "Paused") {
-      navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/live`);
     } else {
-      navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/analytics`);
+      navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/live`);
     }
   };
 
@@ -321,28 +317,46 @@ const ExperiencesDashboard = () => {
           {filteredInstances.map((instance) => (
             <Grid item xs={12} sm={6} md={4} key={instance.experienceId}>
               <Box sx={{ position: "relative" }}>
-                {selectMode && (
-                  <Box onClick={() => toggleSelect(instance.experienceId)} sx={{ position: "absolute", top: 8, left: 8, zIndex: 2, cursor: "pointer" }}>
-                    {selected.includes(instance.experienceId)
-                      ? <CheckBoxIcon sx={{ color: ACCENT }} />
-                      : <CheckBoxOutlineBlankIcon sx={{ color: "#9E9E9E" }} />
-                    }
-                  </Box>
-                )}
-                <Box sx={{ opacity: selectMode && selected.includes(instance.experienceId) ? 0.7 : 1, border: selectMode && selected.includes(instance.experienceId) ? `2px solid ${ACCENT}` : "none", borderRadius: 2 }}>
                   <Box sx={{ mb: 0.5 }}>
                     {eventName && (
                       <Typography sx={{ fontSize: 11, fontWeight: 600, color: "#9E9E9E", mb: 0.5, px: 0.5 }}>
                         {eventName}
                       </Typography>
                     )}
-                    <ExperienceCard
-                      instance={{ ...instance, eventName }}
-                      onAction={handleAction}
-                      onClick={handleCardClick}
-                    />
+                    <Box sx={{ position: "relative", borderRadius: "22px", overflow: "visible", outline: selectMode && selected.includes(instance.experienceId) ? `3px solid ${ACCENT}` : "none", outlineOffset: "2px", transition: "outline-color 0.15s ease" }}>
+                      {selectMode && (
+                        <Box
+                          onClick={(e) => { e.stopPropagation(); toggleSelect(instance.experienceId); }}
+                          sx={{
+                            position: "absolute",
+                            top: 14,
+                            left: 14,
+                            zIndex: 2,
+                            cursor: "pointer",
+                            width: 26,
+                            height: 26,
+                            borderRadius: "50%",
+                            border: selected.includes(instance.experienceId) ? `2px solid ${ACCENT}` : "2px solid #BDBDBD",
+                            background: selected.includes(instance.experienceId) ? ACCENT : "#fff",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            transition: "all 0.15s ease",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                          }}
+                        >
+                          {selected.includes(instance.experienceId) && (
+                            <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "#fff" }} />
+                          )}
+                        </Box>
+                      )}
+                      <ExperienceCard
+                        instance={{ ...instance, eventName }}
+                        onAction={handleAction}
+                        onClick={handleCardClick}
+                      />
+                    </Box>
                   </Box>
-                </Box>
               </Box>
               {actionLoading === instance.experienceId && (
                 <Box sx={{ display: "flex", justifyContent: "center", mt: 0.5 }}>

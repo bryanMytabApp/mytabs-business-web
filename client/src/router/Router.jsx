@@ -1,7 +1,9 @@
 import React, { Suspense, lazy } from "react";
 import { createBrowserRouter, RouterProvider, redirect, Outlet } from "react-router-dom";
 import ErrorPage from "./ErrorPage";
+import ErrorBoundary from "../components/ErrorBoundary";
 import TabsHelp from "../components/TabsHelp/TabsHelp";
+import { hasValidSession, clearSession, buildLoginUrl } from "../utils/auth/session";
 
 // Help context API. Set DOC_SYNC_HELP_API_URL at build time to override.
 const HELP_API_URL =
@@ -146,21 +148,31 @@ const JumpPage = lazy(() => import("../views/JumpPage/JumpPage"));
 
 // Wrapper component for lazy-loaded routes
 const LazyRoute = ({ children }) => (
-  <Suspense fallback={<PageLoader />}>
-    {children}
-  </Suspense>
+  <ErrorBoundary>
+    <Suspense fallback={<PageLoader />}>
+      {children}
+    </Suspense>
+  </ErrorBoundary>
 );
 
 const routerHandler = (isIntern, allowPass = false) => {
+  // Presence of a token is not enough — an expired token must count as logged out,
+  // otherwise the authenticated shell renders while every API call fails.
   const _idToken = localStorage.getItem("idToken");
+  const isAuthenticated = hasValidSession();
 
-  if (!_idToken && isIntern) {
-    return redirect("/login");
-  } else if (_idToken && !isIntern) {
+  if (!isAuthenticated && isIntern) {
+    // Clear the stale token so we don't bounce between /login and /admin.
+    if (_idToken) clearSession();
+    return redirect(buildLoginUrl());
+  } else if (isAuthenticated && !isIntern) {
     if (allowPass) {
       return false;
     }
     return redirect("/admin/home");
+  } else if (_idToken && !isAuthenticated && !isIntern) {
+    // Public route reached with an expired token: drop it and let the page render.
+    clearSession();
   }
   return false;
 };
@@ -173,12 +185,11 @@ const router = createBrowserRouter([
       {
         path: "/",
         loader: () => {
-          const _idToken = localStorage.getItem("idToken");
-          if (_idToken) {
+          if (hasValidSession()) {
             return redirect("/admin/home");
-          } else {
-            return redirect("/login");
           }
+          clearSession();
+          return redirect("/login");
         },
       },
       {

@@ -19,8 +19,10 @@ import {
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import { getEventsByUserId } from "../../services/eventService";
-import { listAllExperiences } from "../../services/experienceService";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import http from "../../utils/axios/http";
+import { listAllExperiences, deleteInstance } from "../../services/experienceService";
+import { getCurrentUserId } from "../../utils/authUtils";
 import ExperienceCard from "../../components/Experiences/ExperienceCard";
 
 const ACCENT = "#F09925";
@@ -40,40 +42,75 @@ const AllExperiencesDashboard = () => {
   const [eventSearchQuery, setEventSearchQuery] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState([]);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const userId = localStorage.getItem("userId") || localStorage.getItem("sub");
-      const selectedBizId = sessionStorage.getItem("selectedBusinessId");
-      const ownerUserId = selectedBizId || userId;
+      // Always use the personal userId for the "all engagements" view.
+      // The events page may switch selectedBusinessId to an org business, but
+      // engagements should show across ALL of the user's events, not just the
+      // currently-selected business. The per-event experiences query inside
+      // listAllExperiences doesn't need business context — it queries by eventId.
+      const userId =
+        localStorage.getItem("userId") || localStorage.getItem("sub") || getCurrentUserId();
 
-      const eventsRes = await getEventsByUserId(ownerUserId);
+      console.log("📋 [Engagements] userId:", userId);
+
+      if (!userId) {
+        setEvents([]);
+        setEventExperiences([]);
+        setError("We couldn't confirm who you're signed in as. Please sign in again.");
+        setLoading(false);
+        return;
+      }
+
+      // Fetch ALL events for this user, bypassing the business header.
+      // The events page switches selectedBusinessId based on org membership,
+      // which scopes the events list to one business. The engagements dashboard
+      // must show engagements across ALL events regardless of business context.
+      const eventsRes = await http.get(`/event/${userId}/all`, { skipBusinessContext: true });
       const events = eventsRes?.data?.data || eventsRes?.data || [];
+      console.log("📋 [Engagements] getEventsByUserId response:", { eventsCount: events.length, rawKeys: Object.keys(eventsRes?.data || {}), firstEvent: events[0] ? { id: events[0]._id || events[0].id, name: events[0].name } : null });
       setEvents(events);
 
       if (events.length === 0) {
+        console.log("📋 [Engagements] No events found — showing empty state");
         setEventExperiences([]);
         setLoading(false);
         return;
       }
 
       const eventIds = events.map(e => e._id || e.id).filter(Boolean);
-      const batchRes = await listAllExperiences(eventIds);
-      const batchData = batchRes?.data?.data?.events || batchRes?.data?.events || [];
+      console.log("📋 [Engagements] Fetching experiences for", eventIds.length, "events:", eventIds.slice(0, 5));
+      const { events: perEvent } = await listAllExperiences(eventIds);
+      console.log("📋 [Engagements] listAllExperiences results:", perEvent.map(r => ({ eventId: r.eventId, instances: r.instances.length, error: r.error || null })));
 
       const eventMap = Object.fromEntries(events.map(e => [e._id || e.id, e]));
-      const results = batchData
-        .filter(r => r.instances && r.instances.length > 0)
+      const results = perEvent
+        .filter(r => r.instances.length > 0)
         .map(r => ({
           event: { ...(eventMap[r.eventId] || {}), id: r.eventId },
           instances: r.instances,
         }));
 
+      console.log("📋 [Engagements] Final results:", results.length, "events with instances, total instances:", results.reduce((sum, r) => sum + r.instances.length, 0));
       setEventExperiences(results);
+
+      // Surface partial failures rather than presenting them as "no engagements".
+      const failed = perEvent.filter(r => r.error);
+      if (failed.length > 0) {
+        console.warn("📋 [Engagements] Failed events:", failed);
+        setError(
+          `Couldn't load engagements for ${failed.length} of ${perEvent.length} event${perEvent.length !== 1 ? "s" : ""}.`
+        );
+      }
     } catch (err) {
-      setError(err.message || "Failed to load engagements");
+      console.error("📋 [Engagements] fetchAll crashed:", err);
+      setError(err.response?.data?.message || err.message || "Failed to load engagements");
     } finally {
       setLoading(false);
     }
@@ -120,19 +157,92 @@ const AllExperiencesDashboard = () => {
   const handleAction = async (eventId, experienceId, action) => {
     if (action === "configure") {
       navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/config`);
+    } else if (action === "activate" || action === "resume") {
+      try {
+        const { transitionState } = await import("../../services/experienceService");
+        await transitionState(eventId, experienceId, { action: "activate" });
+        setEventExperiences((prev) =>
+          prev.map((group) => ({
+            ...group,
+            instances: group.instances.map((inst) =>
+              inst.experienceId === experienceId ? { ...inst, state: "Live" } : inst
+            ),
+          }))
+        );
+      } catch (err) {
+        console.error("Failed to activate:", err);
+        alert(err.response?.data?.message || "Failed to activate. Please try again.");
+      }
+    } else if (action === "pause") {
+      try {
+        const { transitionState } = await import("../../services/experienceService");
+        await transitionState(eventId, experienceId, { action: "pause" });
+        setEventExperiences((prev) =>
+          prev.map((group) => ({
+            ...group,
+            instances: group.instances.map((inst) =>
+              inst.experienceId === experienceId ? { ...inst, state: "Paused" } : inst
+            ),
+          }))
+        );
+      } catch (err) {
+        console.error("Failed to pause:", err);
+        alert(err.response?.data?.message || "Failed to pause. Please try again.");
+      }
+    } else if (action === "close") {
+      try {
+        const { transitionState } = await import("../../services/experienceService");
+        await transitionState(eventId, experienceId, { action: "close" });
+        setEventExperiences((prev) =>
+          prev.map((group) => ({
+            ...group,
+            instances: group.instances.map((inst) =>
+              inst.experienceId === experienceId ? { ...inst, state: "Closed" } : inst
+            ),
+          }))
+        );
+      } catch (err) {
+        console.error("Failed to close:", err);
+        alert(err.response?.data?.message || "Failed to close. Please try again.");
+      }
     } else {
       navigate(`/admin/my-events/${eventId}/experiences`);
     }
   };
 
   const handleCardClick = (eventId, instance) => {
+    if (selectMode) {
+      toggleSelect(`${eventId}:${instance.experienceId}`);
+      return;
+    }
     const { experienceId, state } = instance;
     if (state === "Draft" || state === "Scheduled") {
       navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/config`);
-    } else if (state === "Live" || state === "Paused") {
-      navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/live`);
     } else {
-      navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/analytics`);
+      navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/live`);
+    }
+  };
+
+  const toggleSelect = (key) => {
+    setSelected((prev) => prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selected.length === 0) return;
+    if (!window.confirm(`Delete ${selected.length} engagement${selected.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await Promise.all(selected.map((key) => {
+        const [evId, expId] = key.split(":");
+        return deleteInstance(evId, expId);
+      }));
+      setSelected([]);
+      setSelectMode(false);
+      await fetchAll();
+    } catch (err) {
+      alert(err.message || "Failed to delete");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -157,23 +267,41 @@ const AllExperiencesDashboard = () => {
           </Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Button
-            variant="contained"
-            startIcon={<AddCircleOutlineIcon />}
-            onClick={() => { setShowEventPicker(true); setEventSearchQuery(""); }}
-            sx={{
-              background: ACCENT,
-              textTransform: "none",
-              fontWeight: 700,
-              borderRadius: 2,
-              "&:hover": { background: "#D4820F" },
-            }}
-          >
-            Add Engagement
-          </Button>
-          <IconButton onClick={fetchAll} size="small" sx={{ color: ACCENT }}>
-            <RefreshIcon fontSize="small" />
-          </IconButton>
+          {selectMode ? (
+            <>
+              <Button size="small" variant="outlined" onClick={() => { setSelectMode(false); setSelected([]); }} sx={{ textTransform: "none", fontWeight: 600 }}>
+                Cancel
+              </Button>
+              <Button size="small" variant="contained" startIcon={<DeleteOutlineIcon />} disabled={selected.length === 0 || deleting} onClick={handleDeleteSelected} sx={{ textTransform: "none", fontWeight: 700, background: "#ef4444", "&:hover": { background: "#dc2626" } }}>
+                {deleting ? "Deleting..." : `Delete (${selected.length})`}
+              </Button>
+            </>
+          ) : (
+            <>
+              {allInstances.length > 0 && (
+                <Button size="small" variant="outlined" onClick={() => setSelectMode(true)} sx={{ textTransform: "none", fontWeight: 600 }}>
+                  Select
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                startIcon={<AddCircleOutlineIcon />}
+                onClick={() => { setShowEventPicker(true); setEventSearchQuery(""); }}
+                sx={{
+                  background: ACCENT,
+                  textTransform: "none",
+                  fontWeight: 700,
+                  borderRadius: 2,
+                  "&:hover": { background: "#D4820F" },
+                }}
+              >
+                Add Engagement
+              </Button>
+              <IconButton onClick={fetchAll} size="small" sx={{ color: ACCENT }}>
+                <RefreshIcon fontSize="small" />
+              </IconButton>
+            </>
+          )}
         </Box>
       </Box>
 
@@ -269,20 +397,52 @@ const AllExperiencesDashboard = () => {
       {/* 3-column card grid */}
       {filteredInstances.length > 0 && (
         <Grid container spacing={2}>
-          {filteredInstances.map((instance) => (
-            <Grid item xs={12} sm={6} md={4} key={`${instance.eventId}-${instance.experienceId}`}>
-              <Box sx={{ mb: 0.5 }}>
-                <Typography sx={{ fontSize: 11, fontWeight: 600, color: "#9E9E9E", mb: 0.5, px: 0.5 }}>
-                  {instance.eventName}
-                </Typography>
-                <ExperienceCard
-                  instance={instance}
-                  onAction={(experienceId, action) => handleAction(instance.eventId, experienceId, action)}
-                  onClick={(inst) => handleCardClick(instance.eventId, inst)}
-                />
-              </Box>
-            </Grid>
-          ))}
+          {filteredInstances.map((instance) => {
+            const selectKey = `${instance.eventId}:${instance.experienceId}`;
+            const isSelected = selected.includes(selectKey);
+            return (
+              <Grid item xs={12} sm={6} md={4} key={selectKey}>
+                <Box sx={{ mb: 0.5 }}>
+                  <Typography sx={{ fontSize: 11, fontWeight: 600, color: "#9E9E9E", mb: 0.5, px: 0.5 }}>
+                    {instance.eventName}
+                  </Typography>
+                  <Box sx={{ position: "relative", borderRadius: "22px", overflow: "visible", outline: selectMode && isSelected ? `3px solid ${ACCENT}` : "none", outlineOffset: "2px", transition: "outline-color 0.15s ease" }}>
+                    {selectMode && (
+                      <Box
+                        onClick={(e) => { e.stopPropagation(); toggleSelect(selectKey); }}
+                        sx={{
+                          position: "absolute",
+                          top: 14,
+                          left: 14,
+                          zIndex: 2,
+                          cursor: "pointer",
+                          width: 26,
+                          height: 26,
+                          borderRadius: "50%",
+                          border: isSelected ? `2px solid ${ACCENT}` : "2px solid #BDBDBD",
+                          background: isSelected ? ACCENT : "#fff",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          transition: "all 0.15s ease",
+                          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                        }}
+                      >
+                        {isSelected && (
+                          <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "#fff" }} />
+                        )}
+                      </Box>
+                    )}
+                    <ExperienceCard
+                      instance={instance}
+                      onAction={(experienceId, action) => handleAction(instance.eventId, experienceId, action)}
+                      onClick={(inst) => handleCardClick(instance.eventId, inst)}
+                    />
+                  </Box>
+                </Box>
+              </Grid>
+            );
+          })}
         </Grid>
       )}
 

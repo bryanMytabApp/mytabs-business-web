@@ -9,6 +9,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { refreshAccessToken } from '../utils/axios/http';
+import { clearSession } from '../utils/auth/session';
 
 // Session timeout constants
 export const SESSION_CONSTANTS = {
@@ -110,12 +111,9 @@ const useSessionTimeout = () => {
       countdownIntervalRef.current = null;
     }
 
-    // Clear auth tokens from localStorage
-    localStorage.removeItem('idToken');
-    localStorage.removeItem('refToken');
-    localStorage.removeItem('username');
-
-    // Redirect to login
+    // Clear every auth artifact (not just the tokens) and redirect to login.
+    // Partial clears previously left the app looking logged in.
+    clearSession();
     window.location.href = '/login';
   }, []);
 

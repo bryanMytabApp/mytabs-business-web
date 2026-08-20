@@ -5,6 +5,7 @@ import PauseIcon from "@mui/icons-material/Pause";
 import StopIcon from "@mui/icons-material/Stop";
 import SettingsIcon from "@mui/icons-material/Settings";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 
 /**
  * Map lifecycle states to available quick actions.
@@ -26,7 +27,9 @@ const STATE_ACTIONS = {
   Paused: [
     { label: "Resume", action: "resume", icon: PlayArrowIcon, variant: "golive" },
   ],
-  Closed: [],
+    Closed: [
+    { label: "Reset to Draft", action: "reset", icon: RestartAltIcon, variant: "configure" },
+  ],
   Analytics: [],
 };
 
@@ -44,13 +47,12 @@ const BUTTON_STYLES = {
     },
   },
   golive: {
-    background: "linear-gradient(135deg, #34c471, #1f9d55)",
-    border: "none",
-    color: "#fff",
-    boxShadow: "0 8px 18px -6px rgba(31,157,85,0.5)",
+    background: "rgba(34,197,94,0.08)",
+    border: "1.5px solid rgba(34,197,94,0.25)",
+    color: "#16a34a",
     "&:hover": {
-      background: "linear-gradient(135deg, #3dd47d, #22ad5f)",
-      boxShadow: "0 10px 22px -6px rgba(31,157,85,0.6)",
+      background: "rgba(34,197,94,0.14)",
+      borderColor: "rgba(34,197,94,0.4)",
     },
   },
   close: {
@@ -84,33 +86,40 @@ const BUTTON_STYLES = {
  * - onPreview: () => void (optional — renders Preview button if provided)
  * - disabled: boolean (optional)
  */
-const LifecycleActions = ({ state, onAction, onPreview, disabled = false }) => {
-  const actions = STATE_ACTIONS[state] || [];
+const LifecycleActions = ({ state, onAction, onPreview, disabled = false, drawState }) => {
+  const actions = (STATE_ACTIONS[state] || []).filter(a => {
+    // Hide reopen if a draw was already executed
+    if ((a.action === 'reopen' || a.action === 'reset') && drawState && drawState !== 'OPEN') return false;
+    return true;
+  });
 
   if (actions.length === 0 && !onPreview) return null;
 
+  const primaryActions = actions.filter(a => a.variant !== 'golive');
+  const activateAction = actions.find(a => a.variant === 'golive');
+
   return (
-    <Box sx={{ display: "flex", gap: 1.25, flexWrap: "wrap", width: "100%" }}>
-      {actions.map(({ label, action, icon: Icon, variant }) => {
+    <Box sx={{ display: "flex", gap: 1, width: "100%" }}>
+      {primaryActions.map(({ label, action, icon: Icon, variant }) => {
         const style = BUTTON_STYLES[variant] || BUTTON_STYLES.configure;
         return (
           <Button
             key={action}
             size="small"
             disabled={disabled}
-            startIcon={<Icon sx={{ fontSize: 16 }} />}
             onClick={() => onAction && onAction(action)}
+            title={label}
             sx={{
               flex: 1,
-              minWidth: 120,
+              minWidth: 0,
               textTransform: "none",
               fontWeight: 800,
               fontSize: 14.5,
               fontFamily: "'Nunito', sans-serif",
-              borderRadius: "13px",
-              px: 2,
-              py: 1.4,
-              minHeight: 44,
+              borderRadius: "12px",
+              px: 1.5,
+              py: 1,
+              minHeight: 40,
               ...style,
               "&:disabled": {
                 opacity: 0.5,
@@ -118,7 +127,7 @@ const LifecycleActions = ({ state, onAction, onPreview, disabled = false }) => {
               },
             }}
           >
-            {label}
+            <Icon sx={{ fontSize: 20 }} />
           </Button>
         );
       })}
@@ -126,28 +135,60 @@ const LifecycleActions = ({ state, onAction, onPreview, disabled = false }) => {
         <Button
           size="small"
           disabled={disabled}
-          endIcon={<OpenInNewIcon sx={{ fontSize: 15 }} />}
           onClick={onPreview}
+          title="Preview"
           sx={{
             flex: 1,
-            minWidth: 120,
+            minWidth: 0,
             textTransform: "none",
             fontWeight: 800,
             fontSize: 14.5,
             fontFamily: "'Nunito', sans-serif",
-            borderRadius: "13px",
-            px: 2,
-            py: 1.4,
-            minHeight: 44,
+            borderRadius: "12px",
+            px: 1.5,
+            py: 1,
+            minHeight: 40,
             ...BUTTON_STYLES.preview,
             "&:disabled": {
               opacity: 0.5,
             },
           }}
         >
-          Preview
+          <OpenInNewIcon sx={{ fontSize: 20 }} />
         </Button>
       )}
+      {activateAction && (() => {
+        const { label, action, icon: Icon, variant } = activateAction;
+        const style = BUTTON_STYLES[variant] || BUTTON_STYLES.configure;
+        return (
+          <Button
+            key={action}
+            size="small"
+            disabled={disabled}
+            onClick={() => onAction && onAction(action)}
+            title={label}
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              textTransform: "none",
+              fontWeight: 800,
+              fontSize: 14.5,
+              fontFamily: "'Nunito', sans-serif",
+              borderRadius: "12px",
+              px: 1.5,
+              py: 1,
+              minHeight: 40,
+              ...style,
+              "&:disabled": {
+                opacity: 0.5,
+                boxShadow: "none",
+              },
+            }}
+          >
+            <Icon sx={{ fontSize: 20 }} />
+          </Button>
+        );
+      })()}
     </Box>
   );
 };

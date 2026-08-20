@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Paper from "@mui/material/Paper";
@@ -7,12 +7,17 @@ import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Divider from "@mui/material/Divider";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
 import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import EmojiEventsOutlinedIcon from "@mui/icons-material/EmojiEventsOutlined";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   LineChart,
   Line,
@@ -43,6 +48,7 @@ const CHART_COLORS = ["#F09925", "#4DD9E0", "#A78BFA", "#34D399", "#F97316", "#6
  */
 const ExperienceAnalytics = () => {
   const { eventId, experienceId } = useParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [exporting, setExporting] = useState(false);
@@ -147,7 +153,7 @@ const ExperienceAnalytics = () => {
   ];
 
   return (
-    <Box sx={{ p: 3, fontFamily: "'Outfit', sans-serif" }}>
+    <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1200, mx: "auto", fontFamily: "'Outfit', sans-serif" }}>
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Box>
@@ -158,22 +164,44 @@ const ExperienceAnalytics = () => {
             {engagementCode || `ENG-${experienceId?.replace(/-/g, "").substring(0, 4).toUpperCase()}-${experienceId?.replace(/-/g, "").substring(4, 8).toUpperCase()}`}
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<FileDownloadOutlinedIcon />}
-          onClick={handleExportCsv}
-          disabled={exporting}
-          sx={{
-            bgcolor: ACCENT,
-            "&:hover": { bgcolor: "#d9841f" },
-            textTransform: "none",
-            fontWeight: 700,
-            borderRadius: 2,
-          }}
-        >
-          {exporting ? "Exporting..." : "Export CSV"}
-        </Button>
       </Box>
+
+      {/* Desktop layout: sidebar + main content */}
+      <Box sx={{ display: "flex", gap: 3 }}>
+        {/* Left Sidebar — Desktop only */}
+        <Box sx={{ display: { xs: "none", md: "block" }, width: 200, flexShrink: 0 }}>
+          <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #E8E8E8", position: "sticky", top: 24 }}>
+            <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
+              {[
+                { label: "Live Dashboard", icon: <EmojiEventsOutlinedIcon fontSize="small" />, onClick: () => navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/live`) },
+                { label: "Draw Report", icon: <SettingsOutlinedIcon fontSize="small" />, onClick: () => navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/drawings`) },
+                { divider: true },
+                { label: exporting ? "Exporting..." : "Export CSV", icon: <FileDownloadOutlinedIcon fontSize="small" />, onClick: handleExportCsv, disabled: exporting },
+                { label: "Refresh", icon: <RefreshIcon fontSize="small" />, onClick: fetchAnalytics },
+              ].map((item, idx) => item.divider ? (
+                <Divider key={idx} />
+              ) : (
+                <Box
+                  key={idx}
+                  onClick={item.onClick}
+                  sx={{
+                    display: "flex", alignItems: "center", gap: 1.5, px: 2, py: 1.5,
+                    cursor: "pointer",
+                    color: "#4A4A4A", fontSize: 13, fontWeight: 500,
+                    transition: "background 0.15s",
+                    "&:hover": { background: "#F5F5F5" },
+                  }}
+                >
+                  <Box sx={{ color: "#71727A", display: "flex", alignItems: "center" }}>{item.icon}</Box>
+                  <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{item.label}</Typography>
+                </Box>
+              ))}
+            </CardContent>
+          </Card>
+        </Box>
+
+        {/* Main Content */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
 
       {/* Top Metrics */}
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(5, 1fr)" }, gap: 2, mb: 4 }}>
@@ -350,6 +378,8 @@ const ExperienceAnalytics = () => {
           </Box>
         )}
       </Paper>
+        </Box>{/* End Main Content */}
+      </Box>{/* End Desktop layout flex */}
     </Box>
   );
 };

@@ -15,6 +15,14 @@ import {
   Collapse,
   Modal,
   TextField,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
@@ -22,12 +30,13 @@ import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
 import HourglassBottomOutlinedIcon from "@mui/icons-material/HourglassBottomOutlined";
 import HourglassTopOutlinedIcon from "@mui/icons-material/HourglassTopOutlined";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import EmojiEventsOutlinedIcon from "@mui/icons-material/EmojiEventsOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import {
   getLiveStats,
   triggerDraw,
@@ -37,8 +46,8 @@ import {
   updateInstance,
   getInstance,
 } from "../../services/experienceService";
+import { getToken } from "../../services/authService";
 import PotTicker from "../../components/Experiences/PotTicker";
-import DrawingControls from "../../components/Experiences/DrawingControls";
 import EntrySearchBar from "../../components/Experiences/EntrySearchBar";
 import TimelineEvent from "../../components/Experiences/TimelineEvent";
 
@@ -68,6 +77,7 @@ const RaffleLiveDashboard = () => {
   // Timeline
   const [timeline, setTimeline] = useState([]);
   const [timelineLoading, setTimelineLoading] = useState(true);
+  const [showTimeline, setShowTimeline] = useState(false);
 
   // Raffle starts countdown
   const [startsCountdown, setStartsCountdown] = useState("");
@@ -102,6 +112,71 @@ const RaffleLiveDashboard = () => {
   const [showViewConfig, setShowViewConfig] = useState(false);
   const [viewConfigData, setViewConfigData] = useState(null);
   const [viewConfigLoading, setViewConfigLoading] = useState(false);
+
+  // Trigger Draw confirmation
+  const [showDrawConfirm, setShowDrawConfirm] = useState(false);
+
+  // Access code reveal (password-protected, 5-min session)
+  const [accessCodeRevealed, setAccessCodeRevealed] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordVerifying, setPasswordVerifying] = useState(false);
+  const lastVerifiedRef = useRef(null);
+
+  // Overflow menu
+  const [menuAnchor, setMenuAnchor] = useState(null);
+
+  const handlePasswordVerify = async () => {
+    if (!passwordInput) return;
+    setPasswordVerifying(true);
+    setPasswordError("");
+    try {
+      const email = localStorage.getItem("username") || localStorage.getItem("userEmail") || localStorage.getItem("email") || "";
+      if (!email) {
+        setPasswordError("Unable to determine account email. Please log in again.");
+        setPasswordVerifying(false);
+        return;
+      }
+      await getToken({ email, password: passwordInput });
+      lastVerifiedRef.current = Date.now();
+      setAccessCodeRevealed(true);
+      setPasswordInput("");
+    } catch (err) {
+      setPasswordError("Incorrect password. Please try again.");
+    } finally {
+      setPasswordVerifying(false);
+    }
+  };
+
+  // Auto-hide code after 5 minutes
+  const [revealTimeLeft, setRevealTimeLeft] = useState(0);
+  useEffect(() => {
+    if (!accessCodeRevealed) { setRevealTimeLeft(0); return; }
+    setRevealTimeLeft(300); // 5 minutes in seconds
+    const interval = setInterval(() => {
+      setRevealTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setAccessCodeRevealed(false);
+          lastVerifiedRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [accessCodeRevealed]);
+
+  // When clicking "Reveal Access Code", skip password if within 5-min window
+  const handleRevealClick = () => {
+    if (lastVerifiedRef.current && (Date.now() - lastVerifiedRef.current) < 5 * 60 * 1000) {
+      setAccessCodeRevealed(true);
+      setShowPasswordModal(true);
+    } else {
+      setShowPasswordModal(true);
+    }
+  };
 
   const openViewConfig = async () => {
     setViewConfigLoading(true);
@@ -313,6 +388,12 @@ const RaffleLiveDashboard = () => {
       return;
     }
 
+    // If the raffle is already closed, show "Ended" and don't run the timer
+    if (stats?.state === "Closed" || stats?.state === "Analytics") {
+      setEndsCountdown("Ended");
+      return;
+    }
+
     // Don't start the ends countdown until the raffle has started
     if (!hasStarted) {
       setEndsCountdown("Waiting…");
@@ -349,7 +430,7 @@ const RaffleLiveDashboard = () => {
     return () => {
       if (endsCountdownRef.current) clearInterval(endsCountdownRef.current);
     };
-  }, [stats?.endsAt, hasStarted]);
+  }, [stats?.endsAt, stats?.state, hasStarted]);
 
   // Entry search handler
   const handleSearch = useCallback(
@@ -372,7 +453,12 @@ const RaffleLiveDashboard = () => {
   );
 
   // Manual draw handler
-  const handleTriggerDraw = useCallback(async () => {
+  const handleTriggerDraw = useCallback(() => {
+    setShowDrawConfirm(true);
+  }, []);
+
+  const confirmTriggerDraw = useCallback(async () => {
+    setShowDrawConfirm(false);
     await triggerDraw(eventId, experienceId);
     // Refresh stats and timeline after drawing
     await fetchStats(false);
@@ -469,62 +555,222 @@ const RaffleLiveDashboard = () => {
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1200, mx: "auto" }}>
       {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3 }}>
-        <IconButton
-          onClick={() => navigate(`/admin/my-events/${eventId}/experiences`)}
-          sx={{ color: "#71727A" }}
-        >
-          <ArrowBackIcon />
-        </IconButton>
+      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, mb: 3 }}>
         <Box sx={{ flex: 1 }}>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: "#1D1B20" }}>
-            Live Dashboard
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: "#1D1B20" }}>
+              Live Dashboard
+            </Typography>
+            <Chip
+              label={stats?.state === "Closed" ? "CLOSED" : stats?.state === "Analytics" ? "ENDED" : "LIVE"}
+              size="small"
+              sx={{
+                background: stats?.state === "Closed" || stats?.state === "Analytics" ? "#FEE2E2" : "#E8F5E9",
+                color: stats?.state === "Closed" || stats?.state === "Analytics" ? "#DC2626" : "#2E7D32",
+                fontWeight: 700,
+                fontSize: 11,
+                height: 22,
+                ...(stats?.state !== "Closed" && stats?.state !== "Analytics" && {
+                  animation: "pulse 2s infinite",
+                  "@keyframes pulse": {
+                    "0%, 100%": { opacity: 1 },
+                    "50%": { opacity: 0.7 },
+                  },
+                }),
+              }}
+            />
+          </Box>
           <Typography sx={{ color: "#71727A", fontSize: 13 }}>
             {stats?.experienceName || "Raffle"} — Real-time monitoring
           </Typography>
-          <Typography sx={{ color: "#9E9E9E", fontSize: 11, fontFamily: "monospace", mt: 0.25 }}>
-            {stats?.engagementCode || `ENG-${experienceId?.replace(/-/g, "").substring(0, 4).toUpperCase()}-${experienceId?.replace(/-/g, "").substring(4, 8).toUpperCase()}`}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mt: 0.5 }}>
+            <Typography sx={{ color: "#9E9E9E", fontSize: 11, fontFamily: "monospace" }}>
+              {stats?.engagementCode || `ENG-${experienceId?.replace(/-/g, "").substring(0, 4).toUpperCase()}-${experienceId?.replace(/-/g, "").substring(4, 8).toUpperCase()}`}
+            </Typography>
+          </Box>
         </Box>
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-          <Button
-            variant="text"
-            size="small"
-            onClick={openViewConfig}
-            sx={{ fontWeight: 600, textTransform: "none", borderRadius: 2, color: "#71727A", fontSize: 12, "&:hover": { background: "#f5f5f5" } }}
-          >
-            View Config
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<EditOutlinedIcon />}
-            onClick={openQuickEdit}
-            disabled={(stats?.uniqueParticipants || 0) > 0}
-            sx={{ fontWeight: 700, textTransform: "none", borderRadius: 2, borderColor: ACCENT, color: ACCENT, "&:hover": { borderColor: ACCENT, background: `${ACCENT}10` }, "&.Mui-disabled": { borderColor: "#ccc", color: "#999" } }}
-          >
-            {(stats?.uniqueParticipants || 0) > 0 ? "Locked" : "Quick Edit"}
-          </Button>
-        </Box>
-        <Chip
-          label="LIVE"
-          sx={{
-            background: "#E8F5E9",
-            color: "#2E7D32",
-            fontWeight: 700,
-            fontSize: 12,
-            animation: "pulse 2s infinite",
-            "@keyframes pulse": {
-              "0%, 100%": { opacity: 1 },
-              "50%": { opacity: 0.7 },
-            },
-          }}
-        />
-        <IconButton onClick={() => fetchStats(false)} sx={{ color: ACCENT }}>
-          <RefreshIcon />
+        {/* Mobile only: overflow menu */}
+        <IconButton onClick={(e) => setMenuAnchor(e.currentTarget)} sx={{ color: "#71727A", display: { xs: "flex", md: "none" } }}>
+          <MoreVertIcon />
         </IconButton>
+        <Menu
+          anchorEl={menuAnchor}
+          open={Boolean(menuAnchor)}
+          onClose={() => setMenuAnchor(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
+          PaperProps={{ sx: { borderRadius: 2, minWidth: 200, mt: 0.5 } }}
+        >
+          {stats?.state === "Closed" || stats?.state === "Analytics" ? (
+            <>
+              <MenuItem onClick={() => { setMenuAnchor(null); navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/analytics`); }}>
+                <ListItemIcon><EmojiEventsOutlinedIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>View Analytics</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={() => { setMenuAnchor(null); navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/drawings`); }}>
+                <ListItemIcon><SettingsOutlinedIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>View Report</ListItemText>
+              </MenuItem>
+            </>
+          ) : (
+            <MenuItem onClick={() => { setMenuAnchor(null); handleTriggerDraw(); }} disabled={!stats || stats.state !== "Live" || (stats?.totalEntries || 0) === 0}>
+              <ListItemIcon><EmojiEventsOutlinedIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Trigger Manual Draw</ListItemText>
+            </MenuItem>
+          )}
+          <Divider />
+          {stats?.hasAccessCode && stats?.accessCodeDisplay?.length > 0 && stats?.state !== "Closed" && stats?.state !== "Analytics" && (
+            <MenuItem onClick={() => { setMenuAnchor(null); handleRevealClick(); }}>
+              <ListItemIcon><Typography sx={{ fontSize: 16 }}>🔑</Typography></ListItemIcon>
+              <ListItemText>Reveal Access Code</ListItemText>
+            </MenuItem>
+          )}
+          <MenuItem onClick={() => { setMenuAnchor(null); handleToggleParticipants(); }}>
+            <ListItemIcon><PeopleOutlinedIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{showParticipants ? "Hide Participants" : "Show Participants"}</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={() => { setMenuAnchor(null); setShowTimeline((prev) => !prev); }}>
+            <ListItemIcon><HistoryOutlinedIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{showTimeline ? "Hide Timeline" : "Show Timeline"}</ListItemText>
+          </MenuItem>
+          <Divider />
+          <MenuItem onClick={() => { setMenuAnchor(null); openViewConfig(); }}>
+            <ListItemIcon><SettingsOutlinedIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>View Config</ListItemText>
+          </MenuItem>
+          {(stats?.uniqueParticipants || 0) === 0 && (
+            <MenuItem onClick={() => { setMenuAnchor(null); openQuickEdit(); }}>
+              <ListItemIcon><EditOutlinedIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Quick Edit</ListItemText>
+            </MenuItem>
+          )}
+          <MenuItem onClick={() => { setMenuAnchor(null); etagRef.current = null; fetchStats(true); fetchTimeline(); }}>
+            <ListItemIcon><RefreshIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Refresh</ListItemText>
+          </MenuItem>
+        </Menu>
       </Box>
+
+      {/* Password Verification Modal */}
+      <Modal open={showPasswordModal} onClose={() => { setShowPasswordModal(false); setPasswordInput(""); setPasswordError(""); setAccessCodeRevealed(false); }}>
+        <Box sx={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 360, bgcolor: "#fff", borderRadius: 3, p: 4, boxShadow: 24 }}>
+          {accessCodeRevealed ? (
+            <>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                Access Code
+              </Typography>
+              <Typography sx={{ fontSize: 13, color: "#71727A", mb: 2 }}>
+                Share this code with eligible attendees.
+              </Typography>
+              <Box sx={{ display: "flex", justifyContent: "center", gap: 1, mb: 2 }}>
+                {(stats?.accessCodeDisplay || []).map((code, idx) => (
+                  <Box key={idx} sx={{ fontFamily: "monospace", fontWeight: 800, fontSize: 28, letterSpacing: 4, color: "#E65100", background: "#FFF8E1", px: 3, py: 1.5, borderRadius: 2, border: "2px solid #FFE082" }}>
+                    {code}
+                  </Box>
+                ))}
+              </Box>
+              <Typography sx={{ fontSize: 12, color: "#9E9E9E", textAlign: "center", mb: 2 }}>
+                Auto-hides in {Math.floor(revealTimeLeft / 60)}:{String(revealTimeLeft % 60).padStart(2, "0")}
+              </Typography>
+              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                <Button
+                  onClick={() => { setShowPasswordModal(false); }}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Close
+                </Button>
+              </Box>
+            </>
+          ) : (
+            <>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                Verify Identity
+              </Typography>
+              <Typography sx={{ fontSize: 13, color: "#71727A", mb: 2 }}>
+                Enter your account password to reveal the access code.
+              </Typography>
+              <TextField
+                fullWidth
+                type="password"
+                label="Password"
+                value={passwordInput}
+                onChange={(e) => { setPasswordInput(e.target.value); setPasswordError(""); }}
+                error={!!passwordError}
+                helperText={passwordError}
+                onKeyDown={(e) => { if (e.key === "Enter") handlePasswordVerify(); }}
+                sx={{ mb: 2 }}
+              />
+              <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
+                <Button
+                  onClick={() => { setShowPasswordModal(false); setPasswordInput(""); setPasswordError(""); }}
+                  sx={{ textTransform: "none", color: "#71727A" }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handlePasswordVerify}
+                  disabled={!passwordInput || passwordVerifying}
+                  sx={{ textTransform: "none", fontWeight: 600, background: ACCENT, "&:hover": { background: "#E08820" } }}
+                >
+                  {passwordVerifying ? "Verifying..." : "Reveal"}
+                </Button>
+              </Box>
+            </>
+          )}
+        </Box>
+      </Modal>
+
+      {/* Desktop layout: sidebar + main content */}
+      <Box sx={{ display: "flex", gap: 3 }}>
+        {/* Left Sidebar — Desktop only */}
+        <Box sx={{ display: { xs: "none", md: "block" }, width: 200, flexShrink: 0 }}>
+          <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #E8E8E8", position: "sticky", top: 24 }}>
+            <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
+              {[
+                ...(stats?.state === "Closed" || stats?.state === "Analytics"
+                  ? [
+                      { label: "View Analytics", icon: <EmojiEventsOutlinedIcon fontSize="small" />, onClick: () => navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/analytics`) },
+                      { label: "View Report", icon: <SettingsOutlinedIcon fontSize="small" />, onClick: () => navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/drawings`) },
+                    ]
+                  : [{ label: "Trigger Draw", icon: <EmojiEventsOutlinedIcon fontSize="small" />, onClick: handleTriggerDraw, disabled: !stats || stats.state !== "Live" || (stats?.totalEntries || 0) === 0 }]
+                ),
+                ...(stats?.hasAccessCode && stats?.accessCodeDisplay?.length > 0 && stats?.state !== "Closed" && stats?.state !== "Analytics" ? [{
+                  label: "Reveal Access Code",
+                  icon: <Typography sx={{ fontSize: 16, lineHeight: 1 }}>🔑</Typography>,
+                  onClick: () => { handleRevealClick(); },
+                }] : []),
+                { label: showParticipants ? "Hide Participants" : "Participants", icon: <PeopleOutlinedIcon fontSize="small" />, onClick: handleToggleParticipants },
+                { label: showTimeline ? "Hide Timeline" : "Timeline", icon: <HistoryOutlinedIcon fontSize="small" />, onClick: () => setShowTimeline((prev) => !prev) },
+                { divider: true },
+                { label: "View Config", icon: <SettingsOutlinedIcon fontSize="small" />, onClick: openViewConfig },
+                ...((stats?.uniqueParticipants || 0) === 0 ? [{ label: "Quick Edit", icon: <EditOutlinedIcon fontSize="small" />, onClick: openQuickEdit }] : []),
+                { label: "Refresh", icon: <RefreshIcon fontSize="small" />, onClick: () => { etagRef.current = null; fetchStats(true); fetchTimeline(); } },
+              ].map((item, idx) => item.divider ? (
+                <Divider key={idx} />
+              ) : (
+                <Box
+                  key={idx}
+                  onClick={item.disabled ? undefined : item.onClick}
+                  sx={{
+                    display: "flex", alignItems: "center", gap: 1.5, px: 2, py: 1.5,
+                    cursor: item.disabled ? "not-allowed" : "pointer",
+                    opacity: item.disabled ? 0.4 : 1,
+                    color: "#4A4A4A", fontSize: 13, fontWeight: 500,
+                    transition: "background 0.15s",
+                    "&:hover": item.disabled ? {} : { background: "#F5F5F5" },
+                  }}
+                >
+                  <Box sx={{ color: "#71727A", display: "flex", alignItems: "center" }}>{item.icon}</Box>
+                  <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{item.label}</Typography>
+                </Box>
+              ))}
+            </CardContent>
+          </Card>
+        </Box>
+
+        {/* Main Content */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
 
       {statsError && (
         <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
@@ -597,25 +843,10 @@ const RaffleLiveDashboard = () => {
         </Box>
       )}
 
-      {/* Drawing Controls + Entry Search */}
+      {/* Entry Search */}
       <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #E8E8E8", mb: 3 }}>
         <CardContent sx={{ p: 3 }}>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "column", md: "row" },
-              alignItems: { xs: "stretch", md: "center" },
-              justifyContent: "space-between",
-              gap: 2,
-            }}
-          >
-            <DrawingControls
-              onTriggerDraw={handleTriggerDraw}
-              disabled={!stats || stats.state !== "Live"}
-              totalEntries={stats?.totalEntries || 0}
-            />
-            <EntrySearchBar onSearch={handleSearch} loading={searchLoading} />
-          </Box>
+          <EntrySearchBar onSearch={handleSearch} loading={searchLoading} />
 
           {/* Search Results */}
           {searchResults.length > 0 && (
@@ -747,13 +978,7 @@ const RaffleLiveDashboard = () => {
                 />
               )}
             </Box>
-            <Button
-              size="small"
-              endIcon={showParticipants ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              sx={{ textTransform: "none", fontWeight: 600, fontSize: 12, color: ACCENT }}
-            >
-              {showParticipants ? "Hide" : "Reveal"}
-            </Button>
+            {showParticipants ? <ExpandLessIcon sx={{ color: "#9E9E9E", fontSize: 20 }} /> : <ExpandMoreIcon sx={{ color: "#9E9E9E", fontSize: 20 }} />}
           </Box>
 
           <Collapse in={showParticipants}>
@@ -803,13 +1028,20 @@ const RaffleLiveDashboard = () => {
       {/* Timeline Feed */}
       <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #E8E8E8" }}>
         <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-            <HistoryOutlinedIcon sx={{ color: ACCENT, fontSize: 20 }} />
-            <Typography sx={{ fontWeight: 700, color: "#1D1B20", fontSize: 15 }}>
-              Activity Timeline
-            </Typography>
+          <Box
+            sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
+            onClick={() => setShowTimeline((prev) => !prev)}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <HistoryOutlinedIcon sx={{ color: ACCENT, fontSize: 20 }} />
+              <Typography sx={{ fontWeight: 700, color: "#1D1B20", fontSize: 15 }}>
+                Timeline
+              </Typography>
+            </Box>
+            {showTimeline ? <ExpandLessIcon sx={{ color: "#9E9E9E", fontSize: 20 }} /> : <ExpandMoreIcon sx={{ color: "#9E9E9E", fontSize: 20 }} />}
           </Box>
 
+          <Collapse in={showTimeline}>
           {timelineLoading && timeline.length === 0 ? (
             <Box sx={{ textAlign: "center", py: 4 }}>
               <CircularProgress size={24} sx={{ color: ACCENT }} />
@@ -819,6 +1051,7 @@ const RaffleLiveDashboard = () => {
               sx={{
                 textAlign: "center",
                 py: 4,
+                mt: 2,
                 border: "1.5px dashed #E0E0E0",
                 borderRadius: 2,
                 background: "#FAFAFA",
@@ -833,7 +1066,7 @@ const RaffleLiveDashboard = () => {
               </Typography>
             </Box>
           ) : (
-            <Box>
+            <Box sx={{ mt: 2 }}>
               {timeline.map((event, idx) => (
                 <TimelineEvent
                   key={event.eventId || event.SK || idx}
@@ -846,6 +1079,7 @@ const RaffleLiveDashboard = () => {
               ))}
             </Box>
           )}
+          </Collapse>
         </CardContent>
       </Card>
 
@@ -1042,6 +1276,36 @@ const RaffleLiveDashboard = () => {
           </Box>
         </Box>
       </Modal>
+
+      {/* Trigger Draw Confirmation */}
+      <Dialog open={showDrawConfirm} onClose={() => setShowDrawConfirm(false)} PaperProps={{ sx: { borderRadius: '16px', padding: '8px', maxWidth: '380px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' } }}>
+        <DialogTitle sx={{ fontFamily: 'Outfit, sans-serif', fontSize: '18px', fontWeight: 600, color: '#111827', padding: '20px 24px 8px' }}>Trigger Draw</DialogTitle>
+        <DialogContent sx={{ padding: '12px 24px' }}>
+          <Typography sx={{ fontFamily: 'Outfit, sans-serif', fontSize: '14px', color: '#6B7280' }}>
+            Are you sure you want to trigger the raffle draw? This will select a winner from {stats?.totalEntries || 0} entries and close the raffle.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ padding: '12px 24px 20px', gap: '12px' }}>
+          <Button
+            onClick={() => setShowDrawConfirm(false)}
+            variant="outlined"
+            sx={{ textTransform: 'none', fontWeight: 500, fontSize: '14px', borderRadius: '8px', padding: '8px 20px', color: '#6B7280', borderColor: '#E5E7EB', '&:hover': { backgroundColor: '#F9FAFB', borderColor: '#D1D5DB' } }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmTriggerDraw}
+            variant="contained"
+            sx={{ textTransform: 'none', fontWeight: 600, fontSize: '14px', borderRadius: '8px', padding: '8px 20px', backgroundColor: '#4F46E5', '&:hover': { backgroundColor: '#4338CA' } }}
+            disableElevation
+          >
+            Trigger Draw
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      </Box>{/* End Main Content */}
+      </Box>{/* End Desktop layout flex */}
     </Box>
   );
 };

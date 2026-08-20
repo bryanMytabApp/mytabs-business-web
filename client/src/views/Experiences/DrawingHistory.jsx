@@ -19,7 +19,6 @@ import {
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CasinoOutlinedIcon from "@mui/icons-material/CasinoOutlined";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { getDrawings } from "../../services/experienceService";
@@ -29,8 +28,8 @@ const ACCENT = "#F09925";
 /**
  * DrawingRow — Expandable table row showing drawing details and winner info.
  */
-const DrawingRow = ({ drawing }) => {
-  const [open, setOpen] = useState(false);
+const DrawingRow = ({ drawing, defaultOpen = false }) => {
+  const [open, setOpen] = useState(defaultOpen);
   const [verifyResult, setVerifyResult] = useState(null);
   const [verifying, setVerifying] = useState(false);
 
@@ -224,6 +223,8 @@ const DrawingRow = ({ drawing }) => {
                     <TableRow>
                       <TableCell sx={{ fontSize: 11, fontWeight: 700, color: "#71727A" }}>Entry ID</TableCell>
                       <TableCell sx={{ fontSize: 11, fontWeight: 700, color: "#71727A" }}>User</TableCell>
+                      <TableCell sx={{ fontSize: 11, fontWeight: 700, color: "#71727A" }}>Email</TableCell>
+                      <TableCell sx={{ fontSize: 11, fontWeight: 700, color: "#71727A" }}>Address</TableCell>
                       <TableCell sx={{ fontSize: 11, fontWeight: 700, color: "#71727A" }}>Entry Code</TableCell>
                       <TableCell sx={{ fontSize: 11, fontWeight: 700, color: "#71727A" }}>Claim Status</TableCell>
                     </TableRow>
@@ -236,6 +237,12 @@ const DrawingRow = ({ drawing }) => {
                         </TableCell>
                         <TableCell sx={{ fontSize: 12, color: "#1D1B20" }}>
                           {winner.attendeeName || [winner.firstName, winner.lastName].filter(Boolean).join(' ') || winner.userId || "—"}
+                        </TableCell>
+                        <TableCell sx={{ fontSize: 12, color: "#1D1B20" }}>
+                          {winner.email || winner.entrantEmail || "—"}
+                        </TableCell>
+                        <TableCell sx={{ fontSize: 12, color: "#1D1B20" }}>
+                          {winner.address || winner.entrantAddress || "—"}
                         </TableCell>
                         <TableCell sx={{ fontSize: 12, color: "#1D1B20", fontFamily: "monospace" }}>
                           {winner.entryCode || "—"}
@@ -564,12 +571,6 @@ const DrawingHistory = () => {
     <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1200, mx: "auto" }}>
       {/* Header */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3 }}>
-        <IconButton
-          onClick={() => navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/live`)}
-          sx={{ color: "#71727A" }}
-        >
-          <ArrowBackIcon />
-        </IconButton>
         <Box sx={{ flex: 1 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <CasinoOutlinedIcon sx={{ color: ACCENT, fontSize: 22 }} />
@@ -659,7 +660,7 @@ const DrawingHistory = () => {
               </TableHead>
               <TableBody>
                 {drawings.map((drawing, idx) => (
-                  <DrawingRow key={drawing.drawingId || drawing.SK || idx} drawing={drawing} />
+                  <DrawingRow key={drawing.drawingId || drawing.SK || idx} drawing={drawing} defaultOpen={idx === 0} />
                 ))}
               </TableBody>
             </Table>

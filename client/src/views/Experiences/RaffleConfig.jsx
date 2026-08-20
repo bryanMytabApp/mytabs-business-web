@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from "react";
+import React, { useState, useEffect, useRef, useCallback, memo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -23,6 +23,8 @@ import dayjs from "dayjs";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CardGiftcardOutlinedIcon from "@mui/icons-material/CardGiftcardOutlined";
+import CreditCardOutlinedIcon from "@mui/icons-material/CreditCardOutlined";
+import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import PieChartOutlinedIcon from "@mui/icons-material/PieChartOutlined";
 import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
 import { updateInstance, transitionState, getInstance } from "../../services/experienceService";
@@ -63,7 +65,7 @@ const DEFAULT_FORM = {
   entryWindowEnd: null,
   drawingSchedules: [{ time: null, winners: 1 }],
   // Step 4: Eligibility rules
-  eligibilityRules: [],
+  eligibilityRules: ["single_entry"],
   maxEntries: 10,
   accessCodes: "",
   allowedTicketTypes: "",
@@ -75,11 +77,7 @@ const DEFAULT_FORM = {
   ticketBundles: [{ quantity: 1, price: 0, capacity: 10 }],
   // Step 6: Sponsor association
   hasSponsor: false,
-  sponsorName: "",
-  sponsorLogoUrl: "",
-  sponsorColors: "",
-  sponsorPlacement: "header_banner",
-  sponsorAmount: "",
+  sponsors: [{ id: "sponsor-1", name: "", logoUrl: "", logoFile: null, logoPreview: null, colors: "", placement: "header_banner", amount: "", prizeId: "", prizePurpose: "", prizeTerms: "", prizeFulfillment: "", description: "", website: "" }],
   // Step 7: Notification templates
   entryConfirmationTemplate: "",
   drawingReminderTemplate: "",
@@ -105,8 +103,8 @@ function validateInnerTab(step, innerTab, form) {
   const errors = {};
 
   if (step === 1) {
-    // Step 1 inner tabs: 0=Appearance, 1=Prizes, 2=Schedule
-    if (innerTab === 1) {
+    // Step 1 inner tabs: 0=Prizes, 1=Appearance, 2=Schedule
+    if (innerTab === 0) {
       // Prizes tab validation
       form.prizes.forEach((prize, idx) => {
         if (!prize.name) errors[`prizes[${idx}].name`] = "Prize name is required.";
@@ -174,9 +172,11 @@ function validateInnerTab(step, innerTab, form) {
     // Step 3 inner tabs: 0=Sponsor, 1=Notifications, 2=Compliance
     if (innerTab === 0) {
       if (form.hasSponsor) {
-        if (!form.sponsorName) errors.sponsorName = "Sponsor display name is required.";
-        else if (form.sponsorName.length > 100)
-          errors.sponsorName = "Sponsor name must be ≤ 100 characters.";
+        form.sponsors.forEach((s, idx) => {
+          if (!s.name) errors[`sponsors[${idx}].name`] = "Sponsor display name is required.";
+          else if (s.name.length > 100)
+            errors[`sponsors[${idx}].name`] = "Sponsor name must be ≤ 100 characters.";
+        });
       }
     } else if (innerTab === 1) {
       if (form.entryConfirmationTemplate && form.entryConfirmationTemplate.length > 300)
@@ -346,6 +346,12 @@ function validateAll(form) {
 const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eventId, bannerStyle }) => {
   const [generatingDesc, setGeneratingDesc] = useState(false);
 
+  // A saved prize can come back from the API without `name`/`description` —
+  // empty attributes are dropped on the round trip. Reading `.length` off
+  // undefined threw during render, which blanked the whole page.
+  const nameValue = prize?.name ?? "";
+  const descriptionValue = prize?.description ?? "";
+
   const generateDescription = async (prizeName) => {
     if (!prizeName || prizeName.length < 3) return;
     setGeneratingDesc(true);
@@ -397,13 +403,13 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eve
           fullWidth
           size="small"
           label="Prize Name"
-          value={prize.name}
+          value={nameValue}
           onChange={(e) => onUpdate({ ...prize, name: e.target.value })}
           onBlur={(e) => {
             if (!prize.description) generateDescription(e.target.value);
           }}
           error={!!errors[`prizes[${idx}].name`]}
-          helperText={errors[`prizes[${idx}].name`] || `${prize.name.length}/50`}
+          helperText={errors[`prizes[${idx}].name`] || `${nameValue.length}/50`}
           inputProps={{ maxLength: 51 }}
         />
         <TextField
@@ -425,18 +431,18 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eve
             label="Prize Description"
             multiline
             rows={2}
-            value={prize.description}
+            value={descriptionValue}
             onChange={(e) => onUpdate({ ...prize, description: e.target.value })}
             inputProps={{ maxLength: 150 }}
             error={!!errors[`prizes[${idx}].description`]}
             helperText={
               generatingDesc
                 ? "✨ AI is writing a description..."
-                : (errors[`prizes[${idx}].description`] || `${prize.description.length}/150`)
+                : (errors[`prizes[${idx}].description`] || `${descriptionValue.length}/150`)
             }
           />
           {/* Regenerate AI description button */}
-          {prize.name.length >= 3 && !generatingDesc && (
+          {nameValue.length >= 3 && !generatingDesc && (
             <button
               type="button"
               onClick={() => generateDescription(prize.name)}
@@ -542,6 +548,458 @@ const PrizeItem = memo(({ prize, idx, errors, onUpdate, onDelete, canDelete, eve
 
 PrizeItem.displayName = 'PrizeItem';
 
+/**
+ * SponsorCard — Tabbed card for a single sponsor with sub-tabs:
+ * Sponsor Info | Brand / Logo | Prize | Description
+ */
+const SPONSOR_TABS = ["Sponsor Info", "Brand / Logo", "Prize", "Description"];
+
+const SponsorCard = memo(({ sponsor, idx, form, errors, updateField, canDelete }) => {
+  const [activeTab, setActiveTab] = useState(0);
+
+  const updateSponsorField = (field, value) => {
+    const updated = [...form.sponsors];
+    updated[idx] = { ...updated[idx], [field]: value };
+    updateField("sponsors", updated);
+  };
+
+  return (
+    <Box sx={{ border: "1px solid #E5E7EB", borderRadius: 2, mb: 2, background: "#FAFBFC", overflow: "hidden" }}>
+      {/* Header */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 2, pt: 1.5, pb: 0 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 13 }}>
+          Sponsor {idx + 1}{sponsor.name ? `: ${sponsor.name}` : ""}
+        </Typography>
+        {canDelete && (
+          <IconButton
+            size="small"
+            onClick={() => {
+              const updated = form.sponsors.filter((_, i) => i !== idx);
+              updateField("sponsors", updated);
+            }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        )}
+      </Box>
+      {/* Tab bar */}
+      <Box sx={{ display: "flex", borderBottom: "1px solid #E5E7EB", px: 1, mt: 1 }}>
+        {SPONSOR_TABS.map((label, tabIdx) => (
+          <Box
+            key={label}
+            onClick={() => setActiveTab(tabIdx)}
+            sx={{
+              px: 2, py: 1, cursor: "pointer", fontSize: 12, fontWeight: 600,
+              color: activeTab === tabIdx ? "#00AAD6" : "#6B7280",
+              borderBottom: activeTab === tabIdx ? "2px solid #00AAD6" : "2px solid transparent",
+              marginBottom: "-1px", transition: "all 0.15s", whiteSpace: "nowrap",
+              "&:hover": { color: "#00AAD6" },
+            }}
+          >
+            {label}
+          </Box>
+        ))}
+      </Box>
+      {/* Tab content */}
+      <Box sx={{ p: 2 }}>
+        {/* Tab 0: Sponsor Info */}
+        {activeTab === 0 && (
+          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Sponsor Name"
+              value={sponsor.name}
+              onChange={(e) => updateSponsorField("name", e.target.value)}
+              error={!!errors[`sponsors[${idx}].name`]}
+              helperText={errors[`sponsors[${idx}].name`] || "The brand name shown on the raffle page"}
+              inputProps={{ maxLength: 100 }}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="Contribution ($)"
+              value={sponsor.amount}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                updateSponsorField("amount", raw);
+              }}
+              helperText="How much the sponsor is contributing"
+              inputProps={{ inputMode: "decimal" }}
+            />
+            <FormControl fullWidth size="small">
+              <InputLabel>Branding Placement</InputLabel>
+              <Select
+                value={sponsor.placement}
+                label="Branding Placement"
+                onChange={(e) => updateSponsorField("placement", e.target.value)}
+              >
+                <MenuItem value="header_banner">Header Banner</MenuItem>
+                <MenuItem value="footer_badge">Footer Badge</MenuItem>
+                <MenuItem value="background_watermark">Background Watermark</MenuItem>
+                <MenuItem value="prize_sponsor_label">Prize Sponsor Label</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              size="small"
+              label="Brand Colors"
+              value={sponsor.colors}
+              onChange={(e) => updateSponsorField("colors", e.target.value)}
+              helperText="Comma-separated hex codes (e.g., #FF0000, #0000FF)"
+              placeholder="#FF0000, #0000FF"
+            />
+          </Box>
+        )}
+
+        {/* Tab 1: Brand / Logo */}
+        {activeTab === 1 && (
+          <Box>
+            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, mb: 2 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Logo URL"
+                value={sponsor.logoUrl}
+                onChange={(e) => updateSponsorField("logoUrl", e.target.value)}
+                helperText="Direct link to logo (PNG, SVG, or JPEG)"
+                placeholder="https://..."
+              />
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Or Upload Image</Typography>
+                {sponsor.logoPreview || (sponsor.logoUrl && !sponsor.logoFile) ? (
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, p: 1.5, border: "1px solid #E5E7EB", borderRadius: 2, background: "#fff" }}>
+                    <img
+                      src={sponsor.logoPreview || sponsor.logoUrl}
+                      alt={`${sponsor.name || "Sponsor"} logo`}
+                      style={{ width: "100%", height: 120, objectFit: "contain", borderRadius: 8, background: "#F9FAFB" }}
+                    />
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Typography sx={{ fontSize: 12, color: "#374151", fontWeight: 500 }}>Logo uploaded</Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          const updated = [...form.sponsors];
+                          updated[idx] = { ...updated[idx], logoPreview: null, logoFile: null, logoUrl: "" };
+                          updateField("sponsors", updated);
+                        }}
+                      >
+                        <DeleteIcon sx={{ fontSize: 18 }} />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                ) : (
+                  <label style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    padding: "12px 16px", border: "1.5px dashed #D1D5DB", borderRadius: 8,
+                    cursor: "pointer", background: "#fff",
+                  }}>
+                    <span style={{ fontSize: 20 }}>📷</span>
+                    <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 600 }}>Choose file (PNG, SVG, JPEG, max 2MB)</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/svg+xml,image/jpeg"
+                      hidden
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const updated = [...form.sponsors];
+                          updated[idx] = { ...updated[idx], logoPreview: URL.createObjectURL(file), logoFile: file };
+                          updateField("sponsors", updated);
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </Box>
+            </Box>
+          </Box>
+        )}
+
+        {/* Tab 2: Prize */}
+        {activeTab === 2 && (
+          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Prize Being Sponsored</InputLabel>
+              <Select
+                value={sponsor.prizeId}
+                label="Prize Being Sponsored"
+                onChange={(e) => updateSponsorField("prizeId", e.target.value)}
+              >
+                <MenuItem value="">All Prizes</MenuItem>
+                {form.prizes.filter((p) => p.name).map((p) => (
+                  <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              size="small"
+              label="Prize Purpose"
+              value={sponsor.prizePurpose}
+              onChange={(e) => updateSponsorField("prizePurpose", e.target.value)}
+              helperText="e.g., Grand Prize, Door Prize, Runner-Up"
+              inputProps={{ maxLength: 100 }}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="Prize Terms & Conditions"
+              multiline
+              rows={3}
+              value={sponsor.prizeTerms}
+              onChange={(e) => updateSponsorField("prizeTerms", e.target.value)}
+              helperText="Restrictions, expiration dates, or conditions"
+              inputProps={{ maxLength: 500 }}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="How Prize Will Be Fulfilled"
+              multiline
+              rows={3}
+              value={sponsor.prizeFulfillment}
+              onChange={(e) => updateSponsorField("prizeFulfillment", e.target.value)}
+              helperText="e.g., shipped within 30 days, digital code via email"
+              inputProps={{ maxLength: 300 }}
+            />
+          </Box>
+        )}
+
+        {/* Tab 3: Description */}
+        {activeTab === 3 && (
+          <Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="Sponsor Description"
+              multiline
+              rows={4}
+              value={sponsor.description || ""}
+              onChange={(e) => updateSponsorField("description", e.target.value)}
+              helperText="A brief description of the sponsor and their involvement (shown on raffle page)"
+              inputProps={{ maxLength: 500 }}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="Sponsor Website"
+              value={sponsor.website || ""}
+              onChange={(e) => updateSponsorField("website", e.target.value)}
+              helperText="Link to sponsor's website (optional)"
+              placeholder="https://..."
+            />
+          </Box>
+        )}
+      </Box>
+    </Box>
+  );
+});
+
+SponsorCard.displayName = 'SponsorCard';
+
+/**
+ * PrizeAppearanceCard — 3D flippable card preview with style selector.
+ * Uses the same drag-to-flip interaction as the attendee experience web app.
+ */
+const PrizeAppearanceCard = memo(({ prize, idx, style, color, form, updateField, errors }) => {
+  const [rotationY, setRotationY] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startRotation: 0, lastX: 0, lastT: 0, velocity: 0 });
+
+  const onPointerDown = useCallback((e) => {
+    setDragging(true);
+    const x = e.clientX;
+    dragRef.current = { startX: x, startRotation: rotationY, lastX: x, lastT: performance.now(), velocity: 0 };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }, [rotationY]);
+
+  const onPointerMove = useCallback((e) => {
+    if (!dragging) return;
+    const x = e.clientX;
+    const now = performance.now();
+    const dt = now - dragRef.current.lastT;
+    if (dt > 0) dragRef.current.velocity = (x - dragRef.current.lastX) / dt;
+    dragRef.current.lastX = x;
+    dragRef.current.lastT = now;
+    const delta = x - dragRef.current.startX;
+    setRotationY(dragRef.current.startRotation + delta * 0.6);
+  }, [dragging]);
+
+  const settle = useCallback(() => {
+    setDragging(false);
+    const projected = rotationY + dragRef.current.velocity * 6;
+    const nearest180 = Math.round(projected / 180) * 180;
+    setRotationY(nearest180);
+  }, [rotationY]);
+
+  useEffect(() => {
+    if (!dragging) return;
+    const up = () => settle();
+    window.addEventListener('pointerup', up);
+    return () => window.removeEventListener('pointerup', up);
+  }, [dragging, settle]);
+
+  // Card dimensions: credit card ratio (85.6:53.98 ≈ 1.586:1)
+  const CARD_WIDTH = 260;
+  const CARD_HEIGHT = 164;
+
+  return (
+    <Box sx={{ mb: 2, p: 2, border: "1px solid #E5E7EB", borderRadius: 3, background: "#fff" }}>
+      <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1.5, color: "#111827" }}>
+        {prize.name || `Prize ${idx + 1}`}
+      </Typography>
+
+      <Box sx={{ display: "flex", gap: 3, alignItems: "center" }}>
+        {/* Left: 3D Flippable Card — exact same approach as experience web */}
+        <Box sx={{ width: CARD_WIDTH, flexShrink: 0 }}>
+          <Box sx={{ perspective: "4800px", width: CARD_WIDTH, height: CARD_HEIGHT }}>
+            <Box
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              sx={{
+                position: "relative", width: "100%", height: "100%",
+                transformStyle: "preserve-3d",
+                transform: `scale(${dragging ? 1.03 : 1}) rotateY(${rotationY}deg)`,
+                transition: dragging ? 'none' : 'transform 0.5s cubic-bezier(.2,.9,.25,1)',
+                cursor: dragging ? "grabbing" : "grab",
+                touchAction: "none",
+              }}
+            >
+              {/* Front face */}
+              <Box sx={{
+                position: "absolute", inset: 0, backfaceVisibility: "hidden",
+                transform: "translateZ(5px)",
+                borderRadius: 0, overflow: "hidden",
+                background: style === 'card'
+                  ? `linear-gradient(135deg, #0D1B2A 0%, ${color}88 55%, ${color} 100%)`
+                  : style === 'image' && (prize.imagePreview || prize.imageUrl) ? '#000'
+                  : `radial-gradient(circle at 30% 20%, ${color}99 0%, ${color} 45%, ${color}cc 100%)`,
+                boxShadow: "0 24px 44px -18px rgba(13, 27, 42, 0.45)",
+              }}>
+                {style === 'card' ? (
+                  <Box sx={{ position: "absolute", inset: 0, p: 2, display: "flex", flexDirection: "column", justifyContent: "space-between", color: "#fff" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box sx={{ width: 36, height: 26, borderRadius: "5px", background: "linear-gradient(135deg, #f4d99a, #cf9f4d)", boxShadow: "0 2px 4px rgba(0,0,0,0.2)" }} />
+                      <Typography sx={{ fontSize: 9, letterSpacing: 1.8, opacity: 0.85, fontWeight: 700, color: "#fff" }}>TABS EXPERIENCE</Typography>
+                    </Box>
+                    <Typography sx={{ fontSize: 14, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: "#fff" }}>
+                      {prize.name || 'PRIZE'}
+                    </Typography>
+                    <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                      <Typography sx={{ fontSize: 9, color: "#fff", opacity: 0.7 }}>{`Prize ${idx + 1}`}</Typography>
+                      <Typography sx={{ fontSize: 11, color: "#fff", fontWeight: 700 }}>{prize.value ? `$${prize.value}` : '🎯'}</Typography>
+                    </Box>
+                  </Box>
+                ) : style === 'image' && (prize.imagePreview || prize.imageUrl) ? (
+                  <img src={prize.imagePreview || prize.imageUrl} alt={prize.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : style === 'image' ? (
+                  <Box sx={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#1a1a2e" }}>
+                    <Typography sx={{ fontSize: 28 }}>📷</Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Box sx={{ position: "relative", width: 60, height: 48, borderRadius: "5px", background: "linear-gradient(155deg, #fff 0%, #f1f4f6 100%)", boxShadow: "0 8px 16px -6px rgba(13,27,42,0.3)" }}>
+                      <Box sx={{ position: "absolute", top: -7, left: -3, right: -3, height: 15, borderRadius: "4px", background: "linear-gradient(155deg, #fff 0%, #e9edf0 100%)" }} />
+                      <Box sx={{ position: "absolute", top: -7, bottom: 0, left: "50%", width: 9, ml: "-4.5px", background: `linear-gradient(180deg, ${color}cc, ${color})` }} />
+                      <Box sx={{ position: "absolute", left: -3, right: -3, top: 20, height: 9, background: `linear-gradient(90deg, ${color}cc, ${color})` }} />
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+              {/* Edge thickness — top/bottom */}
+              <Box sx={{ position: "absolute", left: 0, right: 0, height: "10px", top: "calc(50% - 5px)", transformStyle: "preserve-3d", transform: `rotateX(90deg) translateZ(${CARD_HEIGHT / 2}px)`, background: `linear-gradient(180deg, rgba(255,255,255,0.28), rgba(0,0,0,0.4)), #1a2942` }} />
+              <Box sx={{ position: "absolute", left: 0, right: 0, height: "10px", top: "calc(50% - 5px)", transformStyle: "preserve-3d", transform: `rotateX(-90deg) translateZ(${CARD_HEIGHT / 2}px)`, background: `linear-gradient(180deg, rgba(0,0,0,0.4), rgba(255,255,255,0.28)), #1a2942` }} />
+              {/* Edge thickness — left/right */}
+              <Box sx={{ position: "absolute", top: 0, bottom: 0, width: "10px", left: "calc(50% - 5px)", transformStyle: "preserve-3d", transform: `rotateY(-90deg) translateZ(${CARD_WIDTH / 2}px)`, background: `linear-gradient(90deg, rgba(0,0,0,0.45), rgba(255,255,255,0.3), rgba(0,0,0,0.45)), #1a2942` }} />
+              <Box sx={{ position: "absolute", top: 0, bottom: 0, width: "10px", left: "calc(50% - 5px)", transformStyle: "preserve-3d", transform: `rotateY(90deg) translateZ(${CARD_WIDTH / 2}px)`, background: `linear-gradient(90deg, rgba(0,0,0,0.45), rgba(255,255,255,0.3), rgba(0,0,0,0.45)), #1a2942` }} />
+              {/* Back face */}
+              <Box sx={{
+                position: "absolute", inset: 0, backfaceVisibility: "hidden",
+                transform: "rotateY(180deg) translateZ(5px)",
+                borderRadius: 0, overflow: "hidden",
+                background: `linear-gradient(150deg, #0D1B2A 0%, ${color}66 60%, ${color} 100%)`,
+                boxShadow: "0 24px 44px -18px rgba(13, 27, 42, 0.45)",
+                p: 2, display: "flex", flexDirection: "column", justifyContent: "space-between", color: "#fff",
+              }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography sx={{ fontSize: 9, letterSpacing: 1.5, fontWeight: 800, opacity: 0.7 }}>GIFT CARD</Typography>
+                  <Typography sx={{ fontSize: 16, fontWeight: 900, color: `${color}cc` }}>{prize.value ? `$${prize.value}` : ''}</Typography>
+                </Box>
+                <Box sx={{ height: 22, background: "rgba(255,255,255,0.15)", borderRadius: 0.5 }} />
+                <Box>
+                  <Typography sx={{ fontSize: 9, opacity: 0.5, letterSpacing: 1, mb: 0.3 }}>•••• •••• •••• ••••</Typography>
+                  <Typography sx={{ fontSize: 11, fontWeight: 700 }}>{prize.name || 'Prize'}</Typography>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+          <Typography sx={{ fontSize: 10, color: "#9CA3AF", textAlign: "center", mt: 0.5 }}>↔ Drag to flip</Typography>
+        </Box>
+
+        {/* Right: Radio-style selector + photo upload */}
+        <Box sx={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 1.5 }}>
+          <Typography sx={{ fontSize: 11, color: "#6B7280", mb: 0.5, fontWeight: 600 }}>Card Style</Typography>
+          {[
+            { id: "gift", label: "Gift Box", desc: "Animated gift with ribbon", icon: <CardGiftcardOutlinedIcon sx={{ fontSize: 18, color: "#6B7280" }} /> },
+            { id: "card", label: "Gift Card", desc: "Credit card style", icon: <CreditCardOutlinedIcon sx={{ fontSize: 18, color: "#6B7280" }} /> },
+            { id: "image", label: "Photo Only", desc: "Upload a prize image", icon: <ImageOutlinedIcon sx={{ fontSize: 18, color: "#6B7280" }} /> },
+          ].map(opt => (
+            <Box
+              key={opt.id}
+              onClick={() => {
+                const updated = [...form.prizes];
+                updated[idx] = { ...updated[idx], bannerStyle: opt.id };
+                updateField("prizes", updated);
+              }}
+              sx={{
+                display: "flex", alignItems: "center", gap: 1.5,
+                p: 1.2, borderRadius: 1.5, cursor: "pointer",
+                border: style === opt.id ? "1.5px solid #E5E7EB" : "1px solid #E5E7EB",
+                background: style === opt.id ? "#F0FDFF" : "transparent",
+                transition: "all 0.15s",
+              }}
+            >
+              <Box sx={{
+                width: 18, height: 18, borderRadius: "50%", flexShrink: 0,
+                border: style === opt.id ? "5px solid #00AAD6" : "2px solid #D1D5DB",
+                background: "#fff", transition: "all 0.15s",
+              }} />
+              {opt.icon}
+              <Box>
+                <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{opt.label}</Typography>
+                <Typography sx={{ fontSize: 11, color: "#6B7280" }}>{opt.desc}</Typography>
+              </Box>
+            </Box>
+          ))}
+          {style === "image" && (
+            <Box sx={{ mt: 1 }}>
+              {(prize.imagePreview || prize.imageUrl) ? (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1, border: "1px solid #E5E7EB", borderRadius: 1.5, background: "#FAFBFC" }}>
+                  <img src={prize.imagePreview || prize.imageUrl} alt="Prize" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6 }} />
+                  <Typography sx={{ fontSize: 11, color: "#374151", flex: 1 }}>Image uploaded</Typography>
+                  <IconButton size="small" onClick={() => { const updated = [...form.prizes]; updated[idx] = { ...updated[idx], imagePreview: null, imageFile: null, imageUrl: "" }; updateField("prizes", updated); }}>
+                    <DeleteIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Box>
+              ) : (
+                <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", border: "1.5px dashed #D1D5DB", borderRadius: 8, cursor: "pointer", background: "#FAFBFC" }}>
+                  <span style={{ fontSize: 18 }}>📷</span>
+                  <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 600 }}>Upload prize image</span>
+                  <input type="file" accept="image/*" hidden onChange={(e) => { const file = e.target.files[0]; if (file) { const updated = [...form.prizes]; updated[idx] = { ...updated[idx], imagePreview: URL.createObjectURL(file), imageFile: file, bannerStyle: "image" }; updateField("prizes", updated); } }} />
+                </label>
+              )}
+            </Box>
+          )}
+        </Box>
+      </Box>
+    </Box>
+  );
+});
+
+PrizeAppearanceCard.displayName = 'PrizeAppearanceCard';
+
 const RaffleConfig = () => {
   const { eventId, experienceId } = useParams();
   const navigate = useNavigate();
@@ -626,13 +1084,21 @@ const RaffleConfig = () => {
             raffleType: cfg.raffleType || f.raffleType,
             bannerStyle: cfg.bannerStyle || f.bannerStyle,
             accentColor: cfg.accentColor || f.accentColor,
-            prizes: cfg.prizes?.length ? cfg.prizes.map((p, i) => ({ ...p, id: p.id || `prize-${i + 1}`, imagePreview: p.imageUrl || null })) : f.prizes,
+            // Re-seed the string fields: the API omits empty attributes, and the
+            // form renders them as controlled inputs that require a string.
+            prizes: cfg.prizes?.length ? cfg.prizes.map((p, i) => ({
+              ...p,
+              id: p.id || `prize-${i + 1}`,
+              name: p.name ?? "",
+              description: p.description ?? "",
+              imagePreview: p.imageUrl || null,
+            })) : f.prizes,
             entryWindowStart: cfg.entryWindowStart ? dayjs(cfg.entryWindowStart) : f.entryWindowStart,
             entryWindowEnd: cfg.entryWindowEnd ? dayjs(cfg.entryWindowEnd) : f.entryWindowEnd,
             drawingSchedules: cfg.drawingSchedules?.length ? cfg.drawingSchedules.map(s => ({ time: s.time ? dayjs(s.time) : null, winners: s.winners || 1, prizeIndex: s.prizeIndex })) : f.drawingSchedules,
-            eligibilityRules: cfg.eligibilityRules || f.eligibilityRules,
+            eligibilityRules: (() => { const rules = cfg.eligibilityRules?.length ? cfg.eligibilityRules : f.eligibilityRules; if (!rules.includes('single_entry') && !rules.includes('max_entries')) return [...rules, 'single_entry']; return rules; })(),
             maxEntries: cfg.maxEntries || f.maxEntries,
-            accessCodes: Array.isArray(cfg.accessCodes) ? cfg.accessCodes.join(', ') : (cfg.accessCodes || f.accessCodes),
+            accessCodes: Array.isArray(cfg.accessCodeDisplay) ? cfg.accessCodeDisplay.join(', ') : (Array.isArray(cfg.accessCodes) ? cfg.accessCodes.filter(c => !/^[a-f0-9]{64}$/i.test(c)).join(', ') : (cfg.accessCodes || f.accessCodes)),
             allowedTicketTypes: Array.isArray(cfg.allowedTicketTypes) ? cfg.allowedTicketTypes.join(', ') : (cfg.allowedTicketTypes || f.allowedTicketTypes),
             entryModel: cfg.entryModel || f.entryModel,
             infoCollection: cfg.infoCollection || f.infoCollection,
@@ -646,7 +1112,13 @@ const RaffleConfig = () => {
             drawingReminderTemplate: cfg.notifications?.drawingReminder || f.drawingReminderTemplate,
             winnerAnnouncementTemplate: cfg.notifications?.winnerAnnouncement || f.winnerAnnouncementTemplate,
             claimExpirationTemplate: cfg.notifications?.claimExpiration || f.claimExpirationTemplate,
-            jurisdictions: Array.isArray(cfg.compliance?.jurisdictions) ? cfg.compliance.jurisdictions.join(', ') : (cfg.jurisdictions || f.jurisdictions),
+            // Older configs stored `jurisdictions` at the top level, sometimes as
+            // an array — the form treats it as a comma-separated string.
+            jurisdictions: Array.isArray(cfg.compliance?.jurisdictions)
+              ? cfg.compliance.jurisdictions.join(', ')
+              : Array.isArray(cfg.jurisdictions)
+                ? cfg.jurisdictions.join(', ')
+                : (cfg.jurisdictions || f.jurisdictions),
             complianceAcknowledged: cfg.compliance?.acknowledged || f.complianceAcknowledged,
             requireTermsConsent: cfg.compliance?.requireTerms !== undefined ? cfg.compliance.requireTerms : true,
             rulesPreviewedByAdmin: cfg.compliance?.acknowledged || false,
@@ -689,7 +1161,7 @@ const RaffleConfig = () => {
   const [innerTab, setInnerTab] = useState(0);
 
   // Define how many inner tabs each step has (0 = no inner tabs)
-  const INNER_TAB_COUNT = { 1: 3, 2: 2, 3: 3 }; // step 1: Appearance/Prizes/Schedule, step 2: Eligibility/Info Collection, step 3: Sponsor/Notifications/Compliance
+  const INNER_TAB_COUNT = { 1: 3, 2: 2, 3: 3 }; // step 1: Prizes/Appearance/Schedule, step 2: Eligibility/Info Collection, step 3: Sponsor/Notifications/Compliance
 
   // Hash tag mapping for each step + inner tab
   const HASH_MAP = {
@@ -819,6 +1291,36 @@ const RaffleConfig = () => {
         })
       );
 
+      // Upload sponsor images to S3 if any
+      const updatedSponsors = await Promise.all(
+        form.sponsors.map(async (sponsor, idx) => {
+          if (sponsor.logoFile) {
+            try {
+              const { default: http } = await import("../../utils/axios/http");
+              const res = await http.post(
+                `v1/events/${eventId}/experiences/${experienceId}/presigned-url`,
+                { sponsorIndex: idx, contentType: sponsor.logoFile.type || "image/png" }
+              );
+              const result = res.data;
+              if (result.status === "success" && result.data?.presignedUrl) {
+                const uploadRes = await fetch(result.data.presignedUrl, {
+                  method: "PUT",
+                  body: sponsor.logoFile,
+                  headers: { "Content-Type": sponsor.logoFile.type || "image/png" },
+                });
+                if (uploadRes.ok) {
+                  return { ...sponsor, logoUrl: result.data.publicUrl, logoFile: null, logoPreview: null };
+                }
+              }
+            } catch (err) {
+              console.warn("Sponsor image upload failed:", err);
+            }
+          }
+          const { logoFile, logoPreview, ...cleanSponsor } = sponsor;
+          return cleanSponsor;
+        })
+      );
+
       // Build config payload
       const config = {
         raffleType: form.raffleType,
@@ -844,13 +1346,34 @@ const RaffleConfig = () => {
         infoCollection: form.infoCollection,
         ticketBundles: form.entryModel === "paid" ? form.ticketBundles : undefined,
         sponsor: form.hasSponsor
-          ? {
-              name: form.sponsorName,
-              logoUrl: form.sponsorLogoUrl,
-              colors: form.sponsorColors.split(",").map((c) => c.trim()).filter(Boolean),
-              placement: form.sponsorPlacement,
-              amount: parseFloat(form.sponsorAmount) || 0,
-            }
+          ? updatedSponsors.map((s) => ({
+              name: s.name,
+              logoUrl: s.logoUrl,
+              colors: s.colors ? (typeof s.colors === 'string' ? s.colors.split(",").map((c) => c.trim()).filter(Boolean) : s.colors) : [],
+              placement: s.placement,
+              amount: parseFloat(s.amount) || 0,
+              prizeId: s.prizeId || undefined,
+              prizePurpose: s.prizePurpose || undefined,
+              prizeTerms: s.prizeTerms || undefined,
+              prizeFulfillment: s.prizeFulfillment || undefined,
+              description: s.description || undefined,
+              website: s.website || undefined,
+            }))
+          : undefined,
+        sponsors: form.hasSponsor
+          ? updatedSponsors.map((s) => ({
+              name: s.name,
+              logoUrl: s.logoUrl,
+              colors: s.colors ? (typeof s.colors === 'string' ? s.colors.split(",").map((c) => c.trim()).filter(Boolean) : s.colors) : [],
+              placement: s.placement,
+              amount: parseFloat(s.amount) || 0,
+              prizeId: s.prizeId || undefined,
+              prizePurpose: s.prizePurpose || undefined,
+              prizeTerms: s.prizeTerms || undefined,
+              prizeFulfillment: s.prizeFulfillment || undefined,
+              description: s.description || undefined,
+              website: s.website || undefined,
+            }))
           : undefined,
         notifications: {
           entryConfirmation: form.entryConfirmationTemplate,
@@ -925,79 +1448,69 @@ const RaffleConfig = () => {
     </Box>
   );
 
-  const renderAppearance = () => (
+  const renderAppearance = () => {
+    const color = form.accentColor || '#00A9D6';
+    return (
     <Box>
-      <Typography variant="h6" sx={{ mb: 2 }}>Appearance</Typography>
+      <Typography variant="h6" sx={{ mb: 1 }}>Appearance</Typography>
+      <Typography sx={{ fontSize: 13, color: "#6B7280", mb: 2 }}>Choose how each prize appears to attendees</Typography>
 
-      {/* Banner Style Selector */}
-      <Box sx={{ mb: 3, p: 2, border: "1px solid #E5E7EB", borderRadius: 3, background: "#fff" }}>
-        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1.5, color: "#111827" }}>Banner Style</Typography>
-        <Typography sx={{ fontSize: 12, color: "#6B7280", mb: 1.5 }}>Choose how the prize appears in the attendee view</Typography>
-        <Box sx={{ display: "flex", gap: 1.5 }}>
+      {/* Global Accent Color */}
+      <Box sx={{ mb: 2, p: 2, border: "1px solid #E5E7EB", borderRadius: 3, background: "#fff" }}>
+        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1, color: "#111827" }}>Theme Color</Typography>
+        <Typography sx={{ fontSize: 12, color: "#6B7280", mb: 1 }}>Accent color used across all prize displays</Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           {[
-            { id: "gift", label: "🎁 Gift Box", desc: "Animated gift with ribbon" },
-            { id: "card", label: "💳 Gift Card", desc: "Dark gradient card" },
-            { id: "image", label: "📷 Photo Only", desc: "Upload a prize image" },
-          ].map(opt => (
+            { name: "Tabs Cyan", value: "#00A9D6" },
+            { name: "Ember", value: "#F47A20" },
+            { name: "Grape", value: "#8B5CF6" },
+            { name: "Lime", value: "#22C55E" },
+            { name: "Rose", value: "#E8467A" },
+            { name: "Gold", value: "#F09925" },
+            { name: "Navy", value: "#1E3A5F" },
+          ].map(c => (
             <Box
-              key={opt.id}
-              onClick={() => updateField("bannerStyle", opt.id)}
+              key={c.value}
+              onClick={() => updateField("accentColor", c.value)}
+              title={c.name}
               sx={{
-                flex: 1, p: 1.5, borderRadius: 2, cursor: "pointer", textAlign: "center",
-                border: form.bannerStyle === opt.id ? "2px solid #00AAD6" : "1px solid #E5E7EB",
-                background: form.bannerStyle === opt.id ? "#F0FDFF" : "#FAFBFC",
+                width: 28, height: 28, borderRadius: "50%", cursor: "pointer",
+                background: c.value,
+                border: color === c.value ? "3px solid #0D1B2A" : "2px solid #fff",
+                boxShadow: color === c.value ? "0 0 0 1px #0D1B2A" : "0 0 0 1px #d9dee2",
                 transition: "all 0.2s",
               }}
-            >
-              <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{opt.label}</Typography>
-              <Typography sx={{ fontSize: 10.5, color: "#6B7280", mt: 0.5 }}>{opt.desc}</Typography>
-            </Box>
-          ))}
-        </Box>
-
-        {form.bannerStyle === "image" && (
-          <Typography sx={{ fontSize: 11.5, color: "#00A9D6", mt: 1, fontWeight: 600 }}>
-            📷 Upload a photo for your first prize on the Prizes tab — it will be used as the banner.
-          </Typography>
-        )}
-
-        {/* Accent Color */}
-        <Box sx={{ mt: 2 }}>
-          <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1, color: "#111827" }}>Accent Color</Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-            {[
-              { name: "Tabs Cyan", value: "#00A9D6" },
-              { name: "Ember", value: "#F47A20" },
-              { name: "Grape", value: "#8B5CF6" },
-              { name: "Lime", value: "#22C55E" },
-              { name: "Rose", value: "#E8467A" },
-              { name: "Gold", value: "#F09925" },
-            ].map(c => (
-              <Box
-                key={c.value}
-                onClick={() => updateField("accentColor", c.value)}
-                title={c.name}
-                sx={{
-                  width: 28, height: 28, borderRadius: "50%", cursor: "pointer",
-                  background: c.value,
-                  border: form.accentColor === c.value ? "3px solid #0D1B2A" : "2px solid #fff",
-                  boxShadow: form.accentColor === c.value ? "0 0 0 1px #0D1B2A" : "0 0 0 1px #d9dee2",
-                  transition: "all 0.2s",
-                }}
-              />
-            ))}
-            <input
-              type="color"
-              value={form.accentColor}
-              onChange={(e) => updateField("accentColor", e.target.value)}
-              style={{ width: 30, height: 30, border: "none", borderRadius: "50%", padding: 0, cursor: "pointer", background: "none" }}
-              title="Custom color"
             />
-          </Box>
+          ))}
+          <input
+            type="color"
+            value={color}
+            onChange={(e) => updateField("accentColor", e.target.value)}
+            style={{ width: 30, height: 30, border: "none", borderRadius: "50%", padding: 0, cursor: "pointer", background: "none" }}
+            title="Custom color"
+          />
         </Box>
       </Box>
+
+      {/* Per-prize style selector with preview */}
+      {form.prizes.map((prize, idx) => {
+        const style = prize.bannerStyle || form.bannerStyle || 'gift';
+        return (
+        <PrizeAppearanceCard
+          key={prize.id || `prize-appearance-${idx}`}
+          prize={prize}
+          idx={idx}
+          style={style}
+          color={color}
+          form={form}
+          updateField={updateField}
+          errors={errors}
+        />
+        );
+      })}
     </Box>
-  );
+    );
+  };
 
   const renderPrizeConfig = () => (
     <Box>
@@ -1193,9 +1706,16 @@ const RaffleConfig = () => {
                   } else if (opt.value === "max_entries" && !isSelected) {
                     rules = [...form.eligibilityRules.filter(r => r !== "single_entry"), "max_entries"];
                   } else {
-                    rules = isSelected
-                      ? form.eligibilityRules.filter((r) => r !== opt.value)
-                      : [...form.eligibilityRules, opt.value];
+                    if (isSelected) {
+                      // Prevent deselecting single_entry/max_entries if the other isn't selected
+                      if ((opt.value === 'single_entry' || opt.value === 'max_entries') && 
+                          !form.eligibilityRules.includes(opt.value === 'single_entry' ? 'max_entries' : 'single_entry')) {
+                        return; // Must have one of single_entry or max_entries
+                      }
+                      rules = form.eligibilityRules.filter((r) => r !== opt.value);
+                    } else {
+                      rules = [...form.eligibilityRules, opt.value];
+                    }
                   }
                   updateField("eligibilityRules", rules);
                   // Auto-generate access code when selecting Access Code Required
@@ -1339,7 +1859,7 @@ const RaffleConfig = () => {
     <Box>
       <Typography variant="h6" sx={{ mb: 1 }}>Is this raffle sponsored?</Typography>
       <Typography variant="body2" sx={{ mb: 3, color: "#71727A", fontSize: 13 }}>
-        If a brand is funding the prizes, add their details here. Their logo will appear on the raffle page.
+        If brands are funding the prizes, add their details here. Their logos will appear on the raffle page.
       </Typography>
 
       <Box sx={{ display: "flex", gap: 1.5, mb: 3 }}>
@@ -1367,54 +1887,45 @@ const RaffleConfig = () => {
           }}
         >
           <Typography sx={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Add a Sponsor</Typography>
-          <Typography sx={{ fontSize: 11, color: "#71727A", mt: 0.5 }}>A brand is sponsoring this raffle</Typography>
+          <Typography sx={{ fontSize: 11, color: "#71727A", mt: 0.5 }}>One or more brands are sponsoring this raffle</Typography>
         </Box>
       </Box>
 
       {form.hasSponsor && (
-        <Box sx={{ border: "1px solid #E5E7EB", borderRadius: 2, p: 2, background: "#FAFBFC" }}>
-          <TextField
-            fullWidth
-            label="Sponsor Name"
-            value={form.sponsorName}
-            onChange={(e) => updateField("sponsorName", e.target.value)}
-            error={!!errors.sponsorName}
-            helperText={errors.sponsorName || "The brand name shown on the raffle page"}
-            sx={{ mb: 2 }}
-            inputProps={{ maxLength: 100 }}
-          />
-          <TextField
-            fullWidth
-            label="Sponsor Logo URL"
-            value={form.sponsorLogoUrl}
-            onChange={(e) => updateField("sponsorLogoUrl", e.target.value)}
-            helperText="PNG or SVG, max 2MB"
-            sx={{ mb: 2 }}
-          />
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Where to show sponsor branding</InputLabel>
-            <Select
-              value={form.sponsorPlacement}
-              label="Where to show sponsor branding"
-              onChange={(e) => updateField("sponsorPlacement", e.target.value)}
-            >
-              <MenuItem value="header_banner">Header Banner</MenuItem>
-              <MenuItem value="footer_badge">Footer Badge</MenuItem>
-              <MenuItem value="background_watermark">Background Watermark</MenuItem>
-              <MenuItem value="prize_sponsor_label">Prize Sponsor Label</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField
-            fullWidth
-            label="Sponsor Contribution ($)"
-            value={form.sponsorAmount}
-            onChange={(e) => {
-              const raw = e.target.value.replace(/[^0-9.]/g, '');
-              updateField("sponsorAmount", raw);
+        <Box>
+          {form.sponsors.map((sponsor, idx) => (
+            <SponsorCard
+              key={sponsor.id}
+              sponsor={sponsor}
+              idx={idx}
+              form={form}
+              errors={errors}
+              updateField={updateField}
+              canDelete={form.sponsors.length > 1}
+            />
+          ))}
+          {/* Add another sponsor button */}
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<span style={{ fontSize: 16 }}>+</span>}
+            onClick={() => {
+              const newSponsor = {
+                id: `sponsor-${Date.now()}`,
+                name: "", logoUrl: "", logoFile: null, logoPreview: null,
+                colors: "", placement: "header_banner", amount: "",
+                prizeId: "", prizePurpose: "", prizeTerms: "", prizeFulfillment: "",
+                description: "", website: "",
+              };
+              updateField("sponsors", [...form.sponsors, newSponsor]);
             }}
-            helperText="How much the sponsor is contributing to fund prizes"
-            inputProps={{ inputMode: "decimal" }}
-          />
+            sx={{
+              borderColor: "#E5E7EB", color: "#6B7280", textTransform: "none",
+              "&:hover": { borderColor: "#00AAD6", color: "#00AAD6" },
+            }}
+          >
+            Add Another Sponsor
+          </Button>
         </Box>
       )}
     </Box>
@@ -1639,7 +2150,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
       },
     };
 
-    const selectedStates = form.jurisdictions.split(',').map(j => j.trim()).filter(Boolean);
+    const selectedStates = String(form.jurisdictions || "").split(',').map(j => j.trim()).filter(Boolean);
     const matchedRules = selectedStates.map(s => RULES_BY_STATE[s]).filter(Boolean);
 
     return (
@@ -1771,75 +2282,113 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
           </Box>
         )}
 
-        <Alert severity="info" sx={{ mb: 2, fontSize: 12 }}>
-          Raffle legality varies by jurisdiction. By acknowledging below, you confirm you have reviewed
-          applicable local regulations for the selected jurisdictions.
+        <Alert severity="info" sx={{ mb: 3, fontSize: 12 }}>
+          Raffle legality varies by jurisdiction. Complete the steps below before submitting.
         </Alert>
 
-        {/* Require Terms Consent Toggle */}
+        {/* Step 1: Require attendees to agree */}
         <Box sx={{ mb: 2, p: 2, border: "1px solid #E5E7EB", borderRadius: 2, background: "#FAFBFC" }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={form.requireTermsConsent}
-                onChange={(e) => updateField("requireTermsConsent", e.target.checked)}
+          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+            <Box sx={{ width: 24, height: 24, borderRadius: "50%", background: "#00AAD6", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0, mt: 0.25 }}>1</Box>
+            <Box sx={{ flex: 1 }}>
+              <FormControlLabel
+                sx={{ m: 0 }}
+                control={
+                  <Switch
+                    checked={form.requireTermsConsent}
+                    onChange={(e) => updateField("requireTermsConsent", e.target.checked)}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#111827" }}>
+                      Require attendees to agree to rules before entering
+                    </Typography>
+                    <Typography sx={{ fontSize: 11.5, color: "#6B7280", mt: 0.25 }}>
+                      When enabled, attendees must review and accept the Official Rules before they can submit an entry.
+                    </Typography>
+                  </Box>
+                }
               />
-            }
-            label={
-              <Box>
-                <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#111827" }}>
-                  Require attendees to agree to rules before entering
-                </Typography>
-                <Typography sx={{ fontSize: 11.5, color: "#6B7280", mt: 0.25 }}>
-                  When enabled, attendees must review and accept the Official Rules before they can submit an entry.
-                </Typography>
-              </Box>
-            }
-          />
+            </Box>
+          </Box>
         </Box>
 
-        {/* Preview Rules Button — admin must preview before acknowledging */}
-        <Box sx={{ mb: 2 }}>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              updateField("rulesPreviewedByAdmin", true);
-              setShowRulesPreview(true);
-            }}
-            sx={{
-              textTransform: "none",
-              fontWeight: 700,
-              fontSize: 13,
-              borderColor: form.rulesPreviewedByAdmin ? "#34c471" : "#00AAD6",
-              color: form.rulesPreviewedByAdmin ? "#34c471" : "#00AAD6",
-              "&:hover": { borderColor: form.rulesPreviewedByAdmin ? "#1f9d55" : "#0088b0", background: form.rulesPreviewedByAdmin ? "#f0fdf4" : "#f0fdff" },
-            }}
-          >
-            {form.rulesPreviewedByAdmin ? "✓ Rules Previewed" : "👁 Preview Rules (Required)"}
-          </Button>
+        {/* Step 2: Preview the rules */}
+        <Box sx={{ mb: 2, p: 2, border: `1px solid ${form.rulesPreviewedByAdmin ? "#34c471" : "#E5E7EB"}`, borderRadius: 2, background: form.rulesPreviewedByAdmin ? "#f0fdf4" : "#FAFBFC" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Box sx={{ width: 24, height: 24, borderRadius: "50%", background: form.rulesPreviewedByAdmin ? "#34c471" : "#00AAD6", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+              {form.rulesPreviewedByAdmin ? "✓" : "2"}
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#111827" }}>
+                Preview Official Rules
+              </Typography>
+              <Typography sx={{ fontSize: 11.5, color: "#6B7280", mt: 0.25 }}>
+                You must review the generated rules before you can submit.
+              </Typography>
+            </Box>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                updateField("rulesPreviewedByAdmin", true);
+                setShowRulesPreview(true);
+              }}
+              sx={{
+                textTransform: "none",
+                fontWeight: 700,
+                fontSize: 12,
+                borderColor: form.rulesPreviewedByAdmin ? "#34c471" : "#00AAD6",
+                color: form.rulesPreviewedByAdmin ? "#34c471" : "#00AAD6",
+                "&:hover": { borderColor: form.rulesPreviewedByAdmin ? "#1f9d55" : "#0088b0", background: form.rulesPreviewedByAdmin ? "#f0fdf4" : "#f0fdff" },
+              }}
+            >
+              {form.rulesPreviewedByAdmin ? "✓ Done" : "Preview"}
+            </Button>
+          </Box>
           {errors.rulesPreviewedByAdmin && (
-            <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5 }}>
+            <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5, ml: 5 }}>
               {errors.rulesPreviewedByAdmin}
             </Typography>
           )}
         </Box>
 
-        <FormControlLabel
-          control={
-            <Switch
-              checked={form.complianceAcknowledged}
-              onChange={(e) => updateField("complianceAcknowledged", e.target.checked)}
-              disabled={!form.rulesPreviewedByAdmin}
-            />
-          }
-          label="I acknowledge and accept compliance requirements for the selected jurisdictions"
-        />
-        {errors.complianceAcknowledged && (
-          <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5 }}>
-            {errors.complianceAcknowledged}
-          </Typography>
-        )}
+        {/* Step 3: Acknowledge compliance */}
+        <Box sx={{ mb: 2, p: 2, border: `1px solid ${form.complianceAcknowledged ? "#34c471" : "#E5E7EB"}`, borderRadius: 2, background: form.complianceAcknowledged ? "#f0fdf4" : "#FAFBFC", opacity: form.rulesPreviewedByAdmin ? 1 : 0.5 }}>
+          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+            <Box sx={{ width: 24, height: 24, borderRadius: "50%", background: form.complianceAcknowledged ? "#34c471" : (form.rulesPreviewedByAdmin ? "#00AAD6" : "#9E9E9E"), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0, mt: 0.25 }}>
+              {form.complianceAcknowledged ? "✓" : "3"}
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <FormControlLabel
+                sx={{ m: 0 }}
+                control={
+                  <Switch
+                    checked={form.complianceAcknowledged}
+                    onChange={(e) => updateField("complianceAcknowledged", e.target.checked)}
+                    disabled={!form.rulesPreviewedByAdmin}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography sx={{ fontWeight: 700, fontSize: 13, color: "#111827" }}>
+                      Acknowledge compliance
+                    </Typography>
+                    <Typography sx={{ fontSize: 11.5, color: "#6B7280", mt: 0.25 }}>
+                      I confirm I have reviewed applicable local regulations for the selected jurisdictions.
+                    </Typography>
+                  </Box>
+                }
+              />
+            </Box>
+          </Box>
+          {errors.complianceAcknowledged && (
+            <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5, ml: 5 }}>
+              {errors.complianceAcknowledged}
+            </Typography>
+          )}
+        </Box>
       </Box>
     );
   };
@@ -1894,7 +2443,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
   };
 
   const renderPrizeScheduleContent = () => {
-    const tabs = ['Appearance', 'Prizes', 'Schedule'];
+    const tabs = ['Prizes', 'Appearance', 'Schedule'];
     return (
       <Box>
         <Box sx={{ display: "flex", gap: 0, mb: 3, borderBottom: "2px solid #E5E7EB" }}>
@@ -1913,8 +2462,8 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
             </Box>
           ))}
         </Box>
-        {innerTab === 0 && renderAppearance()}
-        {innerTab === 1 && renderPrizeConfig()}
+        {innerTab === 0 && renderPrizeConfig()}
+        {innerTab === 1 && renderAppearance()}
         {innerTab === 2 && renderSchedule()}
       </Box>
     );
@@ -2155,12 +2704,12 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
                 } catch (e) {
                   console.warn("Preview: draft save failed, opening with last saved config", e.message);
                 }
-                const previewUrl = `https://experience.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId}&eventName=${encodeURIComponent(eventData?.name || '')}&accentColor=${encodeURIComponent(form.accentColor)}&bannerStyle=${encodeURIComponent(form.bannerStyle)}&prizeName=${encodeURIComponent(form.prizes[0]?.name || '')}&infoCollection=${encodeURIComponent(form.infoCollection)}&prizes=${encodeURIComponent(JSON.stringify(form.prizes.map(p => ({ name: p.name, description: p.description, value: p.value, imageUrl: p.imageUrl || '' }))))}`;
+                const previewUrl = `https://engage.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId}&eventName=${encodeURIComponent(eventData?.name || '')}&accentColor=${encodeURIComponent(form.accentColor)}&bannerStyle=${encodeURIComponent(form.bannerStyle)}&prizeName=${encodeURIComponent(form.prizes[0]?.name || '')}&infoCollection=${encodeURIComponent(form.infoCollection)}&prizes=${encodeURIComponent(JSON.stringify(form.prizes.map(p => ({ name: p.name, description: p.description, value: p.value, imageUrl: p.imageUrl || '', bannerStyle: p.bannerStyle || '' }))))}&eligibilityRules=${encodeURIComponent(JSON.stringify(form.eligibilityRules))}&accessCodes=${encodeURIComponent(form.eligibilityRules.includes('access_code') ? form.accessCodes : '')}`;
                 setDemoPreviewUrl(previewUrl);
                 setShowDemoPreview(true);
               }}
             >
-              🎯 Open Demo Preview
+              Open Demo Preview
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import axios from "axios";
 import configJSON from "../../config.json"
 import { CognitoUser, CognitoRefreshToken, CognitoUserPool } from 'amazon-cognito-identity-js';
+import { isTokenExpired, endSessionAndRedirect } from "../auth/session";
 const config = configJSON;
 
 const CUP = new CognitoUserPool(config.userPoolData)
@@ -89,6 +90,26 @@ http.interceptors.request.use( async function ( config ) {
   return Promise.reject(error);
 });
 
+/**
+ * Decides whether a failed request means "the session is dead".
+ *
+ * - 401 is always an auth failure.
+ * - 403 is ambiguous: API Gateway authorizers return it for expired/invalid
+ *   tokens, but the app also returns it for legitimate permission denials.
+ *   Only treat it as a session failure when the local token is actually stale.
+ * - No response at all (CORS-blocked gateway 4xx, offline) is only a session
+ *   failure when the local token is stale — otherwise it is a network error.
+ */
+const isSessionFailure = (error) => {
+	const status = error.response?.status;
+	if (status === 401) return true;
+
+	const localTokenStale = isTokenExpired(localStorage.getItem("idToken"));
+	if (status === 403) return localTokenStale;
+	if (!error.response) return localTokenStale;
+	return false;
+};
+
 http.interceptors.response.use(
 	(response) => {
 		// Dispatch session-activity event on successful API responses
@@ -96,31 +117,27 @@ http.interceptors.response.use(
 		return response;
 	},
 	async (error) => {
-		const originalRequest = error.config;
-		if (error.response?.status === 401 && !originalRequest._retry) {
-			originalRequest._retry = true;
-			const access_token = await refreshAccessToken();
-			
-			if (!access_token) {
-				// Token refresh failed, clear storage and redirect
-				localStorage.removeItem("idToken");
-				localStorage.removeItem("refToken");
-				localStorage.removeItem("username");
-				window.location.href = "/login";
-				return Promise.reject(error);
-			}
-			
-			axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-			originalRequest.headers.Authorization = `Bearer ${access_token}`;
-			return http(originalRequest);
-		} else if (error.response?.status === 401) {
-			// Second 401 after retry, clear storage and redirect
-			localStorage.removeItem("idToken");
-			localStorage.removeItem("refToken");
-			localStorage.removeItem("username");
-			window.location.href = "/login";
+		const originalRequest = error.config || {};
+
+		if (!isSessionFailure(error)) {
 			return Promise.reject(error);
 		}
+
+		if (!originalRequest._retry) {
+			originalRequest._retry = true;
+			const access_token = await refreshAccessToken();
+
+			if (access_token) {
+				axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+				originalRequest.headers = originalRequest.headers || {};
+				originalRequest.headers.Authorization = `Bearer ${access_token}`;
+				return http(originalRequest);
+			}
+		}
+
+		// Refresh failed or already retried: clear every auth artifact and send
+		// the user to login with a returnUrl so they land back on this page.
+		endSessionAndRedirect();
 		return Promise.reject(error);
 	});
 

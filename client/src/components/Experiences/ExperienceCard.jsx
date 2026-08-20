@@ -82,7 +82,7 @@ const shimmerKeyframes = `
  * - onClick: (instance) => void
  */
 const ExperienceCard = ({ instance, onAction, onClick }) => {
-  const { experienceId, name, experienceType, state, entryCount, eventId } = instance;
+  const { experienceId, name, experienceType, state, entryCount, eventId, engagementCode, drawState } = instance;
   const stateStyle = STATE_STYLES[state] || STATE_STYLES.Draft;
   const [showPreview, setShowPreview] = useState(false);
   const [showConfigure, setShowConfigure] = useState(false);
@@ -113,7 +113,7 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
     if (onClick) onClick(instance);
   };
 
-  const previewUrl = `https://experience.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId || ''}&userToken=${encodeURIComponent(localStorage.getItem('idToken') || '')}`;
+  const previewUrl = `https://engage.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId || ''}&userToken=${encodeURIComponent(localStorage.getItem('idToken') || '')}`;
   const configureUrl = `/admin/my-events/${eventId}/experiences/${experienceId}/config?embedded=true`;
 
   return (
@@ -123,6 +123,9 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
         elevation={0}
         sx={{
           borderRadius: "22px",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
           cursor: onClick ? "pointer" : "default",
           transition: "border-color 0.2s, box-shadow 0.2s, transform 0.15s",
           border: "1px solid #eef1f3",
@@ -266,6 +269,13 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
             </Typography>
           </Box>
 
+          {/* Engagement Code */}
+          {engagementCode && (
+            <Typography sx={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", mt: 1, fontFamily: "'Courier New', monospace", letterSpacing: 0.5 }}>
+              {engagementCode}
+            </Typography>
+          )}
+
           {/* Divider */}
           <Box sx={{ height: "1px", background: "#eef1f3", my: 2.25 }} />
 
@@ -273,6 +283,7 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
           <Box onClick={(e) => e.stopPropagation()}>
             <LifecycleActions
               state={state}
+              drawState={drawState}
               onAction={(action) => {
                 onAction && onAction(experienceId, action);
               }}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -11,10 +11,15 @@ import {
   CircularProgress,
   Alert,
   IconButton,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import SearchIcon from "@mui/icons-material/Search";
+import AutoFixHighOutlinedIcon from "@mui/icons-material/AutoFixHighOutlined";
+import EngagementWizard from "./EngagementWizard";
 import EmojiEventsOutlinedIcon from "@mui/icons-material/EmojiEventsOutlined";
 import PollOutlinedIcon from "@mui/icons-material/PollOutlined";
 import QuizOutlinedIcon from "@mui/icons-material/QuizOutlined";
@@ -23,7 +28,6 @@ import FeedbackOutlinedIcon from "@mui/icons-material/FeedbackOutlined";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import CameraAltOutlinedIcon from "@mui/icons-material/CameraAltOutlined";
 import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
-import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
 import StarOutlinedIcon from "@mui/icons-material/StarOutlined";
@@ -41,23 +45,22 @@ const ACCENT = "#F09925";
  * Map experience type keys to MUI icons.
  */
 const TYPE_ICONS = {
-  raffles: EmojiEventsOutlinedIcon,
-  live_polls: PollOutlinedIcon,
-  trivia: QuizOutlinedIcon,
-  surveys: InsightsOutlinedIcon,
-  pulse_feedback: FeedbackOutlinedIcon,
-  prediction_challenges: InsightsOutlinedIcon,
-  instant_win: CasinoOutlinedIcon,
-  digital_scratch_offs: CardGiftcardOutlinedIcon,
-  treasure_hunts: PlaceOutlinedIcon,
-  check_in_challenges: CheckCircleOutlineIcon,
-  photo_contests: CameraAltOutlinedIcon,
-  social_wall: ForumOutlinedIcon,
-  ai_concierge: SmartToyOutlinedIcon,
-  digital_coupons: LocalOfferOutlinedIcon,
-  sponsor_promotions: CampaignOutlinedIcon,
-  loyalty_rewards: StarOutlinedIcon,
-  leaderboards: LeaderboardOutlinedIcon,
+  'raffles': EmojiEventsOutlinedIcon,
+  'live-polls': PollOutlinedIcon,
+  'trivia-challenges': QuizOutlinedIcon,
+  'surveys': InsightsOutlinedIcon,
+  'pulse-feedback': FeedbackOutlinedIcon,
+  'prediction-challenges': InsightsOutlinedIcon,
+  'instant-win': CasinoOutlinedIcon,
+  'digital-scratch-offs': CardGiftcardOutlinedIcon,
+  'treasure-hunts': PlaceOutlinedIcon,
+  'check-in-challenges': CheckCircleOutlineIcon,
+  'photo-contests': CameraAltOutlinedIcon,
+  'social-wall': ForumOutlinedIcon,
+  'digital-coupons': LocalOfferOutlinedIcon,
+  'sponsor-promotions': CampaignOutlinedIcon,
+  'loyalty-rewards': StarOutlinedIcon,
+  'leaderboards': LeaderboardOutlinedIcon,
 };
 
 /**
@@ -82,6 +85,8 @@ const ExperienceCatalog = () => {
   const [error, setError] = useState(null);
   const [creating, setCreating] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const fetchCatalog = useCallback(async () => {
     setLoading(true);
@@ -136,10 +141,35 @@ const ExperienceCatalog = () => {
   // Extract unique categories from catalog
   const categories = [...new Set(catalogTypes.map((t) => t.category).filter(Boolean))].sort();
 
-  // Filter by selected category
-  const filteredTypes = selectedCategory
-    ? catalogTypes.filter((t) => t.category === selectedCategory)
-    : catalogTypes;
+  // Filter by selected category and search query
+  const filteredTypes = useMemo(() => {
+    let result = catalogTypes;
+    if (selectedCategory) {
+      result = result.filter((t) => t.category === selectedCategory);
+    }
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (t) =>
+          (t.name || "").toLowerCase().includes(query) ||
+          (t.description || "").toLowerCase().includes(query) ||
+          (t.category || "").toLowerCase().includes(query)
+      );
+    }
+    return result;
+  }, [catalogTypes, selectedCategory, searchQuery]);
+
+  /**
+   * Handle wizard recommendation selection — find the type in catalog and select it.
+   */
+  const handleWizardSelect = (typeId) => {
+    const type = catalogTypes.find(
+      (t) => (t.typeId || t.id || t.key) === typeId
+    );
+    if (type) {
+      handleSelectType(type);
+    }
+  };
 
   if (loading || entitlementLoading) {
     return (
@@ -171,6 +201,51 @@ const ExperienceCatalog = () => {
       <Typography sx={{ color: "#71727A", fontSize: 14, mb: 3, ml: 5 }}>
         Select an experience type to add to your event.
       </Typography>
+
+      {/* Search and Wizard row */}
+      <Box sx={{ display: "flex", gap: 1.5, mb: 2.5, alignItems: "center" }}>
+        <TextField
+          size="small"
+          placeholder="Search engagements..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: "#9E9E9E", fontSize: 20 }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            flex: 1,
+            maxWidth: 400,
+            "& .MuiOutlinedInput-root": {
+              borderRadius: 2,
+              fontSize: 13,
+              "& fieldset": { borderColor: "#E0E0E0" },
+              "&:hover fieldset": { borderColor: "#BDBDBD" },
+              "&.Mui-focused fieldset": { borderColor: ACCENT },
+            },
+          }}
+        />
+        <Button
+          variant="outlined"
+          startIcon={<AutoFixHighOutlinedIcon />}
+          onClick={() => setWizardOpen(true)}
+          sx={{
+            textTransform: "none",
+            fontWeight: 700,
+            fontSize: 13,
+            borderColor: ACCENT,
+            color: ACCENT,
+            borderRadius: 2,
+            px: 2,
+            "&:hover": { borderColor: "#D4820F", background: `${ACCENT}08` },
+          }}
+        >
+          Help Me Choose
+        </Button>
+      </Box>
 
       {/* Error */}
       {error && (
@@ -347,17 +422,28 @@ const ExperienceCatalog = () => {
           <Typography sx={{ color: "#71727A", fontWeight: 600, fontSize: 14 }}>
             No experience types available for this filter.
           </Typography>
-          {selectedCategory && (
+          {(selectedCategory || searchQuery) && (
             <Button
               size="small"
-              onClick={() => setSelectedCategory(null)}
+              onClick={() => {
+                setSelectedCategory(null);
+                setSearchQuery("");
+              }}
               sx={{ mt: 1, textTransform: "none", fontWeight: 600, color: ACCENT }}
             >
-              Clear filter
+              Clear filters
             </Button>
           )}
         </Box>
       )}
+
+      {/* Engagement Wizard Modal */}
+      <EngagementWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onSelectType={handleWizardSelect}
+        catalogTypes={catalogTypes}
+      />
     </Box>
   );
 };
