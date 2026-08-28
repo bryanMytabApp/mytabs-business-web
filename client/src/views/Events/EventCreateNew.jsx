@@ -72,6 +72,35 @@ const G = `
 .ecn-fh{font-size:11.5px;color:var(--mu);margin-top:-3px;margin-bottom:7px}
 .ecn-fi,.ecn-fs,.ecn-fta{width:100%;padding:10px 14px;background:#FFFFFF;border:1px solid #E5E7EB;border-radius:8px;font-size:14px;font-weight:500;color:var(--tx);font-family:'Outfit','Nunito',sans-serif;transition:all var(--tr);outline:none;appearance:none;box-sizing:border-box}
 .ecn-fi:focus,.ecn-fs:focus,.ecn-fta:focus{border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,.1);background:#fff}
+/* Date field */
+.ecn-df{position:relative;width:100%}
+.ecn-df-trigger{display:flex;align-items:center;gap:6px;padding:0 6px 0 14px;text-align:left}
+.ecn-df-trigger:focus-within{border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,.1);background:#fff}
+.ecn-df-input{flex:1;min-width:0;border:none;outline:none;background:transparent;padding:10px 0;font-size:14px;font-weight:500;color:var(--tx);font-family:'Outfit','Nunito',sans-serif}
+.ecn-df-input::placeholder{color:var(--mu);font-weight:500}
+.ecn-df-calbtn{flex-shrink:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:7px;cursor:pointer;transition:background var(--tr)}
+.ecn-df-calbtn:hover{background:#F3F4F6}
+.ecn-df-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:60;width:300px;max-width:calc(100vw - 32px);background:#fff;border:1px solid #E5E7EB;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.16);padding:14px;font-family:'Outfit','Nunito',sans-serif;animation:ecnFadeUp .14s ease both}
+.ecn-df-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ecn-df-navb{width:32px;height:32px;border:1px solid #E5E7EB;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--tr)}
+.ecn-df-navb:hover{background:#F3F4F6;border-color:#D1D5DB}
+.ecn-df-title{font-size:14.5px;font-weight:700;color:#111827}
+.ecn-df-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+.ecn-df-dow span{text-align:center;font-size:11px;font-weight:700;color:var(--mu);padding:4px 0}
+.ecn-df-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.ecn-df-cell{aspect-ratio:1;min-height:36px;border:none;background:none;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--tx);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background var(--tr),color var(--tr)}
+.ecn-df-cell:hover:not(:disabled):not(.ecn-df-empty){background:#EEF2FF}
+.ecn-df-empty{cursor:default}
+.ecn-df-cell:disabled{color:#CBD5E1;cursor:not-allowed}
+.ecn-df-today{box-shadow:inset 0 0 0 1.5px #C7D2FE}
+.ecn-df-sel{background:#4F46E5;color:#fff}
+.ecn-df-sel:hover{background:#4338CA}
+.ecn-df-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #F1F3F5}
+.ecn-df-todaybtn,.ecn-df-clear{background:none;border:none;font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 6px;border-radius:6px;font-family:inherit}
+.ecn-df-todaybtn{color:#4F46E5}
+.ecn-df-todaybtn:hover{background:#EEF2FF}
+.ecn-df-clear{color:var(--mu)}
+.ecn-df-clear:hover{color:#EF4444}
 .ecn-fi::placeholder{color:#9CA3AF}
 .ecn-fi.ferr,.ecn-fs.ferr,.ecn-fta.ferr{border-color:#ef4444;background:#fff5f5}
 .ecn-fi.ferr:focus,.ecn-fs.ferr:focus,.ecn-fta.ferr:focus{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.12)}
@@ -270,6 +299,205 @@ function I({ n, s = 20, c = "currentColor", w = 1.65 }) {
     users: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></>,
   };
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round">{p[n]}</svg>;
+}
+
+// ─── DATE FIELD ───────────────────────────────────────────────────────────────
+// Friendly date picker. Value in/out is a "YYYY-MM-DD" string (same as native
+// <input type="date">), so all downstream moment()/formatting keeps working.
+// Solves: cramped native popup + accidental year edits (e.g. "0020").
+const DF_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const DF_DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const dfPad = n => String(n).padStart(2, "0");
+const dfToStr = d => `${d.getFullYear()}-${dfPad(d.getMonth() + 1)}-${dfPad(d.getDate())}`;
+const dfParse = s => {
+  if (!s || typeof s !== "string") return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return isNaN(d.getTime()) ? null : d;
+};
+// Masked display (MM/DD/YYYY) used inside the editable text input.
+const dfInputLabel = s => {
+  const d = dfParse(s);
+  if (!d) return "";
+  return `${dfPad(d.getMonth() + 1)}/${dfPad(d.getDate())}/${d.getFullYear()}`;
+};
+// Build a "YYYY-MM-DD" string from y / 0-indexed-month / d, validating that the
+// calendar date round-trips (rejects Feb 30, month 13, etc.). Returns "" if invalid.
+const dfBuild = (y, m, d) => {
+  const dt = new Date(y, m, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== m || dt.getDate() !== d) return "";
+  if (y < 1000 || y > 9999) return "";
+  return dfToStr(dt);
+};
+// Apply an MM/DD/YYYY mask to raw user input: keep digits only (max 8),
+// then insert "/" separators. Returns the masked display string.
+const dfApplyMask = raw => {
+  const digits = (raw || "").replace(/\D/g, "").slice(0, 8);
+  const mm = digits.slice(0, 2);
+  const dd = digits.slice(2, 4);
+  const yy = digits.slice(4, 8);
+  let out = mm;
+  if (dd) out += "/" + dd;
+  if (yy) out += "/" + yy;
+  return out;
+};
+// Convert a complete masked "MM/DD/YYYY" string to "YYYY-MM-DD" (or "" if incomplete/invalid).
+const dfMaskToValue = masked => {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(masked || "");
+  if (!m) return "";
+  return dfBuild(Number(m[3]), Number(m[1]) - 1, Number(m[2]));
+};
+
+function DateField({ value, onChange, hasError, minToday = true, id }) {
+  const [open, setOpen] = React.useState(false);
+  const [text, setText] = React.useState(dfInputLabel(value));
+  const selected = dfParse(value);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const initView = selected || today;
+  const [viewY, setViewY] = React.useState(initView.getFullYear());
+  const [viewM, setViewM] = React.useState(initView.getMonth());
+  const wrapRef = React.useRef(null);
+
+  // Reflect external value changes back into the text field (edit mode, calendar picks, clears).
+  React.useEffect(() => {
+    setText(dfInputLabel(value));
+  }, [value]);
+
+  // Keep the calendar view aligned with an externally changed value when reopening.
+  React.useEffect(() => {
+    if (open) {
+      const v = dfParse(value) || today;
+      setViewY(v.getFullYear());
+      setViewM(v.getMonth());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Close on outside click / Escape.
+  React.useEffect(() => {
+    if (!open) return;
+    const onDoc = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    const onKey = e => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+
+  // Handle each keystroke through the MM/DD/YYYY mask, and commit as soon as a
+  // full, valid date has been entered.
+  const handleMaskChange = e => {
+    const masked = dfApplyMask(e.target.value);
+    setText(masked);
+    if (masked === "") {
+      if (value) onChange("");
+      return;
+    }
+    if (masked.length === 10) {
+      const parsed = dfMaskToValue(masked);
+      if (parsed && parsed !== value) onChange(parsed);
+    }
+  };
+
+  // On blur: keep a valid completed date, otherwise revert to the last good value.
+  const commitText = () => {
+    const parsed = dfMaskToValue(text);
+    if (parsed) {
+      if (parsed !== value) onChange(parsed);
+    } else if (text === "") {
+      if (value) onChange("");
+    } else {
+      setText(dfInputLabel(value)); // revert incomplete/invalid input
+    }
+  };
+
+  const stepMonth = delta => {
+    let m = viewM + delta, y = viewY;
+    if (m < 0) { m = 11; y -= 1; } else if (m > 11) { m = 0; y += 1; }
+    setViewM(m); setViewY(y);
+  };
+
+  const firstDow = new Date(viewY, viewM, 1).getDay();
+  const daysInMonth = new Date(viewY, viewM + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const isSameDay = (d, a) => a && a.getFullYear() === viewY && a.getMonth() === viewM && a.getDate() === d;
+  const pick = d => {
+    const chosen = new Date(viewY, viewM, d);
+    onChange(dfToStr(chosen));
+    setOpen(false);
+  };
+
+  return (
+    <div className="ecn-df" ref={wrapRef}>
+      <div className={`ecn-df-trigger ecn-fi${hasError ? " ecn-err" : ""}`}>
+        <input
+          type="text"
+          id={id}
+          className="ecn-df-input"
+          placeholder="MM/DD/YYYY"
+          value={text}
+          onChange={handleMaskChange}
+          onFocus={() => setOpen(true)}
+          onBlur={commitText}
+          onKeyDown={e => {
+            if (e.key === "Enter") { e.preventDefault(); commitText(); setOpen(false); }
+            else if (e.key === "ArrowDown") { e.preventDefault(); setOpen(true); }
+          }}
+          aria-label="Event date"
+          autoComplete="off"
+          inputMode="numeric"
+          maxLength={10}
+        />
+        <button
+          type="button"
+          className="ecn-df-calbtn"
+          aria-label="Open calendar"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onClick={() => setOpen(o => !o)}
+        >
+          <I n="cal" s={16} c="var(--mu)" w={1.8} />
+        </button>
+      </div>
+      {open && (
+        <div className="ecn-df-pop" role="dialog" aria-label="Choose date">
+          <div className="ecn-df-nav">
+            <button type="button" className="ecn-df-navb" aria-label="Previous month" onClick={() => stepMonth(-1)}><I n="chevL" s={16} c="var(--tx)" w={2} /></button>
+            <div className="ecn-df-title">{DF_MONTHS[viewM]} {viewY}</div>
+            <button type="button" className="ecn-df-navb" aria-label="Next month" onClick={() => stepMonth(1)}><I n="chev" s={16} c="var(--tx)" w={2} /></button>
+          </div>
+          <div className="ecn-df-dow">{DF_DOW.map(d => <span key={d}>{d}</span>)}</div>
+          <div className="ecn-df-grid">
+            {cells.map((d, i) => {
+              if (d === null) return <span key={`e${i}`} className="ecn-df-cell ecn-df-empty" />;
+              const cellDate = new Date(viewY, viewM, d);
+              const disabled = minToday && cellDate < today;
+              const sel = isSameDay(d, selected);
+              const isToday = isSameDay(d, today);
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  disabled={disabled}
+                  aria-pressed={sel}
+                  className={`ecn-df-cell${sel ? " ecn-df-sel" : ""}${isToday && !sel ? " ecn-df-today" : ""}`}
+                  onClick={() => pick(d)}
+                >{d}</button>
+              );
+            })}
+          </div>
+          <div className="ecn-df-foot">
+            <button type="button" className="ecn-df-todaybtn" onClick={() => { const t = new Date(); onChange(dfToStr(t)); setOpen(false); }}>Today</button>
+            {value && <button type="button" className="ecn-df-clear" onClick={() => { onChange(""); setOpen(false); }}>Clear</button>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
@@ -656,7 +884,7 @@ function P1({ f, u, next, steps, editMode, eventId, onDelete, previewEventCode, 
           <div className="ecn-fg">
             <label className="ecn-fl">Event date *</label>
             <div className="ecn-fh">e.g. Thu 21 March, 2026</div>
-            <input className={`ecn-fi${errors.date ? " ecn-err" : ""}`} type="date" value={f.date} onChange={e => handleChange("date", e.target.value)} />
+            <DateField value={f.date} onChange={val => handleChange("date", val)} hasError={!!errors.date} />
             {errors.date && <div className="ecn-err-msg">{errors.date}</div>}
           </div>
           <div className="ecn-fr" style={{ marginBottom: 0 }}>
@@ -811,7 +1039,7 @@ function P_ShowDates({ f, u, next, back, maxAdSpaces = 3, existingEventsCount = 
                 <input className="ecn-fi" placeholder='e.g. Opening Night' value={d.label} onChange={e => upd(i, "label", e.target.value)} />
               </div>
               <div className="ecn-fr">
-                <div className="ecn-fg" style={{ marginBottom: 0 }}><label className="ecn-fl">Date *</label><input className="ecn-fi" type="date" value={d.date} onChange={e => upd(i, "date", e.target.value)} /></div>
+                <div className="ecn-fg" style={{ marginBottom: 0 }}><label className="ecn-fl">Date *</label><DateField value={d.date} onChange={val => upd(i, "date", val)} /></div>
                 <div className="ecn-fg" style={{ marginBottom: 0 }}>
                   <label className="ecn-fl">Status</label>
                   <div className="ecn-sw"><select className="ecn-fs" value={d.status} onChange={e => upd(i, "status", e.target.value)}>{SC.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}</select></div>
@@ -2620,4 +2848,4 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
 };
 
 export default EventCreateNew;
-export { P_Weather };
+export { P_Weather, DateField };

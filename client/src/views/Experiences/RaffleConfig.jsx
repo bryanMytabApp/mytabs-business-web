@@ -15,6 +15,7 @@ import {
   IconButton,
   Chip,
   Modal,
+  Slider,
 } from "@mui/material";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -60,6 +61,9 @@ const DEFAULT_FORM = {
   bannerStyle: "gift", // "gift" | "card" | "image"
   accentColor: "#00A9D6", // Tabs Cyan default
   prizes: [{ id: "prize-1", name: "", description: "", quantity: 1, winnersPerDrawing: 1 }],
+  // 50/50 raffle: how the pot is split between the winner and the organizer.
+  // Percentages always sum to 100; controlled by the split slider.
+  split: { winnerPct: 50, organizerPct: 50 },
   // Step 3: Schedule
   entryWindowStart: null,
   entryWindowEnd: null,
@@ -96,6 +100,27 @@ const DEFAULT_FORM = {
 };
 
 /**
+ * Validates the 50/50 pot split. The winner and organizer percentages must
+ * each be within 1–99 and sum to exactly 100. Mutates the provided errors map.
+ */
+function validateSplit(form, errors) {
+  const split = form.split || {};
+  const winnerPct = Number(split.winnerPct);
+  const organizerPct = Number(split.organizerPct);
+  if (!Number.isFinite(winnerPct) || !Number.isFinite(organizerPct)) {
+    errors["split"] = "Split percentages are required.";
+    return;
+  }
+  if (winnerPct < 1 || winnerPct > 99) {
+    errors["split"] = "Winner share must be between 1% and 99%.";
+    return;
+  }
+  if (winnerPct + organizerPct !== 100) {
+    errors["split"] = "Winner and organizer shares must add up to 100%.";
+  }
+}
+
+/**
  * Validates a specific inner tab within a step.
  * Returns field-level errors for only that inner tab's fields.
  */
@@ -105,20 +130,25 @@ function validateInnerTab(step, innerTab, form) {
   if (step === 1) {
     // Step 1 inner tabs: 0=Prizes, 1=Appearance, 2=Schedule
     if (innerTab === 0) {
-      // Prizes tab validation
-      form.prizes.forEach((prize, idx) => {
-        if (!prize.name) errors[`prizes[${idx}].name`] = "Prize name is required.";
-        else if (prize.name.length > 50)
-          errors[`prizes[${idx}].name`] = "Prize name must be ≤ 50 characters.";
-        if (prize.description && prize.description.length > 150)
-          errors[`prizes[${idx}].description`] = "Description must be ≤ 150 characters.";
-        if (parseFloat(prize.value) > 75000)
-          errors[`prizes[${idx}].value`] = "Prize value exceeds $75,000 statutory limit (Texas Charitable Raffle Enabling Act).";
-        if (!prize.quantity || prize.quantity < 1 || prize.quantity > 1000)
-          errors[`prizes[${idx}].quantity`] = "Quantity must be between 1 and 1000.";
-        if (!prize.winnersPerDrawing || prize.winnersPerDrawing < 1 || prize.winnersPerDrawing > prize.quantity)
-          errors[`prizes[${idx}].winnersPerDrawing`] = `Winners per drawing must be between 1 and ${prize.quantity || 1}.`;
-      });
+      if (form.raffleType === "5050") {
+        // 50/50 raffles have no fixed prizes — validate the pot split instead.
+        validateSplit(form, errors);
+      } else {
+        // Prizes tab validation
+        form.prizes.forEach((prize, idx) => {
+          if (!prize.name) errors[`prizes[${idx}].name`] = "Prize name is required.";
+          else if (prize.name.length > 50)
+            errors[`prizes[${idx}].name`] = "Prize name must be ≤ 50 characters.";
+          if (prize.description && prize.description.length > 150)
+            errors[`prizes[${idx}].description`] = "Description must be ≤ 150 characters.";
+          if (parseFloat(prize.value) > 75000)
+            errors[`prizes[${idx}].value`] = "Prize value exceeds $75,000 statutory limit (Texas Charitable Raffle Enabling Act).";
+          if (!prize.quantity || prize.quantity < 1 || prize.quantity > 1000)
+            errors[`prizes[${idx}].quantity`] = "Quantity must be between 1 and 1000.";
+          if (!prize.winnersPerDrawing || prize.winnersPerDrawing < 1 || prize.winnersPerDrawing > prize.quantity)
+            errors[`prizes[${idx}].winnersPerDrawing`] = `Winners per drawing must be between 1 and ${prize.quantity || 1}.`;
+        });
+      }
     } else if (innerTab === 2) {
       // Schedule tab validation
       if (!form.entryWindowStart) errors.entryWindowStart = "Entry window start is required.";
@@ -215,6 +245,10 @@ function validateStep(step, form) {
       break;
 
     case 1: { // Prize & Schedule
+      // 50/50 raffles have no fixed prizes — validate the pot split instead.
+      if (form.raffleType === "5050") {
+        validateSplit(form, errors);
+      } else {
       // Prize validation
       form.prizes.forEach((prize, idx) => {
         if (!prize.name) errors[`prizes[${idx}].name`] = "Prize name is required.";
@@ -229,6 +263,7 @@ function validateStep(step, form) {
         if (!prize.winnersPerDrawing || prize.winnersPerDrawing < 1 || prize.winnersPerDrawing > prize.quantity)
           errors[`prizes[${idx}].winnersPerDrawing`] = `Winners per drawing must be between 1 and ${prize.quantity || 1}.`;
       });
+      }
       // Schedule validation
       if (!form.entryWindowStart) errors.entryWindowStart = "Entry window start is required.";
       if (!form.entryWindowEnd) errors.entryWindowEnd = "Entry window end is required.";
@@ -1084,6 +1119,10 @@ const RaffleConfig = () => {
             raffleType: cfg.raffleType || f.raffleType,
             bannerStyle: cfg.bannerStyle || f.bannerStyle,
             accentColor: cfg.accentColor || f.accentColor,
+            // 50/50 pot split (defaults to 50/50 when absent).
+            split: cfg.split && Number.isFinite(Number(cfg.split.winnerPct))
+              ? { winnerPct: Number(cfg.split.winnerPct), organizerPct: 100 - Number(cfg.split.winnerPct) }
+              : f.split,
             // Re-seed the string fields: the API omits empty attributes, and the
             // form renders them as controlled inputs that require a string.
             prizes: cfg.prizes?.length ? cfg.prizes.map((p, i) => ({
@@ -1326,7 +1365,11 @@ const RaffleConfig = () => {
         raffleType: form.raffleType,
         bannerStyle: form.bannerStyle,
         accentColor: form.accentColor,
-        prizes: updatedPrizes,
+        // 50/50 raffles save the pot split instead of fixed prizes.
+        prizes: form.raffleType === "5050" ? [] : updatedPrizes,
+        split: form.raffleType === "5050"
+          ? { winnerPct: form.split?.winnerPct ?? 50, organizerPct: form.split?.organizerPct ?? 50 }
+          : undefined,
         entryWindowStart: form.entryWindowStart?.toISOString(),
         entryWindowEnd: form.entryWindowEnd?.toISOString(),
         drawingSchedules: form.drawingSchedules.map((s) => ({
@@ -1512,7 +1555,82 @@ const RaffleConfig = () => {
     );
   };
 
-  const renderPrizeConfig = () => (
+  // 50/50 raffles distribute the pot rather than fixed prizes. Instead of the
+  // prize cards, show a split configuration with a slider controlling how the
+  // pot is divided between the winner and the organizer.
+  const renderSplitConfig = () => {
+    const split = form.split || { winnerPct: 50, organizerPct: 50 };
+    const winnerPct = Number.isFinite(Number(split.winnerPct)) ? Number(split.winnerPct) : 50;
+    const organizerPct = 100 - winnerPct;
+    const setWinnerPct = (pct) => {
+      const w = Math.max(1, Math.min(99, Math.round(pct)));
+      updateField("split", { winnerPct: w, organizerPct: 100 - w });
+    };
+    return (
+      <Box>
+        <Typography variant="h6" sx={{ mb: 0.5 }}>Pot Split</Typography>
+        <Typography sx={{ fontSize: 13, color: "#6B7280", mb: 3 }}>
+          A 50/50 raffle has no fixed prizes. The prize is a share of the pot collected from ticket
+          sales. Choose how the pot is split between the winner and the organizer.
+        </Typography>
+
+        <Box sx={{ p: 3, border: "1px solid #E5E7EB", borderRadius: 3, background: "#fff", maxWidth: 640 }}>
+          {/* Live split summary */}
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+            <Box sx={{ textAlign: "left" }}>
+              <Typography sx={{ fontSize: 12, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: 1 }}>
+                Winner
+              </Typography>
+              <Typography sx={{ fontSize: 32, fontWeight: 800, color: form.accentColor || "#00A9D6", lineHeight: 1.1 }}>
+                {winnerPct}%
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: "right" }}>
+              <Typography sx={{ fontSize: 12, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: 1 }}>
+                Organizer
+              </Typography>
+              <Typography sx={{ fontSize: 32, fontWeight: 800, color: "#111827", lineHeight: 1.1 }}>
+                {organizerPct}%
+              </Typography>
+            </Box>
+          </Box>
+
+          <Slider
+            aria-label="Winner share of the pot"
+            value={winnerPct}
+            onChange={(_e, val) => setWinnerPct(Array.isArray(val) ? val[0] : val)}
+            step={5}
+            marks={[
+              { value: 0, label: "0%" },
+              { value: 50, label: "50/50" },
+              { value: 100, label: "100%" },
+            ]}
+            min={0}
+            max={100}
+            valueLabelDisplay="auto"
+            valueLabelFormat={(v) => `${v}% winner`}
+            sx={{ color: form.accentColor || "#00A9D6", mt: 1 }}
+          />
+
+          <Typography sx={{ fontSize: 12, color: "#6B7280", mt: 1 }}>
+            Winner receives {winnerPct}% of the pot; {organizerPct}% goes to the organizer.
+          </Typography>
+
+          {errors.split && (
+            <Typography variant="caption" color="error" sx={{ mt: 1.5, display: "block" }}>
+              {errors.split}
+            </Typography>
+          )}
+        </Box>
+      </Box>
+    );
+  };
+
+  const renderPrizeConfig = () => {
+    if (form.raffleType === "5050") {
+      return renderSplitConfig();
+    }
+    return (
     <Box>
       <Typography variant="h6" sx={{ mb: 2 }}>Prizes</Typography>
 
@@ -1544,7 +1662,8 @@ const RaffleConfig = () => {
         Add Prize Tier
       </Button>
     </Box>
-  );
+    );
+  };
 
   const renderSchedule = () => (
     <LocalizationProvider dateAdapter={AdapterDayjs}>

@@ -5,5 +5,10 @@
   "userPoolData": {
     "UserPoolId": "us-east-1_MAXS6xo4n",
     "ClientId": "6e2i01snasqfdamrne144ua0df"
+  },
+  "telemetry": {
+    "ingestUrl": "https://fwvr6vlznb.execute-api.us-east-1.amazonaws.com/prod/telemetry",
+    "emitterKeyId": "",
+    "emitterKeySecret": ""
   }
 }

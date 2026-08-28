@@ -2,6 +2,7 @@ import axios from "axios";
 import configJSON from "../../config.json"
 import { CognitoUser, CognitoRefreshToken, CognitoUserPool } from 'amazon-cognito-identity-js';
 import { isTokenExpired, endSessionAndRedirect } from "../auth/session";
+import { apiLatency } from "../../telemetry/telemetry";
 const config = configJSON;
 
 const CUP = new CognitoUserPool(config.userPoolData)
@@ -85,6 +86,8 @@ http.interceptors.request.use( async function ( config ) {
   if (selectedBizId && !config.skipBusinessContext) {
     config.headers["X-Business-Id"] = selectedBizId;
   }
+  // Telemetry: stamp request start for an API-latency sample.
+  config.metadata = { startTime: Date.now() };
   return config;
 }, function (error) {
   return Promise.reject(error);
@@ -114,10 +117,18 @@ http.interceptors.response.use(
 	(response) => {
 		// Dispatch session-activity event on successful API responses
 		window.dispatchEvent(new CustomEvent('session-activity'));
+		try {
+			const start = response.config && response.config.metadata && response.config.metadata.startTime;
+			if (start) apiLatency({ method: (response.config.method || 'get').toUpperCase(), path: response.config.url, status: response.status, durationMs: Date.now() - start });
+		} catch (_) { /* telemetry must never break requests */ }
 		return response;
 	},
 	async (error) => {
 		const originalRequest = error.config || {};
+		try {
+			const start = originalRequest.metadata && originalRequest.metadata.startTime;
+			if (start) apiLatency({ method: (originalRequest.method || 'get').toUpperCase(), path: originalRequest.url, status: error.response && error.response.status, durationMs: Date.now() - start });
+		} catch (_) { /* telemetry must never break requests */ }
 
 		if (!isSessionFailure(error)) {
 			return Promise.reject(error);

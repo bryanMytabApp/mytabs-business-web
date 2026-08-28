@@ -3,6 +3,12 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { initTelemetry } from './telemetry/telemetry';
+
+// Initialize the batched telemetry SDK (app='keeptabs') at boot. Emits a
+// heartbeat + session and wires browser lifecycle/error handlers. Safe no-op
+// until emitter credentials are provisioned (config.telemetry).
+initTelemetry();
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

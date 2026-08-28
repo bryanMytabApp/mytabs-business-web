@@ -188,10 +188,10 @@ const useLogin = () => {
         window.location.href = authenticatedUrl;
         return; // CRITICAL: Stop execution here to prevent subscription check
       } else {
-        // Team members (verifiers/scanners) should always go to verify.keeptabs.app
+        // Team members (verifiers/scanners) should always go to verify.ticket.keeptabs.app
         if (isTeamMember) {
-          console.log("Team member login - redirecting to verify.keeptabs.app");
-          const verifyUrl = `https://verify.keeptabs.app?token=${encodeURIComponent(token)}&userId=${encodeURIComponent(userIdFromToken)}`;
+          console.log("Team member login - redirecting to verify.ticket.keeptabs.app");
+          const verifyUrl = `https://verify.ticket.keeptabs.app?token=${encodeURIComponent(token)}&userId=${encodeURIComponent(userIdFromToken)}`;
           window.location.href = verifyUrl;
           return;
         }

@@ -122,3 +122,45 @@ describe("RaffleConfig - PrizeItem component focus behavior", () => {
     expect(prizeInput.value).toBe("MacBook Pro");
   });
 });
+
+describe("RaffleConfig - 50/50 split configuration", () => {
+  const navigateToSplitStep = async () => {
+    renderComponent();
+    // Select the 50/50 Raffle type card
+    const fiftyLabel = screen.getAllByText("50/50 Raffle")[0];
+    const clickableCard = fiftyLabel.closest('[class*="MuiBox-root"]');
+    await act(async () => {
+      fireEvent.click(clickableCard || fiftyLabel);
+    });
+    // One Next advances from step 0 (Raffle Type) to step 1, inner tab 0.
+    // For 50/50 that inner tab is the Pot Split panel (default 50/50 is valid).
+    await act(async () => { fireEvent.click(screen.getByText(/Next →/)); });
+    await waitFor(() => {
+      expect(screen.getByText("Pot Split")).toBeInTheDocument();
+    });
+  };
+
+  it("shows the split UI (not the prize form) for 50/50 raffles", async () => {
+    await navigateToSplitStep();
+    // Split panel is shown
+    expect(screen.getByText("Pot Split")).toBeInTheDocument();
+    expect(screen.getByLabelText("Winner share of the pot")).toBeInTheDocument();
+    // Default is 50/50
+    expect(screen.getAllByText("50%").length).toBeGreaterThanOrEqual(2);
+    // The fixed-prize form is NOT rendered
+    expect(screen.queryByLabelText("Prize Name")).not.toBeInTheDocument();
+  });
+
+  it("updates winner/organizer percentages when the slider changes", async () => {
+    await navigateToSplitStep();
+    const slider = screen.getByLabelText("Winner share of the pot");
+    // MUI Slider exposes an underlying input with a settable value
+    await act(async () => {
+      fireEvent.change(slider, { target: { value: 70 } });
+    });
+    await waitFor(() => {
+      expect(screen.getByText("70%")).toBeInTheDocument();
+      expect(screen.getByText("30%")).toBeInTheDocument();
+    });
+  });
+});

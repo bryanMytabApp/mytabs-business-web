@@ -145,7 +145,7 @@ The KeepTabs business portal (keeptabs.app) is a React-based web application for
 - **API:** https://ticket.keeptabs.app
 
 ### Ticket Acceptance
-- **URL:** verify.keeptabs.app
+- **URL:** verify.ticket.keeptabs.app
 - **Purpose:** Event check-in and validation
 
 ## Authentication Flow

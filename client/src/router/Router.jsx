@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider, redirect, Outlet } from "react-rou
 import ErrorPage from "./ErrorPage";
 import ErrorBoundary from "../components/ErrorBoundary";
 import TabsHelp from "../components/TabsHelp/TabsHelp";
+import PageTracker from "../telemetry/PageTracker";
 import { hasValidSession, clearSession, buildLoginUrl } from "../utils/auth/session";
 
 // Help context API. Set DOC_SYNC_HELP_API_URL at build time to override.
@@ -26,6 +27,7 @@ const HELP_SITE_URL =
 // can't go in App.jsx alongside other providers.
 const AppLayout = () => (
   <>
+    <PageTracker />
     <Outlet />
     <TabsHelp
       apiUrl={HELP_API_URL}
