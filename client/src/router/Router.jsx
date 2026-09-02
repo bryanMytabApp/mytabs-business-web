@@ -123,6 +123,7 @@ const AiAgentDashboard = lazy(() => import("../views/AiAgents/AiAgentDashboard")
 const AiAgentDetail = lazy(() => import("../views/AiAgents/AiAgentDetail"));
 const AiAgentRouteGuard = lazy(() => import("../components/AiAgentRouteGuard"));
 const UrbanHTXRouteGuard = lazy(() => import("../components/UrbanHTXRouteGuard"));
+const SubscriptionGuard = lazy(() => import("../components/SubscriptionGuard"));
 
 // Experience views (admin dashboard)
 const ExperiencesDashboard = lazy(() => import("../views/Experiences/ExperiencesDashboard"));
@@ -290,7 +291,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/admin",
-        element: <LazyRoute><HomeView /></LazyRoute>,
+        element: <LazyRoute><SubscriptionGuard><HomeView /></SubscriptionGuard></LazyRoute>,
         loader: () => routerHandler(true),
         children: [
           {

@@ -1,9 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getSystemSubscriptions, createCheckoutSession } from "../../services/paymentService";
+import {
+  getSystemSubscriptions,
+  createCheckoutSession,
+  getCustomerSubscription,
+} from "../../services/paymentService";
 import { parseJwt } from "../../utils/common";
 import { toast } from "react-toastify";
 import logo from "../../assets/logo.png";
+import {
+  PLAN_LEVELS,
+  planProductMix,
+  PRODUCT_NAMES,
+  pricingVersions,
+  versionForNewSignup,
+} from "../../config/pricingVersions";
+import { clearSession } from "../../utils/auth/session";
 
 const loadScript = (src) =>
   new Promise((resolve, reject) => {
@@ -15,11 +27,90 @@ const loadScript = (src) =>
     document.head.appendChild(s);
   });
 
+// Plan_Name_Map: PLAN_LEVELS is ordered Starter=level1 ... Enterprise=level4, so the
+// index in PLAN_LEVELS + 1 is the code numeric level (Req 4.1). Names come from the config,
+// not hardcoded, so the four cards render the Price_Card names.
+
+// The pricing version a NEW signup TODAY is pinned to, honoring the go-live cutover
+// (the migration version's effectiveDate = Sunday 2026-09-06). BEFORE the cutover
+// this resolves to the LEGACY (pre-migration) version; ON/AFTER, the new Price_Card
+// version — so the Subscribe page shows legacy prices until Sunday, then new ones.
+const CURRENT_VERSION =
+  versionForNewSignup(new Date()) || pricingVersions[pricingVersions.length - 1];
+
+const dollars = (cents) =>
+  `$${(cents / 100).toLocaleString(undefined, {
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
+
+// Build the four plan cards from the config: names via Plan_Name_Map, amounts from
+// the current version's Plans, feature list = that plan's product mix (Req 4.1-4.3, 4.7).
+const buildPlanCards = (interval = "monthly") =>
+  PLAN_LEVELS.map((planName, idx) => {
+    const level = idx + 1; // Starter=1 ... Enterprise=4
+    const monthlyCents = CURRENT_VERSION.planMonthlyCents[planName];
+    // Yearly = 12x monthly (matches the provisioned Stripe yearly prices). Display
+    // the per-interval amount so the card price matches what checkout will charge.
+    const amountCents = interval === "yearly" ? monthlyCents * 12 : monthlyCents;
+    // Cumulative model: each plan includes everything below it. Rather than list all
+    // 7/14/25/29 products (which overwhelms the cards), show only what THIS plan ADDS
+    // over the plan below, plus an "Everything in <lower>" note. Much shorter cards.
+    const prevName = idx > 0 ? PLAN_LEVELS[idx - 1] : null;
+    const prevIds = prevName ? planProductMix[prevName] || [] : [];
+    const prevSet = new Set(prevIds);
+    const deltaIds = (planProductMix[planName] || []).filter((pid) => !prevSet.has(pid));
+    const features = deltaIds.map((pid) => PRODUCT_NAMES[pid] || pid);
+    return {
+      id: planName.toLowerCase(),
+      level,
+      name: planName,
+      amountCents,
+      price: dollars(amountCents),
+      priceSuffix: interval === "yearly" ? "/yr" : "/mo",
+      priceSub: interval === "yearly" ? "per year" : "per month",
+      // For Starter (no lower plan) show its own features; higher plans show the delta.
+      features,
+      includesPrev: prevName, // "Everything in <prevName>, plus:" — null for Starter
+      isEnterprise: planName === "Enterprise",
+      featured: planName === "Growth", // "Most Popular"/recommended plan per the Price_Card requirement
+    };
+  });
+
+// Cards never render more than this many feature lines; the rest collapse into
+// "+N more" so no card runs long regardless of plan.
+const MAX_VISIBLE_FEATURES = 6;
+
+// Contract / custom-quote add-ons — NOT self-serve, never auto-charged (Req 4.4, 8).
+const buildContractAddons = () => [
+  {
+    id: "ai_discovery",
+    name: PRODUCT_NAMES.ai_discovery || "AI Discovery",
+    baseline: CURRENT_VERSION.aiDiscovery,
+  },
+  {
+    id: "market_intel",
+    name: PRODUCT_NAMES.market_intel || "Market Intelligence",
+    baseline: CURRENT_VERSION.marketIntel,
+  },
+];
+
+const baselineLabel = (baseline) => {
+  if (!baseline) return "Custom quote";
+  const suffix = baseline.interval === "year" ? "/yr" : "/mo";
+  return `From ${dollars(baseline.baselineCents)}${suffix}`;
+};
+
 const SubscriptionView = () => {
   const navigate = useNavigate();
+
+  // Let a logged-in-but-unsubscribed customer get back to the login page.
+  const handleBackToLogin = () => {
+    clearSession();
+    navigate("/login");
+  };
+
   const canvasRef = useRef(null);
-  const cursorRef = useRef(null);
-  const cursorDotRef = useRef(null);
   const heroRef = useRef(null);
   const headlineRef = useRef(null);
   const subRef = useRef(null);
@@ -29,6 +120,21 @@ const SubscriptionView = () => {
   const [hoveredCard, setHoveredCard] = useState(null);
   const [counts, setCounts] = useState({ advertisers: 0, fill: "0.0", speed: 0, rating: "0.0" });
   const [systemSubscriptions, setSystemSubscriptions] = useState([]);
+  // Grandfathered customer's active subscription (their ACTUAL price, not the new price) — Req 4.6.
+  const [currentSubscription, setCurrentSubscription] = useState(null);
+  // A RETURNING customer whose subscription was previously canceled/expired (no
+  // active sub, but Stripe shows a prior one) — greet them with a "restart" banner.
+  const [hadCanceled, setHadCanceled] = useState(false);
+  // Billing interval the customer chose (monthly | yearly). Drives the displayed
+  // price AND which catalog row (priceId) checkout uses, so the charge matches.
+  const [billingInterval, setBillingInterval] = useState("monthly");
+
+  // Is a customer signed in? The guard sends logged-in-but-unsubscribed users here,
+  // so the hero must make the required action — choosing a plan — immediately clear.
+  const isLoggedIn = !!localStorage.getItem("idToken");
+
+  const planCards = buildPlanCards(billingInterval);
+  const contractAddons = buildContractAddons();
 
   // Fetch system subscriptions for plan selection
   useEffect(() => {
@@ -43,37 +149,86 @@ const SubscriptionView = () => {
     fetchSubs();
   }, []);
 
-  const handleSelectPlan = async (plan, price) => {
-    const planMap = { Basic: 1, Plus: 2, Premium: 3 };
-    const level = planMap[plan];
-    // Find the yearly subscription for this plan
-    const yearlySub = systemSubscriptions.find((sub) => sub.level === level && sub.sublevel === 'yearly');
-    
-    if (!yearlySub) {
-      // Fallback to subpart page if yearly sub not found
-      const subsFiltered = systemSubscriptions.filter((sub) => sub.level === level);
-      navigate("/subpart", { state: { plan, price, paymentArray: subsFiltered } });
+  // Fetch the signed-in customer's active subscription so a grandfathered customer's
+  // current-plan card can show the price of the Plan referenced by their subscription
+  // (their actual price), not the new price (Req 4.6).
+  useEffect(() => {
+    const fetchCurrent = async () => {
+      try {
+        const userId = parseJwt(localStorage.getItem("idToken")) || localStorage.getItem("username");
+        if (!userId) return;
+        const response = await getCustomerSubscription({ userId });
+        if (response?.data?.hasSubscription) setCurrentSubscription(response.data);
+        // Returning-but-canceled: no active sub, but a prior canceled/expired one.
+        if (response?.data && !response.data.hasSubscription && response.data.hadCanceledSubscription) {
+          setHadCanceled(true);
+        }
+      } catch (e) {
+        /* not signed in / no subscription — show new-price cards only */
+      }
+    };
+    fetchCurrent();
+  }, []);
+
+  // Resolve a grandfathered customer's actual price for a plan level by matching their
+  // active subscription's priceId against the catalog rows (each carries amount+priceId).
+  // Returns null when the customer is not on this plan (or is a prospective/new customer).
+  const grandfatheredPriceForLevel = (level) => {
+    if (!currentSubscription?.priceId) return null;
+    const row = systemSubscriptions.find(
+      (sub) => sub.priceId === currentSubscription.priceId
+    );
+    if (!row || row.level !== level) return null;
+    return typeof row.amount === "number" ? dollars(row.amount) : null;
+  };
+
+  const handleSelectPlan = async (planName) => {
+    const planMap = { Starter: 1, Growth: 2, Pro: 3, Enterprise: 4 };
+    const level = planMap[planName];
+
+    // Enterprise is presented with a contact path (Req 4.7).
+    if (planName === "Enterprise") {
+      navigate("/admin/service/organization");
       return;
     }
 
-    // Go directly to Stripe checkout
+    // Select the catalog row for the CHOSEN interval (monthly/yearly) so the price
+    // sent to Stripe matches the card the customer sees. sublevel values in the
+    // catalog are "monthly" / "yearly".
+    const wantedSublevel = billingInterval === "yearly" ? "yearly" : "monthly";
+    // Match on both level AND sublevel; the level fields may be number or string.
+    const chosenSub =
+      systemSubscriptions.find(
+        (sub) => String(sub.level) === String(level) && sub.sublevel === wantedSublevel
+      ) ||
+      // Fall back to the other interval for this level if the exact one is missing.
+      systemSubscriptions.find((sub) => String(sub.level) === String(level));
+
+    if (!chosenSub) {
+      // No catalog row for this plan at all — go to the detailed subpart page.
+      const subsFiltered = systemSubscriptions.filter((sub) => String(sub.level) === String(level));
+      navigate("/subpart", { state: { plan: planName, paymentArray: subsFiltered } });
+      return;
+    }
+
+    // Go directly to Stripe checkout (Req 4.5 / 2.1 — reuse existing createCheckoutSession).
     try {
-      const userId = parseJwt(localStorage.getItem('idToken')) || localStorage.getItem('username');
+      const userId = parseJwt(localStorage.getItem("idToken")) || localStorage.getItem("username");
       if (!userId) {
         navigate("/login");
         return;
       }
-      const response = await createCheckoutSession({ userId, subscriptionId: yearlySub._id, cancelUrl: '/subscription' });
+      const response = await createCheckoutSession({ userId, subscriptionId: chosenSub._id, cancelUrl: "/subscription" });
       if (response?.url) {
         window.location.href = response.url;
       } else if (response?.sessionId) {
         window.location.href = `https://checkout.stripe.com/pay/${response.sessionId}`;
       } else {
-        toast.error('Failed to create checkout session. Please try again.');
+        toast.error("Failed to create checkout session. Please try again.");
       }
     } catch (error) {
-      console.error('Checkout error:', error);
-      toast.error(error?.response?.data?.error || 'Failed to start checkout. Please try again.');
+      console.error("Checkout error:", error);
+      toast.error(error?.response?.data?.error || "Failed to start checkout. Please try again.");
     }
   };
 
@@ -182,36 +337,18 @@ const SubscriptionView = () => {
     bootstrap();
   }, [loaded]);
 
-  // Custom cursor
-  useEffect(() => {
-    let cx = 0, cy = 0, dx = 0, dy = 0, raf;
-    const onMove = (e) => { dx = e.clientX; dy = e.clientY; if (cursorDotRef.current) cursorDotRef.current.style.transform = `translate(${dx - 4}px,${dy - 4}px)`; };
-    window.addEventListener("mousemove", onMove);
-    const lerp = () => { cx += (dx - cx) * 0.08; cy += (dy - cy) * 0.08; if (cursorRef.current) cursorRef.current.style.transform = `translate(${cx - 20}px,${cy - 20}px)`; raf = requestAnimationFrame(lerp); };
-    raf = requestAnimationFrame(lerp);
-    return () => { window.removeEventListener("mousemove", onMove); cancelAnimationFrame(raf); };
-  }, []);
-
-  const plans = [
-    { id: "premium", name: "Premium", price: "$18.98", priceSub: "per month, billed yearly", featured: true, cta: "Start Free Trial", ctaStyle: "orange", badge: "Best Value", realPrice: 227.76, billedNote: "$227.76/year", features: ["25 ad spaces", "Tour/Season space included", "Plus tier features included"] },
-    { id: "plus", name: "Plus", price: "$13.98", priceSub: "per month, billed yearly", featured: false, cta: "Purchase", ctaStyle: "dark", realPrice: 167.76, billedNote: "$167.76/year", features: ["10 ad spaces", "Dedicated ad spaces", "Basic tier features included"] },
-    { id: "basic", name: "Basic", price: "$7.99", priceSub: "per month, billed yearly", featured: false, lightBlue: true, cta: "Purchase", ctaStyle: "dark", badge: "Starter", realPrice: 95.88, billedNote: "$95.88/year", features: ["3 ad spaces", "Quick Ad Tool", "Ticketing Options", "Business QR codes"] },
-  ];
-
   const dk = "#0d1b35";
   const md = "#1a3354";
   const mu = "#2a4a6e";
   const sh = "0 1px 6px rgba(0,0,0,0.28)";
 
   return (
-    <div style={{ background: "linear-gradient(135deg, #c8a96e 0%, #a8c4a0 18%, #5bbfbf 38%, #3aaccc 55%, #2196b8 70%, #1a7ab5 85%, #1560a8 100%)", minHeight: "100vh", fontFamily: "'Nunito', sans-serif", overflowX: "hidden", cursor: "none", position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 }}>
+    <div style={{ background: "linear-gradient(135deg, #c8a96e 0%, #a8c4a0 18%, #5bbfbf 38%, #3aaccc 55%, #2196b8 70%, #1a7ab5 85%, #1560a8 100%)", minHeight: "100vh", fontFamily: "'Nunito', sans-serif", overflowX: "hidden", position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900;1000&display=swap');
         *{box-sizing:border-box;}
         .subscription-page-root{background:linear-gradient(135deg, #c8a96e 0%, #a8c4a0 18%, #5bbfbf 38%, #3aaccc 55%, #2196b8 70%, #1a7ab5 85%, #1560a8 100%) !important;}
         .Subscription-view{display:none !important;}
-        .cursor-ring{position:fixed;top:0;left:0;width:40px;height:40px;border:2px solid rgba(13,27,53,0.45);border-radius:50%;pointer-events:none;z-index:9999;transition:width .3s,height .3s;}
-        .cursor-dot{position:fixed;top:0;left:0;width:8px;height:8px;background:#f97316;border-radius:50%;pointer-events:none;z-index:10000;}
         .plan-card{transition:transform .4s cubic-bezier(.23,1,.32,1),box-shadow .4s;transform-style:preserve-3d;}
         .plan-card:hover{transform:translateY(-14px) scale(1.025) !important;}
         .orange-btn{background:linear-gradient(135deg,#f97316,#fb923c);color:white;border:none;border-radius:50px;padding:14px 36px;font-size:16px;font-weight:800;cursor:pointer;transition:transform .2s,box-shadow .2s;font-family:'Nunito',sans-serif;}
@@ -223,8 +360,6 @@ const SubscriptionView = () => {
         @keyframes gradShift{0%{background-position:0%}50%{background-position:100%}100%{background-position:0%}}
       `}</style>
 
-      <div ref={cursorRef} className="cursor-ring" />
-      <div ref={cursorDotRef} className="cursor-dot" />
       <canvas ref={canvasRef} style={{ position: "fixed", top: 0, left: 0, zIndex: 0, pointerEvents: "none" }} />
 
       {/* NAV */}
@@ -232,18 +367,54 @@ const SubscriptionView = () => {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <img src={logo} alt="Tabs" style={{ height: 36 }} />
         </div>
+        <button
+          type="button"
+          data-testid="subscription-logout"
+          onClick={handleBackToLogin}
+          className="ghost-btn"
+          style={{ padding: "10px 22px", fontSize: 14 }}
+        >
+          Log out
+        </button>
       </nav>
 
       {/* HERO */}
-      <section ref={heroRef} style={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", padding: "80px 8% 90px", maxWidth: 1300, margin: "0 auto" }}>
+      <section ref={heroRef} style={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", padding: "80px 8% 40px", maxWidth: 1300, margin: "0 auto" }}>
+        {isLoggedIn && hadCanceled && (
+          <div data-testid="restart-banner" style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "linear-gradient(135deg,#f97316,#fb923c)", color: "white", borderRadius: 50, padding: "10px 22px", marginBottom: 24, fontWeight: 800, fontSize: 14, boxShadow: "0 8px 24px rgba(249,115,22,.32)" }}>
+            <span style={{ fontSize: 16, lineHeight: 1 }}>↻</span>
+            Welcome back — your subscription was canceled. Pick a plan below to restart.
+          </div>
+        )}
+        {isLoggedIn && !hadCanceled && (
+          <div data-testid="choose-plan-banner" style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(13,27,53,0.9)", color: "white", borderRadius: 50, padding: "10px 22px", marginBottom: 24, fontWeight: 800, fontSize: 14, boxShadow: "0 8px 24px rgba(13,27,53,.28)" }}>
+            <span style={{ color: "#fb923c", fontSize: 18, lineHeight: 1 }}>●</span>
+            Choose a plan below to continue to your dashboard.
+          </div>
+        )}
         <h1 ref={headlineRef} style={{ opacity: 1, fontSize: "clamp(46px,7vw,96px)", fontWeight: 1000, lineHeight: 0.95, color: dk, marginBottom: 28, maxWidth: 640, textShadow: "0 2px 10px rgba(0,0,0,.18)" }}>
-          Unlock<br /><span style={{ background: "linear-gradient(90deg,#0d4a8a,#f97316,#0d4a8a)", backgroundSize: "200%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", animation: "gradShift 5s ease infinite" }}>Ad Space.</span>
+          {isLoggedIn ? (
+            hadCanceled ? (
+              <>Welcome<br /><span style={{ background: "linear-gradient(90deg,#0d4a8a,#f97316,#0d4a8a)", backgroundSize: "200%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", animation: "gradShift 5s ease infinite" }}>Back.</span></>
+            ) : (
+              <>Choose your<br /><span style={{ background: "linear-gradient(90deg,#0d4a8a,#f97316,#0d4a8a)", backgroundSize: "200%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", animation: "gradShift 5s ease infinite" }}>Plan.</span></>
+            )
+          ) : (
+            <>Unlock<br /><span style={{ background: "linear-gradient(90deg,#0d4a8a,#f97316,#0d4a8a)", backgroundSize: "200%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", animation: "gradShift 5s ease infinite" }}>Ad Space.</span></>
+          )}
         </h1>
-        <p ref={subRef} style={{ opacity: 1, color: md, fontSize: "clamp(15px,1.7vw,19px)", maxWidth: 460, lineHeight: 1.75, marginBottom: 44, fontWeight: 600, textShadow: sh }}>
-          Pick a plan that fits your business — and start reaching local customers in minutes.
+        <p ref={subRef} style={{ opacity: 1, color: md, fontSize: "clamp(15px,1.7vw,19px)", maxWidth: 480, lineHeight: 1.75, marginBottom: 44, fontWeight: 600, textShadow: sh }}>
+          {isLoggedIn
+            ? (hadCanceled
+                ? "Your subscription was canceled, but your account and data are still here. Pick a plan below to restart and pick up right where you left off."
+                : "You're signed in — pick the plan that fits your business to unlock your dashboard. It only takes a minute.")
+            : "Pick a plan that fits your business — and start reaching local customers in minutes."}
         </p>
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 80 }}>
-          <button className="hero-cta orange-btn" onClick={() => pricingRef.current?.scrollIntoView({ behavior: "smooth" })}>See Plans</button>
+          <button data-testid="see-plans-cta" className="hero-cta orange-btn" style={{ display: "inline-flex", alignItems: "center", gap: 10 }} onClick={() => pricingRef.current?.scrollIntoView({ behavior: "smooth" })}>
+            {isLoggedIn ? "Choose a plan" : "See plans"}
+            <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1 }}>↓</span>
+          </button>
         </div>
         <div style={{ display: "flex", gap: "clamp(20px,5vw,68px)", flexWrap: "wrap" }}>
           {[{ val: counts.advertisers, suffix: "+", label: "Active Advertisers" }, { val: counts.fill, suffix: "%", label: "Avg Fill Rate" }, { val: counts.speed || "< 3", suffix: " min", label: "Time to Go Live" }, { val: counts.rating, suffix: "★", label: "Avg Rating" }].map((s, i) => (
@@ -256,47 +427,121 @@ const SubscriptionView = () => {
       </section>
 
       {/* PRICING */}
-      <section ref={pricingRef} style={{ position: "relative", zIndex: 2, padding: "60px 24px 100px", maxWidth: 1160, margin: "0 auto" }}>
+      <section ref={pricingRef} style={{ position: "relative", zIndex: 2, padding: "12px 24px 100px", maxWidth: 1300, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div className="pricing-eyebrow" style={{ color: "#f97316", fontSize: 11, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 16, textShadow: sh }}>Pricing Plans</div>
           <h2 className="pricing-headline" style={{ color: dk, fontSize: "clamp(28px,3.5vw,48px)", fontWeight: 1000, lineHeight: 1.1, marginBottom: 18, textShadow: "0 2px 8px rgba(0,0,0,.14)" }}>
             Pick your power level.
           </h2>
-          <p style={{ color: md, fontSize: 16, maxWidth: 420, margin: "0 auto", fontWeight: 600, textShadow: sh }}>Every plan starts with a free 30-day trial. No credit card surprises.</p>
+          <p style={{ color: md, fontSize: 16, maxWidth: 460, margin: "0 auto 22px", fontWeight: 600, textShadow: sh }}>Every plan includes everything in the plan below it. Choose monthly or yearly billing.</p>
+          <div data-testid="billing-interval-toggle" role="group" aria-label="Billing interval" style={{ display: "inline-flex", background: "rgba(255,255,255,.5)", border: "1px solid rgba(255,255,255,.7)", borderRadius: 50, padding: 4, gap: 4 }}>
+            {[{ id: "monthly", label: "Monthly" }, { id: "yearly", label: "Yearly" }].map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                data-testid={`billing-${opt.id}`}
+                aria-pressed={billingInterval === opt.id}
+                onClick={() => setBillingInterval(opt.id)}
+                style={{
+                  border: "none",
+                  cursor: "pointer",
+                  borderRadius: 50,
+                  padding: "9px 26px",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  fontFamily: "'Nunito',sans-serif",
+                  color: billingInterval === opt.id ? "white" : dk,
+                  background: billingInterval === opt.id ? "linear-gradient(135deg,#f97316,#fb923c)" : "transparent",
+                  boxShadow: billingInterval === opt.id ? "0 6px 18px rgba(249,115,22,.35)" : "none",
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 24, perspective: "1200px" }}>
-          {plans.map((plan, i) => (
-            <div key={plan.id} ref={el => cardsRef.current[i] = el} className="plan-card" onMouseEnter={() => setHoveredCard(plan.id)} onMouseLeave={() => setHoveredCard(null)}
-              style={{ opacity: 1, position: "relative", borderRadius: 28, overflow: "hidden", background: plan.featured ? "linear-gradient(148deg,#1fb8c8 0%,#0d8fa2 55%,#0a6e80 100%)" : plan.lightBlue ? "linear-gradient(148deg,#e0f4ff 0%,#b8e4f8 55%,#8dd4f0 100%)" : "rgba(255,255,255,0.58)", backdropFilter: "blur(22px)", border: plan.featured || plan.lightBlue ? "none" : hoveredCard === plan.id ? "1px solid rgba(255,255,255,0.95)" : "1px solid rgba(255,255,255,0.68)", boxShadow: plan.featured ? "0 30px 80px rgba(10,110,128,.42)" : plan.lightBlue ? "0 30px 80px rgba(100,180,230,.3)" : hoveredCard === plan.id ? "0 22px 64px rgba(0,0,0,.17)" : "0 8px 30px rgba(0,0,0,.1)", marginTop: plan.featured ? -26 : 0, cursor: "pointer" }}>
-              {plan.featured && plan.badge && (<div style={{ background: "rgba(255,255,255,.17)", padding: "10px 24px", textAlign: "center", fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", color: "white", textTransform: "uppercase" }}>✦ {plan.badge}</div>)}
-              {!plan.featured && plan.badge && (<div style={{ position: "absolute", top: 20, right: 20, background: "#f97316", color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", padding: "5px 14px", borderRadius: 20, textTransform: "uppercase" }}>{plan.badge}</div>)}
-              <div style={{ padding: "40px 36px 38px" }}>
-                {plan.price === "Free" ? (<div style={{ fontSize: 58, fontWeight: 1000, color: "white", lineHeight: 1, marginBottom: 8 }}>FREE</div>) : (
-                  <div style={{ display: "flex", alignItems: "flex-start", lineHeight: 1, marginBottom: 8 }}>
-                    <span style={{ fontSize: 22, fontWeight: 900, color: plan.featured ? "white" : dk, marginTop: 10 }}>$</span>
-                    <span style={{ fontSize: 70, fontWeight: 1000, color: plan.featured ? "white" : dk, lineHeight: 1 }}>{plan.price.replace("$", "")}</span>
-                    <span style={{ fontSize: 14, color: plan.featured ? "rgba(255,255,255,.7)" : mu, alignSelf: "flex-end", marginBottom: 12, marginLeft: 4, fontWeight: 700 }}>/mo</span>
-                  </div>
-                )}
-                <div style={{ color: plan.featured ? "rgba(255,255,255,.72)" : mu, fontSize: 13, marginBottom: 22, fontWeight: 600 }}>{plan.priceSub}</div>
-                <div style={{ fontSize: 26, fontWeight: 900, color: plan.featured ? "white" : dk, marginBottom: 22 }}>{plan.name}</div>
-                <div style={{ height: 1, background: plan.featured ? "rgba(255,255,255,.2)" : "rgba(13,27,53,.12)", marginBottom: 22 }} />
-                <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 12, marginBottom: 34, padding: 0 }}>
-                  {plan.features.map((f, fi) => (<li key={fi} style={{ display: "flex", alignItems: "center", color: plan.featured ? "white" : md, fontSize: 15, fontWeight: 700 }}><span style={{ color: plan.featured ? "rgba(255,255,255,.85)" : "#f97316", marginRight: 10, fontWeight: 900 }}>✓</span>{f}</li>))}
-                </ul>
-                <button className={plan.ctaStyle === "orange" ? "orange-btn" : "dark-btn"} style={{ width: "100%", fontSize: 16 }} onClick={() => handleSelectPlan(plan.name, plan.realPrice)}>{plan.cta}</button>
-                <p style={{ color: plan.featured ? "rgba(255,255,255,.58)" : mu, fontSize: 11, textAlign: "center", marginTop: 16, lineHeight: 1.6, fontWeight: 600 }}>
-                  Free 30-day trial then {plan.billedNote || "$95.88/year"}.<br />First time members only. Terms apply.
-                </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 24, perspective: "1200px" }}>
+          {planCards.map((plan, i) => {
+            const grandfatheredPrice = grandfatheredPriceForLevel(plan.level);
+            const isCurrentPlan = grandfatheredPrice !== null;
+            // A grandfathered customer's current-plan card shows THEIR actual price
+            // (from the Plan their subscription references), not the new price (Req 4.6).
+            const displayPrice = isCurrentPlan ? grandfatheredPrice : plan.price;
+            return (
+              <div key={plan.id} data-testid={`plan-card-${plan.id}`} ref={el => cardsRef.current[i] = el} className="plan-card" onMouseEnter={() => setHoveredCard(plan.id)} onMouseLeave={() => setHoveredCard(null)}
+                style={{ opacity: 1, position: "relative", borderRadius: 28, overflow: "hidden", background: plan.featured ? "linear-gradient(148deg,#1fb8c8 0%,#0d8fa2 55%,#0a6e80 100%)" : plan.isEnterprise ? "linear-gradient(148deg,#0d1b35 0%,#12294d 55%,#0a1e3c 100%)" : "rgba(255,255,255,0.58)", backdropFilter: "blur(22px)", border: plan.featured || plan.isEnterprise ? "none" : hoveredCard === plan.id ? "1px solid rgba(255,255,255,0.95)" : "1px solid rgba(255,255,255,0.68)", boxShadow: plan.featured ? "0 30px 80px rgba(10,110,128,.42)" : plan.isEnterprise ? "0 30px 80px rgba(13,27,53,.42)" : hoveredCard === plan.id ? "0 22px 64px rgba(0,0,0,.17)" : "0 8px 30px rgba(0,0,0,.1)", marginTop: plan.featured ? -26 : 0, cursor: "pointer" }}>
+                {plan.featured && (<div style={{ background: "rgba(255,255,255,.17)", padding: "10px 24px", textAlign: "center", fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", color: "white", textTransform: "uppercase" }}>✦ Most Popular</div>)}
+                {isCurrentPlan && (<div style={{ position: "absolute", top: 20, right: 20, background: "#10B981", color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", padding: "5px 14px", borderRadius: 20, textTransform: "uppercase" }}>Your Plan</div>)}
+                <div style={{ padding: "40px 32px 34px" }}>
+                  {plan.isEnterprise ? (
+                    // Enterprise is a custom-quote / contact-sales plan — NO price shown.
+                    <div style={{ display: "flex", alignItems: "flex-end", lineHeight: 1, marginBottom: 8 }}>
+                      <span style={{ fontSize: 42, fontWeight: 1000, color: "white", lineHeight: 1 }}>Custom</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "flex-start", lineHeight: 1, marginBottom: 8 }}>
+                      <span style={{ fontSize: 22, fontWeight: 900, color: plan.featured ? "white" : dk, marginTop: 10 }}>$</span>
+                      <span style={{ fontSize: 64, fontWeight: 1000, color: plan.featured ? "white" : dk, lineHeight: 1 }}>{displayPrice.replace("$", "")}</span>
+                      <span style={{ fontSize: 14, color: plan.featured ? "rgba(255,255,255,.7)" : mu, alignSelf: "flex-end", marginBottom: 12, marginLeft: 4, fontWeight: 700 }}>{plan.priceSuffix}</span>
+                    </div>
+                  )}
+                  {plan.isEnterprise && (
+                    <div style={{ color: "rgba(255,255,255,.72)", fontSize: 13, marginBottom: 22, fontWeight: 600 }}>
+                      tailored pricing — contact sales
+                    </div>
+                  )}
+                  {isCurrentPlan && (
+                    <div style={{ color: plan.featured || plan.isEnterprise ? "rgba(255,255,255,.72)" : mu, fontSize: 13, marginBottom: 22, fontWeight: 600 }}>
+                      your current price
+                    </div>
+                  )}
+                  <div style={{ fontSize: 26, fontWeight: 900, color: plan.featured || plan.isEnterprise ? "white" : dk, marginBottom: 22 }}>{plan.name}</div>
+                  <div style={{ height: 1, background: plan.featured || plan.isEnterprise ? "rgba(255,255,255,.2)" : "rgba(13,27,53,.12)", marginBottom: 22 }} />
+                  {plan.includesPrev && (
+                    <div style={{ color: plan.featured || plan.isEnterprise ? "rgba(255,255,255,.9)" : dk, fontSize: 13, fontWeight: 800, marginBottom: 12 }}>
+                      Everything in {plan.includesPrev}, plus:
+                    </div>
+                  )}
+                  <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 10, marginBottom: 30, padding: 0 }}>
+                    {plan.features.slice(0, MAX_VISIBLE_FEATURES).map((f, fi) => (<li key={fi} style={{ display: "flex", alignItems: "center", color: plan.featured || plan.isEnterprise ? "white" : md, fontSize: 14, fontWeight: 700 }}><span style={{ color: plan.featured || plan.isEnterprise ? "rgba(255,255,255,.85)" : "#f97316", marginRight: 10, fontWeight: 900 }}>✓</span>{f}</li>))}
+                    {plan.features.length > MAX_VISIBLE_FEATURES && (
+                      <li style={{ display: "flex", alignItems: "center", color: plan.featured || plan.isEnterprise ? "rgba(255,255,255,.75)" : mu, fontSize: 13, fontWeight: 700, fontStyle: "italic" }}>
+                        <span style={{ color: plan.featured || plan.isEnterprise ? "rgba(255,255,255,.6)" : "#f97316", marginRight: 10, fontWeight: 900 }}>+</span>
+                        {plan.features.length - MAX_VISIBLE_FEATURES} more
+                      </li>
+                    )}
+                  </ul>
+                  <button className={plan.isEnterprise ? "orange-btn" : plan.featured ? "orange-btn" : "dark-btn"} style={{ width: "100%", fontSize: 16 }} onClick={() => handleSelectPlan(plan.name)}>
+                    {plan.isEnterprise ? "Contact Sales" : "Get Started"}
+                  </button>
+                  {plan.isEnterprise && (
+                    <p style={{ color: "rgba(255,255,255,.58)", fontSize: 11, textAlign: "center", marginTop: 16, lineHeight: 1.6, fontWeight: 600 }}>
+                      Multi-location, org admin & consolidated billing. Contracted integrations and SLAs available.
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        <div style={{ marginTop: 54, textAlign: "center", padding: "34px 40px", background: "rgba(255,255,255,.48)", backdropFilter: "blur(18px)", borderRadius: 20, border: "1px solid rgba(255,255,255,.68)" }}>
-          <span style={{ color: md, fontSize: 15, fontWeight: 700 }}>Need more than 25 ad spaces? </span>
-          <a href="/admin/service/organization" style={{ color: "#1560a8", fontWeight: 900, fontSize: 15, textDecoration: "none", borderBottom: "2px solid #1560a8" }}>Talk to us about Enterprise →</a>
+        {/* CONTRACT ADD-ONS — AI Discovery / Market Intelligence: contact us, not self-serve (Req 4.4, 8) */}
+        <div style={{ marginTop: 56 }}>
+          <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <div style={{ color: "#f97316", fontSize: 11, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 10, textShadow: sh }}>Contract Add-ons</div>
+            <h3 style={{ color: dk, fontSize: "clamp(22px,2.6vw,32px)", fontWeight: 1000, marginBottom: 8, textShadow: "0 2px 8px rgba(0,0,0,.12)" }}>Custom-quote products</h3>
+            <p style={{ color: md, fontSize: 15, maxWidth: 480, margin: "0 auto", fontWeight: 600, textShadow: sh }}>These are contract offerings, not self-serve. Talk to us for a custom quote — nothing is auto-charged.</p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 20, maxWidth: 760, margin: "0 auto" }}>
+            {contractAddons.map((addon) => (
+              <div key={addon.id} data-testid={`contract-addon-${addon.id}`} style={{ borderRadius: 22, padding: "28px 28px", background: "rgba(255,255,255,.5)", backdropFilter: "blur(18px)", border: "1px solid rgba(255,255,255,.68)" }}>
+                <div style={{ fontSize: 20, fontWeight: 900, color: dk, marginBottom: 6 }}>{addon.name}</div>
+                <div style={{ fontSize: 13, color: mu, fontWeight: 700, marginBottom: 16 }}>{baselineLabel(addon.baseline)} · contract</div>
+                <button className="ghost-btn" style={{ width: "100%", fontSize: 15 }} onClick={() => navigate("/admin/service/organization")}>Contact us</button>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

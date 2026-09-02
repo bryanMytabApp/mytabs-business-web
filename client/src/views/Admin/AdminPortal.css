@@ -218,35 +218,415 @@ tr:hover {
   background-color: #5a6268;
 }
 
-/* Tab buttons */
+/* Tab buttons — segmented pill control matching the Events page (.ev-tabs/.ev-tab) */
 .tab-buttons {
   display: flex;
-  gap: 0;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  overflow: hidden;
+  gap: 4px;
+  background: rgba(0, 80, 160, 0.06);
+  padding: 4px;
+  border-radius: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tab-buttons button {
-  padding: 10px 20px;
+  flex-shrink: 0;
+  padding: 8px 16px;
   border: none;
-  background: white;
+  background: none;
+  border-radius: 9px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
+  color: #5a6b7b;
+  white-space: nowrap;
   transition: all 0.2s;
-  border-right: 1px solid #ddd;
-}
-
-.tab-buttons button:last-child {
-  border-right: none;
 }
 
 .tab-buttons button.active {
-  background: #7B1FA2;
-  color: white;
+  background: #0077cc;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 119, 204, 0.25);
 }
 
 .tab-buttons button:hover:not(.active) {
-  background: #f5f5f5;
+  color: #0077cc;
+  background: rgba(0, 119, 204, 0.08);
+}
+
+/* Pricing Console (Task 9) */
+.pricing-console h2 {
+  font-size: 24px;
+  color: #333;
+}
+
+.pricing-console h3 {
+  font-size: 16px;
+  color: #333;
+  margin: 0 0 10px 0;
+}
+
+.pricing-panel {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.pricing-status-row {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+.pricing-console-notice {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.pricing-console-error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+/* Pricing Console — business-first redesign */
+.pricing-console h4 {
+  font-size: 14px;
+  color: #333;
+}
+
+.pricing-status-compact {
+  padding: 12px 16px;
+}
+
+.pricing-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pricing-status-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pricing-status-meta {
+  font-size: 13px;
+  color: #444;
+}
+
+.pricing-plan-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pricing-business-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pricing-business-id {
+  font-family: monospace;
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.pricing-business-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pricing-preview-note {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #6d4c00;
+  margin-top: 10px;
+}
+
+.pricing-product-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 4px 16px;
+}
+
+/* Bounded, scrollable step panel: the plan cards + heading stay put, the
+   product list scrolls internally, and the Back/Next footer is always pinned
+   to the bottom (so long product mixes like Enterprise's 30 items never push
+   Next off-screen). */
+.pricing-panel--scroll {
+  display: flex;
+  flex-direction: column;
+  /* Cap to the viewport so the footer stays visible. The subtracted space
+     accounts for the topbar + step pill bar + panel margins above it. */
+  max-height: calc(100vh - 220px);
+}
+
+/* The only region allowed to scroll. flex:1 lets it consume the leftover
+   height between the fixed content above and the pinned footer below. */
+.pricing-product-scroll {
+  flex: 1 1 auto;
+  min-height: 120px;
+  overflow-y: auto;
+  /* Room so the last row isn't flush against the scrollbar/edge. */
+  padding-right: 4px;
+}
+
+/* Keep the footer from being squeezed by the flex layout. */
+.pricing-panel--scroll .pc-foot {
+  flex: 0 0 auto;
+}
+
+.pricing-product-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #333;
+  padding: 2px 0;
+}
+
+.pricing-addon-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pricing-inline-note {
+  color: #777;
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+
+.pricing-business-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pricing-action-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pricing-advanced {
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 8px !important;
+  margin-bottom: 16px;
+}
+
+.pricing-advanced-block {
+  margin-bottom: 12px;
+}
+
+/* Pricing Console — guided stepped workflow (Req 12).
+   Mirrors the Events "Create Event" stepper (ecn-steps / ecn-step-btn):
+   a rounded pill bar, the current step is #0077cc filled with a soft shadow,
+   completed steps read green with a ✓. Replicated here (pc-*) so the console
+   matches the Events look without depending on the Events-scoped <style> block. */
+.pc-steps {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1.5px solid rgba(200, 220, 240, 0.6);
+  box-shadow: 0 4px 20px rgba(0, 100, 180, 0.06);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+
+.pc-step-btn {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #5a738a;
+  cursor: pointer;
+  transition: all 0.22s;
+  background: none;
+  white-space: nowrap;
+}
+
+.pc-step-btn:hover:not(.cur) {
+  background: rgba(0, 119, 204, 0.06);
+}
+
+.pc-step-btn.cur {
+  background: #0077cc;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 119, 204, 0.25);
+}
+
+.pc-step-btn.done {
+  color: #1ab76b;
+  font-weight: 600;
+}
+
+/* Stepped layout: main panel + running side summary (like EventCreateNew's SidePanel). */
+.pc-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.pc-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.pc-side {
+  width: 260px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 16px;
+}
+
+.pc-side-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.pc-side-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #8a9ab0;
+  margin: 0 0 10px;
+}
+
+.pc-side-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f3f5;
+  font-size: 13px;
+}
+
+.pc-side-row:last-child {
+  border-bottom: none;
+}
+
+.pc-side-l {
+  color: #8a9ab0;
+  font-weight: 600;
+}
+
+.pc-side-v {
+  color: #2d3748;
+  font-weight: 700;
+  text-align: right;
+  word-break: break-word;
+}
+
+/* Step footer with Back / Next (mirrors ecn-foot). */
+.pc-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Plan level / version selectable cards (mirror ecn-visc radio cards). */
+.pc-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.pc-choice {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+}
+
+.pc-choice:hover {
+  border-color: #b9d6ec;
+  background: #fafcff;
+}
+
+.pc-choice.sel {
+  border-color: #0077cc;
+  background: #f0f8ff;
+  box-shadow: 0 0 0 2px rgba(0, 119, 204, 0.14);
+}
+
+.pc-choice-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #2d3748;
+}
+
+.pc-choice-sub {
+  font-size: 12px;
+  color: #8a9ab0;
+  margin-top: 3px;
+}
+
+.pc-choice-price {
+  font-size: 16px;
+  font-weight: 900;
+  color: #0077cc;
+  margin-top: 6px;
+}
+
+.pc-warn {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #6d4c00;
+  margin-top: 10px;
+}
+
+@media (max-width: 860px) {
+  .pc-layout {
+    flex-direction: column;
+  }
+  .pc-side {
+    width: 100%;
+    position: static;
+  }
 }

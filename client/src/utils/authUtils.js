@@ -36,7 +36,7 @@ export const getCurrentUserId = () => {
 /**
  * Super admin user IDs (from database)
  */
-const SUPER_ADMIN_USERNAMES = ['urbanhtx', 'findhouston'];
+const SUPER_ADMIN_USERNAMES = ['urbanhtx', 'findhouston', 'vsmike2500'];
 
 /**
  * Get username from JWT token

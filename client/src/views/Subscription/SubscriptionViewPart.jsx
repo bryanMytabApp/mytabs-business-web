@@ -6,29 +6,43 @@ import {useStripe} from "@stripe/react-stripe-js";
 import {createCheckoutSession, updateCustomerSubscription} from "../../services/paymentService";
 import {toast} from "react-toastify";
 import {parseJwt} from "../../utils/common";
+import {PLAN_LEVELS, pricingVersions} from "../../config/pricingVersions";
 
 let userId;
-const SUBSCRIPTION_PLANS = ["Basic", "Plus", "Premium"];
+// Price_Card plan levels in order (Starter=1 ... Enterprise=4) — replaces Basic/Plus/Premium.
+const SUBSCRIPTION_PLANS = PLAN_LEVELS;
 
-// Prices from Stripe (in display format)
-const PRICES = {
-  Basic:   { yearly: { perMonth: '7.99',  total: 95.88 },  quarterly: { perMonth: '10.99', total: 32.97 }, monthly: { perMonth: '13.99', total: 13.99 } },
-  Plus:    { yearly: { perMonth: '13.98', total: 167.76 }, quarterly: { perMonth: '16.98', total: 50.94 }, monthly: { perMonth: '19.98', total: 19.98 } },
-  Premium: { yearly: { perMonth: '18.98', total: 227.76 }, quarterly: { perMonth: '21.98', total: 65.94 }, monthly: { perMonth: '24.98', total: 24.98 } },
-};
+// The current (latest) pricing version — the New_Price_Set (source of amounts, not hardcoded).
+const CURRENT_VERSION = pricingVersions[pricingVersions.length - 1];
+
+// Build display prices per plan from the config's monthly amount. Yearly/quarterly totals
+// are derived from the monthly amount (12x / 3x) so displayed prices match the version's Plans.
+const money = (cents) => (cents / 100).toFixed(2);
+const buildPrices = () =>
+  PLAN_LEVELS.reduce((acc, planName) => {
+    const monthlyCents = CURRENT_VERSION.planMonthlyCents[planName] || 0;
+    acc[planName] = {
+      yearly: { perMonth: money(monthlyCents), total: Number(money(monthlyCents * 12)) },
+      quarterly: { perMonth: money(monthlyCents), total: Number(money(monthlyCents * 3)) },
+      monthly: { perMonth: money(monthlyCents), total: Number(money(monthlyCents)) },
+    };
+    return acc;
+  }, {});
+
+const PRICES = buildPrices();
 
 const SubscriptionViewPart = () => {
   const stripe = useStripe();
   const location = useLocation();
   const navigate = useNavigate();
-  const {plan, paymentArray, isUpdating} = location.state || { plan: "Basic", price: 0, paymentArray: [], isUpdating: false };
+  const {plan, paymentArray, isUpdating} = location.state || { plan: "Starter", price: 0, paymentArray: [], isUpdating: false };
 
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [checkoutMounted, setCheckoutMounted] = useState(false);
   const [checkoutInstance, setCheckoutInstance] = useState(null);
 
-  const planPrices = PRICES[plan] || PRICES.Basic;
+  const planPrices = PRICES[plan] || PRICES.Starter;
 
   useEffect(() => {
     const token = localStorage.getItem("idToken");

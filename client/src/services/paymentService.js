@@ -45,6 +45,15 @@ export const getCustomerSubscription = async (userIdObj) => {
   }
 };
 
+// Reads the DynamoDB Subscription entity row for a user (the source of truth that
+// includes EXEMPT accounts — billingMode='exempt' rows have no Stripe subscription).
+// Used by the subscription gate so exempt customers are recognized as subscribed.
+// Returns the first row (or null); may 404/empty for users with no row.
+export const getUserPremiumSubscription = async (userId) => {
+  const response = await http.get(`subscription/${encodeURIComponent(userId)}`);
+  return response;
+};
+
 export const cancelCustomerSubscription = async (userId) => {
   try {
     const response = await http.post( "payments/subscription/cancel", {userId} );
