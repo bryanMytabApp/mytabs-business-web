@@ -585,9 +585,10 @@ const PricingConsole = ({
     if (!businessInfo) return;
     const cfg = CONTRACT_PRODUCTS.find((p) => p.value === product);
     const turningOn = !addonOn(product);
-    // The contract-addon endpoint assigns/grants the add-on for this business.
-    // (Toggling ON assigns it; there is no dedicated revoke endpoint, so OFF is
-    // surfaced as a re-assign with a note — kept honest, no invented call.)
+    // The contract-addon endpoint assigns OR unassigns the add-on for this business.
+    // Toggling ON grants the contract entitlement; toggling OFF sends
+    // `assigned: false`, which cancels (soft-deletes) it. A contract add-on has no
+    // Stripe object, so neither path ever charges/refunds.
     const body = {
       // OWNER/payer userId (Business PK) — the entitlement is keyed by userId +
       // serviceId in User_Services, so the endpoint REQUIRES this (else it 400s).
@@ -595,12 +596,12 @@ const PricingConsole = ({
       businessId: businessInfo.id,
       product,
       interval: cfg?.defaultInterval || 'month',
-      ...(turningOn ? {} : { note: 'admin toggled off in pricing console' }),
+      assigned: turningOn,
     };
-    run(`${turningOn ? 'Assign' : 'Update'} ${cfg?.label || product}`, async () => {
+    run(`${turningOn ? 'Assign' : 'Unassign'} ${cfg?.label || product}`, async () => {
       await call('admin/pricing/contract-addon', { method: 'POST', body });
-      // Re-fetch the subscriber status so the toggle reflects the now-assigned
-      // add-on (contractAddons) instead of flipping back to "not assigned".
+      // Re-fetch the subscriber status so the toggle reflects the new state
+      // (assigned add-on appears in contractAddons; an unassigned one no longer does).
       await loadSubStatus(businessInfo.id, businessInfo.ownerUserId);
     });
   };

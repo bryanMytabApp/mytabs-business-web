@@ -70,7 +70,12 @@ const mockFetchRouting = (subStatusPayload = SUB_STATUS_MATCHES) => {
     if (typeof url === "string" && url.includes("/admin/pricing/contract-addon")) {
       try {
         const b = JSON.parse((opts && opts.body) || "{}");
-        if (b.product) assigned.add(b.product);
+        // Honor the assign/unassign flag: assigned:false removes the add-on
+        // (mirrors the endpoint soft-deleting the User_Services entitlement).
+        if (b.product) {
+          if (b.assigned === false) assigned.delete(b.product);
+          else assigned.add(b.product);
+        }
       } catch (e) { /* ignore */ }
       return Promise.resolve({ ok: true, status: 200, text: async () => JSON.stringify({ ok: true }) });
     }
@@ -515,11 +520,60 @@ describe("PricingConsole (guided stepped workflow)", () => {
       );
     await waitFor(() => expect(statusCalls().length).toBeGreaterThanOrEqual(2));
     await waitFor(() => {
-      const sw = within(screen.getByTestId("pc-panel-5"))
-        .getByTestId("addon-toggle-ai_discovery")
-        .querySelector('input[type="checkbox"]');
+      const sw = within(
+        within(screen.getByTestId("pc-panel-5")).getByTestId("addon-toggle-ai_discovery")
+      ).getByRole("checkbox");
       expect(sw).toBeChecked();
     });
+  });
+
+  // ── Step 5 (Add-ons) toggling OFF unassigns — the reported bug: could turn on
+  //    but not off. The toggle must send assigned:false and then read as unchecked.
+  it("Step 5 (Add-ons) toggling an ASSIGNED add-on OFF sends assigned:false and the switch turns off", async () => {
+    isSuperAdmin.mockReturnValue(true);
+    const user = userEvent.setup();
+
+    // Seed the subscriber status with AI Discovery ALREADY assigned so the switch
+    // starts ON. The routing mock will remove it when it sees assigned:false.
+    global.fetch = mockFetchRouting({
+      ...SUB_STATUS_MATCHES,
+      contractAddons: [{ serviceId: "ai_discovery", type: "contract", contractStatus: "active" }],
+    });
+
+    render(<PricingConsole selectedSubscribers={[BIZ]} businesses={[BIZ]} />);
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+
+    await advance(user, 4); // → step 5 (Add-ons)
+    const panel = await screen.findByTestId("pc-panel-5");
+
+    // The AI Discovery switch starts checked (assigned).
+    const switchInput = () =>
+      within(
+        within(screen.getByTestId("pc-panel-5")).getByTestId("addon-toggle-ai_discovery")
+      ).getByRole("checkbox");
+    await waitFor(() => expect(switchInput()).toBeChecked());
+
+    // Toggle it OFF.
+    await user.click(within(panel).getByTestId("addon-toggle-ai_discovery"));
+
+    // The POST must carry assigned:false (the unassign path), not a re-assign.
+    const offCall = await waitFor(() => {
+      const c = global.fetch.mock.calls.find(
+        (x) =>
+          typeof x[0] === "string" &&
+          x[0].includes("admin/pricing/contract-addon") &&
+          x[1] &&
+          JSON.parse(x[1].body).assigned === false
+      );
+      expect(c).toBeTruthy();
+      return c;
+    });
+    const offBody = JSON.parse(offCall[1].body);
+    expect(offBody.product).toBe("ai_discovery");
+    expect(offBody.assigned).toBe(false);
+
+    // After the status refetch, the add-on is gone → the switch reads unchecked.
+    await waitFor(() => expect(switchInput()).not.toBeChecked());
   });
 
   // ── Step 5 (Add-ons) is optional/skippable — Next works with none selected ───
