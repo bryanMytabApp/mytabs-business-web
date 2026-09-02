@@ -120,6 +120,67 @@ if [ -z "$AWS_ACCOUNT" ]; then
 fi
 ok "AWS Account: $AWS_ACCOUNT"
 
+# Step 4b: Ensure CloudFront serves compressed, cacheable assets (idempotent)
+#
+# Root cause of slow loads: the default cache behavior had Compress=true but
+# was attached to the "Managed-CachingDisabled" cache policy. That managed
+# policy disables caching AND disables gzip/brotli in the cache key, so
+# CloudFront served the ~466KB JS bundle uncompressed on every request
+# (x-cache: Miss). Compression requires BOTH Compress=true on the behavior
+# AND a cache policy with EnableAcceptEncodingGzip/Brotli=true.
+#
+# Fix: switch the default behavior to the managed "Managed-CachingOptimized"
+# policy (gzip+brotli on, honors origin Cache-Control) and keep Compress=true.
+CF_CACHING_OPTIMIZED_ID="658327ea-f89d-4fab-a63d-7e88639e58f6"  # AWS managed
+CF_CACHING_DISABLED_ID="4135ea2d-6df8-44a3-9df3-4b5a84be39ad"   # AWS managed
+
+step 4b "Ensuring CloudFront compression + caching policy..."
+CF_CFG_TMP="$(mktemp -t cf-config.XXXXXX.json)"
+CF_PATCHED_TMP="$(mktemp -t cf-patched.XXXXXX.json)"
+trap 'rm -f "$CF_CFG_TMP" "$CF_PATCHED_TMP"' EXIT
+
+aws cloudfront get-distribution-config \
+  --id "$CLOUDFRONT_ID" --region "$AWS_REGION" --output json > "$CF_CFG_TMP" 2>/dev/null
+
+CF_ETAG=$(python3 -c "import json,sys; print(json.load(open('$CF_CFG_TMP'))['ETag'])" 2>/dev/null)
+
+# Patch the default behavior: Compress=true + CachePolicyId=CachingOptimized.
+# Prints "yes" if any change was actually needed, "no" otherwise.
+CF_NEEDS_UPDATE=$(CF_OPT_ID="$CF_CACHING_OPTIMIZED_ID" python3 <<PY
+import json, os
+opt_id = os.environ["CF_OPT_ID"]
+d = json.load(open("$CF_CFG_TMP"))
+cfg = d["DistributionConfig"]
+dc = cfg["DefaultCacheBehavior"]
+changed = False
+
+if not dc.get("Compress", False):
+    dc["Compress"] = True
+    changed = True
+
+# Only override the policy when it is the caching-disabled one (don't stomp a
+# deliberate custom policy). This keeps the fix targeted and idempotent.
+if dc.get("CachePolicyId") == "$CF_CACHING_DISABLED_ID":
+    dc["CachePolicyId"] = opt_id
+    changed = True
+
+json.dump(cfg, open("$CF_PATCHED_TMP", "w"))
+print("yes" if changed else "no")
+PY
+)
+
+if [ "$CF_NEEDS_UPDATE" == "yes" ]; then
+  aws cloudfront update-distribution \
+    --id "$CLOUDFRONT_ID" --region "$AWS_REGION" \
+    --distribution-config "file://$CF_PATCHED_TMP" \
+    --if-match "$CF_ETAG" --output json > /dev/null
+  ok "CloudFront updated (Compress=true + CachingOptimized policy)"
+elif [ "$CF_NEEDS_UPDATE" == "no" ]; then
+  ok "CloudFront compression/caching already configured"
+else
+  warn "Could not verify CloudFront settings - check distribution $CLOUDFRONT_ID manually"
+fi
+
 # Step 5: Upload versioned copy
 step 5 "Uploading v$APP_VERSION to S3..."
 aws s3 sync build/ "s3://$S3_BUCKET/versions/$APP_VERSION" \
@@ -134,14 +195,19 @@ aws s3 cp build/index.html "s3://$S3_BUCKET/index.html" \
   --region "$AWS_REGION" --cache-control "no-cache,no-store,must-revalidate" \
   --content-type "text/html" --quiet
 
-# Other files
-aws s3 sync build/ "s3://$S3_BUCKET" \
-  --region "$AWS_REGION" --delete --exclude "versions/*" --exclude "*.html" \
-  --cache-control "max-age=3600" --quiet
-
-# Static assets with long cache
+# Static assets FIRST, with long immutable cache (filenames are content-hashed).
+# Must run before the catch-all sync below, otherwise the catch-all writes
+# these files with max-age=3600 and the follow-up sync skips them as
+# "unchanged", leaving the wrong (short) cache header live.
 aws s3 sync build/static "s3://$S3_BUCKET/static" \
-  --region "$AWS_REGION" --cache-control "max-age=31536000,immutable" --quiet
+  --region "$AWS_REGION" --delete \
+  --cache-control "max-age=31536000,immutable" --quiet
+
+# Other files (short cache), excluding HTML, versioned copies, and static/*
+aws s3 sync build/ "s3://$S3_BUCKET" \
+  --region "$AWS_REGION" --delete \
+  --exclude "versions/*" --exclude "*.html" --exclude "static/*" \
+  --cache-control "max-age=3600" --quiet
 
 ok "Atomic switch completed"
 

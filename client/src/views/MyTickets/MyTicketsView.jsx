@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { getEventsByUserId } from '../../services/eventService';
-import { getBusiness } from '../../services/businessService';
 import { getTicketsByEvent } from '../../services/ticketManagementService';
 import { getCurrentUserId } from '../../utils/authUtils';
 import moment from 'moment';
@@ -146,32 +145,24 @@ const MyTicketsView = () => {
 
         const savedBizId = sessionStorage.getItem("selectedBusinessId");
 
-        // Determine primary business for untagged events
-        let primaryBizId = null;
-        try {
-          const primaryRes = await getBusiness(userId);
-          primaryBizId = primaryRes?.data?._id || null;
-        } catch (e) { /* ignore */ }
-
         const res = await getEventsByUserId(userId);
-        // Only show events that have Tabs tickets
-        const withTickets = (res.data || []).filter(ev =>
+        const allEvents = res.data || [];
+        // The backend already scopes events to the selected business partition
+        // (via the X-Business-Id header), so we only need to keep the ones that
+        // have Tabs tickets enabled.
+        const withTickets = allEvents.filter(ev =>
           ev.tickets && ev.tickets.length > 0 &&
           ev.tickets.some(t => t.option === 'Tabs Tickets' || t.option === 'Tickets with Tabs')
         );
 
-        // Filter by selected business
-        const bizFiltered = savedBizId
-          ? withTickets.filter(ev => {
-              if (ev.businessId === savedBizId) return true;
-              if (!ev.businessId && savedBizId === primaryBizId) return true;
-              return false;
-            })
-          : withTickets;
+        console.info(
+          `[Tickets] fetched=${allEvents.length} withTabsTickets=${withTickets.length} ` +
+          `savedBizId=${savedBizId || 'none'}`
+        );
 
         // Fetch real-time ticket stats for each event from the tickets table
         const eventsWithRealStats = await Promise.all(
-          bizFiltered.map(async (ev) => {
+          withTickets.map(async (ev) => {
             try {
               const eventId = ev._id || ev.id;
               const statsRes = await getTicketsByEvent(eventId);

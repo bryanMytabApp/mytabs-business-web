@@ -10,6 +10,7 @@ import { getBusiness } from "../../services/businessService";
 import { getCustomerSubscription, getSystemSubscriptions } from "../../services/paymentService";
 import { getMyOrganizations, getOrganizationBusinesses } from "../../services/organizationService";
 import { getWeatherPreview } from "../../services/weatherPreviewService";
+import { setHelpRoute } from "../../components/TabsHelp/helpRoute";
 import axios from "axios";
 const EventMembers = React.lazy(() => import("./EventMembers"));
 
@@ -2454,9 +2455,9 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
   // Update URL hash and notify help SDK when step changes
   const updateHelpHash = (stepNum) => {
     const hash = stepHashMap[stepNum] || "setup";
-    if (window.tabsHelp && typeof window.tabsHelp.setRoute === "function") {
-      window.tabsHelp.setRoute(window.location.pathname + `#${hash}`);
-    }
+    // Buffer + forward to the help SDK. setHelpRoute survives the SDK not being
+    // loaded yet (cold/incognito loads) — the route is replayed on boot.
+    setHelpRoute(window.location.pathname + `#${hash}`);
   };
 
   const next = () => setStep(s => s + 1);
