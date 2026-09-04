@@ -7,6 +7,7 @@ export const SETTINGS_SECTIONS = [
   { id: 'organization', label: 'Organization', icon: 'BusinessOutlined', roles: null, requiresOrg: false },
   { id: 'team', label: 'Team', icon: 'GroupOutlined', roles: null, requiresOrg: false },
   { id: 'billing', label: 'Billing', icon: 'CreditCardOutlined', roles: null, requiresOrg: false },
+  { id: 'payouts', label: 'Payouts', icon: 'AccountBalanceOutlined', roles: null, requiresOrg: false },
   { id: 'privacy', label: 'Privacy', icon: 'VisibilityOffOutlined', roles: null, requiresOrg: false },
 ];
 

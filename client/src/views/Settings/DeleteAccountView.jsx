@@ -136,8 +136,9 @@ export default function DeleteAccountView() {
 
       await http.delete("authWeb/delete-account", { data: payload });
 
-      // Clear all localStorage
+      // Clear all local + session state
       localStorage.clear();
+      sessionStorage.clear();
 
       toast.success("Your account has been deleted.");
       navigate("/login");

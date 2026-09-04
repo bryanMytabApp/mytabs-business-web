@@ -234,6 +234,156 @@ describe("SubscriptionView (Subscribe page)", () => {
     await waitFor(() => expect(createCheckoutSession).toHaveBeenCalled());
     expect(createCheckoutSession.mock.calls[0][0].subscriptionId).toBe("row-growth-yearly");
   });
+  it("prices the card AND checkout from the catalog row for the CURRENTLY-EFFECTIVE version (no legacy/new drift)", async () => {
+    // The catalog holds BOTH versions' rows for Starter monthly (as the seeder writes
+    // them, each stamped with pricingEffectiveDate): legacy $13.99 and new $187. The
+    // card MUST show the row for the version in effect TODAY, and Get Started MUST send
+    // that SAME row — one source, so display and charge always match.
+    const legacyDate = pricingVersions[0].effectiveDate; // e.g. "2000-01-01"
+    const newDate = pricingVersions[pricingVersions.length - 1].effectiveDate; // "2026-09-06"
+    // amount arrives as a NUMBER sourced live from Stripe (getSystemSubscriptions
+    // enriches each row with the Stripe price's unit_amount).
+    getSystemSubscriptions.mockResolvedValue({
+      data: [
+        { _id: "row-starter-legacy", level: 1, sublevel: "monthly", amount: 1399, priceId: "price_starter_legacy", pricingEffectiveDate: legacyDate, amountSource: "stripe" },
+        { _id: "row-starter-new", level: 1, sublevel: "monthly", amount: 18700, priceId: "price_starter_new", pricingEffectiveDate: newDate, amountSource: "stripe" },
+      ],
+    });
+    localStorage.setItem("username", "user-123");
+    createCheckoutSession.mockResolvedValue({ url: "https://checkout.stripe.com/x" });
+
+    renderView();
+    await waitFor(() => expect(getSystemSubscriptions).toHaveBeenCalled());
+
+    // Which version is effective for a signup today drives BOTH the shown price and
+    // the row checkout uses — derived the same way the page does.
+    const effective = versionForNewSignup(new Date());
+    const isNew = effective.effectiveDate === newDate;
+    const expectedAmount = isNew ? "187" : "13.99";
+    const expectedRowId = isNew ? "row-starter-new" : "row-starter-legacy";
+    const otherAmount = isNew ? "13.99" : "187";
+
+    // Card shows the currently-effective price, never the other version's price.
+    const starter = screen.getByTestId("plan-card-starter");
+    await waitFor(() => expect(within(starter).getByText(expectedAmount)).toBeInTheDocument());
+    expect(within(starter).queryByText(otherAmount)).not.toBeInTheDocument();
+
+    // Get Started sends the SAME catalog row that priced the card.
+    const user = userEvent.setup();
+    await user.click(within(starter).getByText(/get started/i));
+    await waitFor(() => expect(createCheckoutSession).toHaveBeenCalled());
+    expect(createCheckoutSession.mock.calls[0][0].subscriptionId).toBe(expectedRowId);
+  });
+
+  it("never picks a NOT-YET-LIVE (future) pricing version's catalog row before its cutover", async () => {
+    // Defensive: even if only a future-dated row is somehow closest, pre-cutover we
+    // must not charge the future price. With both rows present, before the cutover the
+    // legacy row wins; on/after, the new row wins — matching versionForNewSignup.
+    const legacyDate = pricingVersions[0].effectiveDate;
+    const newDate = pricingVersions[pricingVersions.length - 1].effectiveDate;
+    getSystemSubscriptions.mockResolvedValue({
+      data: [
+        { _id: "row-legacy", level: 1, sublevel: "monthly", amount: 1399, priceId: "p_legacy", pricingEffectiveDate: legacyDate },
+        { _id: "row-new", level: 1, sublevel: "monthly", amount: 18700, priceId: "p_new", pricingEffectiveDate: newDate },
+      ],
+    });
+    localStorage.setItem("username", "user-123");
+    createCheckoutSession.mockResolvedValue({ url: "https://checkout.stripe.com/x" });
+
+    renderView();
+    await waitFor(() => expect(getSystemSubscriptions).toHaveBeenCalled());
+
+    const effectiveDate = versionForNewSignup(new Date()).effectiveDate;
+    const expectedRowId = effectiveDate === newDate ? "row-new" : "row-legacy";
+
+    const user = userEvent.setup();
+    await user.click(within(screen.getByTestId("plan-card-starter")).getByText(/get started/i));
+    await waitFor(() => expect(createCheckoutSession).toHaveBeenCalled());
+    expect(createCheckoutSession.mock.calls[0][0].subscriptionId).toBe(expectedRowId);
+  });
+
+  it("YEARLY: prices the card AND checkout from the currently-effective yearly catalog row (no drift)", async () => {
+    // The catalog holds BOTH versions' YEARLY rows (as the seeded data does): legacy
+    // annual $95.88 and new annual $2,244. Switching to Yearly must show the effective
+    // version's annual price AND check out that same yearly row — one source, no drift.
+    const legacyDate = pricingVersions[0].effectiveDate;
+    const newDate = pricingVersions[pricingVersions.length - 1].effectiveDate;
+    getSystemSubscriptions.mockResolvedValue({
+      data: [
+        { _id: "row-starter-m-legacy", level: 1, sublevel: "monthly", amount: 1399, priceId: "p_s_m_legacy", pricingEffectiveDate: legacyDate },
+        { _id: "row-starter-m-new", level: 1, sublevel: "monthly", amount: 18700, priceId: "p_s_m_new", pricingEffectiveDate: newDate },
+        // Legacy annual Stripe price is $95.88 (9588) — NOT 12x monthly.
+        { _id: "row-starter-y-legacy", level: 1, sublevel: "yearly", amount: 9588, priceId: "p_s_y_legacy", pricingEffectiveDate: legacyDate },
+        { _id: "row-starter-y-new", level: 1, sublevel: "yearly", amount: 224400, priceId: "p_s_y_new", pricingEffectiveDate: newDate },
+      ],
+    });
+    localStorage.setItem("username", "user-123");
+    createCheckoutSession.mockResolvedValue({ url: "https://checkout.stripe.com/x" });
+
+    renderView();
+    await waitFor(() => expect(getSystemSubscriptions).toHaveBeenCalled());
+
+    const effectiveDate = versionForNewSignup(new Date()).effectiveDate;
+    const isNew = effectiveDate === newDate;
+    // Expected YEARLY display + row for the effective version.
+    const expectedYearly = isNew ? (224400 / 100).toLocaleString() : (9588 / 100).toLocaleString();
+    const expectedYearlyRow = isNew ? "row-starter-y-new" : "row-starter-y-legacy";
+
+    // Switch to Yearly.
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("billing-yearly"));
+
+    const starter = screen.getByTestId("plan-card-starter");
+    await waitFor(() => expect(within(starter).getByText(expectedYearly)).toBeInTheDocument());
+
+    // Get Started (yearly) sends the effective YEARLY row — not a monthly row, not the
+    // other version's yearly row.
+    await user.click(within(starter).getByText(/get started/i));
+    await waitFor(() => expect(createCheckoutSession).toHaveBeenCalled());
+    expect(createCheckoutSession.mock.calls[0][0].subscriptionId).toBe(expectedYearlyRow);
+  });
+
+  it("shows the yearly discount badge from the catalog's yearlyDiscountPercent field (yearly only)", async () => {
+    // The discount is an explicit DATA field on the yearly catalog row; the page reads
+    // it (does not compute it). It appears on the Yearly view and not on Monthly.
+    const newDate = pricingVersions[pricingVersions.length - 1].effectiveDate;
+    const legacyDate = pricingVersions[0].effectiveDate;
+    getSystemSubscriptions.mockResolvedValue({
+      data: [
+        { _id: "s-m", level: 1, sublevel: "monthly", amount: 18700, priceId: "p_s_m", pricingEffectiveDate: newDate },
+        { _id: "s-m-l", level: 1, sublevel: "monthly", amount: 1399, priceId: "p_s_m_l", pricingEffectiveDate: legacyDate },
+        { _id: "s-y", level: 1, sublevel: "yearly", amount: 201960, priceId: "p_s_y", pricingEffectiveDate: newDate, yearlyDiscountPercent: 10 },
+        { _id: "s-y-l", level: 1, sublevel: "yearly", amount: 9588, priceId: "p_s_y_l", pricingEffectiveDate: legacyDate },
+      ],
+    });
+    localStorage.setItem("username", "user-123");
+
+    renderView();
+    await waitFor(() => expect(getSystemSubscriptions).toHaveBeenCalled());
+
+    const user = userEvent.setup();
+    // The effective yearly row carries a 10% discount only on the NEW version; the
+    // legacy row has none. So the badge should appear iff the new version is effective.
+    const isNew = versionForNewSignup(new Date()).effectiveDate === newDate;
+
+    // Monthly (default): never a discount badge regardless of version.
+    expect(screen.queryByTestId("yearly-discount-starter")).not.toBeInTheDocument();
+
+    // Switch to Yearly and let the render settle (the toggle reflects the pressed state).
+    await user.click(screen.getByTestId("billing-yearly"));
+    await waitFor(() =>
+      expect(screen.getByTestId("billing-yearly")).toHaveAttribute("aria-pressed", "true")
+    );
+
+    // Badge presence must follow the effective row's data field (no conditional expect).
+    const badge = screen.queryByTestId("yearly-discount-starter");
+    expect(Boolean(badge)).toBe(isNew);
+    // When present, it states the discount from the data field ("Save 10% billed yearly").
+    const badgeText = badge ? badge.textContent : "";
+    const statesDiscount = /save 10% billed yearly/i.test(badgeText);
+    expect(statesDiscount).toBe(isNew);
+  });
+
   it("resolves the cutover boundary: pre-migration BEFORE the go-live effectiveDate, new pricing ON/AFTER", async () => {
     // The migration version's effectiveDate is the go-live cutover; versionForNewSignup
     // (used by the page) must return the pre-migration version before it and the new

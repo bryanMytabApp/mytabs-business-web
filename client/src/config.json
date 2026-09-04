@@ -1,5 +1,6 @@
 {
   "backendUrl": "https://16psjhr9ni.execute-api.us-east-1.amazonaws.com/prod/",
+  "payoutsUrl": "https://kmxiz6g1uf.execute-api.us-east-1.amazonaws.com/prod/",
   "bucketUrl": "https://mytabs-core-prod.s3.amazonaws.com/",
   "env": "prod",
   "userPoolData": {

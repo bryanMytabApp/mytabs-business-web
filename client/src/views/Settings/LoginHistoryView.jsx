@@ -183,6 +183,7 @@ export default function LoginHistoryView() {
 
       toast.success("All sessions revoked. Please log in again.");
       localStorage.clear();
+      sessionStorage.clear();
       navigate("/login");
     } catch (err) {
       const message =

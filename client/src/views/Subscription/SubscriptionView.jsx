@@ -12,9 +12,13 @@ import {
   PLAN_LEVELS,
   planProductMix,
   PRODUCT_NAMES,
-  pricingVersions,
-  versionForNewSignup,
 } from "../../config/pricingVersions";
+import {
+  CURRENT_VERSION,
+  dollars,
+  findCatalogRow,
+  baselineLabel,
+} from "../../utils/pricing/pricingCatalog";
 import { clearSession } from "../../utils/auth/session";
 
 const loadScript = (src) =>
@@ -30,29 +34,40 @@ const loadScript = (src) =>
 // Plan_Name_Map: PLAN_LEVELS is ordered Starter=level1 ... Enterprise=level4, so the
 // index in PLAN_LEVELS + 1 is the code numeric level (Req 4.1). Names come from the config,
 // not hardcoded, so the four cards render the Price_Card names.
+//
+// `CURRENT_VERSION`, `dollars`, and `findCatalogRow` are imported from the shared
+// `pricingCatalog` module (single source of truth) so the Subscribe page and the public
+// Marketing pricing surface can never drift on displayed price vs. amount charged.
 
-// The pricing version a NEW signup TODAY is pinned to, honoring the go-live cutover
-// (the migration version's effectiveDate = Sunday 2026-09-06). BEFORE the cutover
-// this resolves to the LEGACY (pre-migration) version; ON/AFTER, the new Price_Card
-// version — so the Subscribe page shows legacy prices until Sunday, then new ones.
-const CURRENT_VERSION =
-  versionForNewSignup(new Date()) || pricingVersions[pricingVersions.length - 1];
-
-const dollars = (cents) =>
-  `$${(cents / 100).toLocaleString(undefined, {
-    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-// Build the four plan cards from the config: names via Plan_Name_Map, amounts from
-// the current version's Plans, feature list = that plan's product mix (Req 4.1-4.3, 4.7).
-const buildPlanCards = (interval = "monthly") =>
+// Build the four plan cards. Price comes from the BACKEND CATALOG row (the same
+// source checkout charges from) so the displayed price and the "Get Started" charge
+// can never drift. Falls back to the config amount only when the catalog row for a
+// plan hasn't loaded yet (Req 4.1-4.3, 4.7).
+const buildPlanCards = (interval = "monthly", systemSubscriptions = []) =>
   PLAN_LEVELS.map((planName, idx) => {
     const level = idx + 1; // Starter=1 ... Enterprise=4
     const monthlyCents = CURRENT_VERSION.planMonthlyCents[planName];
-    // Yearly = 12x monthly (matches the provisioned Stripe yearly prices). Display
-    // the per-interval amount so the card price matches what checkout will charge.
-    const amountCents = interval === "yearly" ? monthlyCents * 12 : monthlyCents;
+    // Config-derived fallback for when the catalog hasn't loaded.
+    // Yearly = 12x monthly (matches the provisioned Stripe yearly prices).
+    const fallbackCents = interval === "yearly" ? monthlyCents * 12 : monthlyCents;
+    // Prefer the catalog row's real amount (what Stripe will charge) over config.
+    // Catalog `amount` is in cents and may be a number OR a numeric string (DynamoDB
+    // stores it as a String), so coerce and validate before trusting it.
+    const catalogRow = findCatalogRow(systemSubscriptions, level, interval);
+    const catalogAmount = catalogRow != null ? Number(catalogRow.amount) : NaN;
+    const amountCents = Number.isFinite(catalogAmount)
+      ? catalogAmount
+      : fallbackCents;
+    // Bind the card to its catalog subscription id so Get Started uses this exact row.
+    const subscriptionId = catalogRow?._id || null;
+    // Yearly discount is an explicit DATA field on the catalog row (yearlyDiscountPercent),
+    // set by the backend/Stripe provisioning — the page displays it, it is NOT computed.
+    // Only surface it on the yearly interval and only when it's a positive number.
+    const rawDiscount = catalogRow != null ? Number(catalogRow.yearlyDiscountPercent) : NaN;
+    const yearlyDiscountPercent =
+      interval === "yearly" && Number.isFinite(rawDiscount) && rawDiscount > 0
+        ? rawDiscount
+        : null;
     // Cumulative model: each plan includes everything below it. Rather than list all
     // 7/14/25/29 products (which overwhelms the cards), show only what THIS plan ADDS
     // over the plan below, plus an "Everything in <lower>" note. Much shorter cards.
@@ -66,6 +81,8 @@ const buildPlanCards = (interval = "monthly") =>
       level,
       name: planName,
       amountCents,
+      subscriptionId,
+      yearlyDiscountPercent,
       price: dollars(amountCents),
       priceSuffix: interval === "yearly" ? "/yr" : "/mo",
       priceSub: interval === "yearly" ? "per year" : "per month",
@@ -94,12 +111,6 @@ const buildContractAddons = () => [
     baseline: CURRENT_VERSION.marketIntel,
   },
 ];
-
-const baselineLabel = (baseline) => {
-  if (!baseline) return "Custom quote";
-  const suffix = baseline.interval === "year" ? "/yr" : "/mo";
-  return `From ${dollars(baseline.baselineCents)}${suffix}`;
-};
 
 const SubscriptionView = () => {
   const navigate = useNavigate();
@@ -133,7 +144,7 @@ const SubscriptionView = () => {
   // so the hero must make the required action — choosing a plan — immediately clear.
   const isLoggedIn = !!localStorage.getItem("idToken");
 
-  const planCards = buildPlanCards(billingInterval);
+  const planCards = buildPlanCards(billingInterval, systemSubscriptions);
   const contractAddons = buildContractAddons();
 
   // Fetch system subscriptions for plan selection
@@ -178,8 +189,11 @@ const SubscriptionView = () => {
     const row = systemSubscriptions.find(
       (sub) => sub.priceId === currentSubscription.priceId
     );
-    if (!row || row.level !== level) return null;
-    return typeof row.amount === "number" ? dollars(row.amount) : null;
+    // level may be a number or numeric string; compare loosely via String().
+    if (!row || String(row.level) !== String(level)) return null;
+    // amount is cents, possibly a numeric string (DynamoDB String) — coerce.
+    const amt = Number(row.amount);
+    return Number.isFinite(amt) ? dollars(amt) : null;
   };
 
   const handleSelectPlan = async (planName) => {
@@ -192,17 +206,10 @@ const SubscriptionView = () => {
       return;
     }
 
-    // Select the catalog row for the CHOSEN interval (monthly/yearly) so the price
-    // sent to Stripe matches the card the customer sees. sublevel values in the
-    // catalog are "monthly" / "yearly".
-    const wantedSublevel = billingInterval === "yearly" ? "yearly" : "monthly";
-    // Match on both level AND sublevel; the level fields may be number or string.
-    const chosenSub =
-      systemSubscriptions.find(
-        (sub) => String(sub.level) === String(level) && sub.sublevel === wantedSublevel
-      ) ||
-      // Fall back to the other interval for this level if the exact one is missing.
-      systemSubscriptions.find((sub) => String(sub.level) === String(level));
+    // Select the catalog row for the CHOSEN interval (monthly/yearly). This is the
+    // SAME lookup buildPlanCards used to price the card, so the amount sent to Stripe
+    // matches what the customer saw. sublevel values in the catalog are "monthly"/"yearly".
+    const chosenSub = findCatalogRow(systemSubscriptions, level, billingInterval);
 
     if (!chosenSub) {
       // No catalog row for this plan at all — go to the detailed subpart page.
@@ -484,6 +491,30 @@ const SubscriptionView = () => {
                       <span style={{ fontSize: 22, fontWeight: 900, color: plan.featured ? "white" : dk, marginTop: 10 }}>$</span>
                       <span style={{ fontSize: 64, fontWeight: 1000, color: plan.featured ? "white" : dk, lineHeight: 1 }}>{displayPrice.replace("$", "")}</span>
                       <span style={{ fontSize: 14, color: plan.featured ? "rgba(255,255,255,.7)" : mu, alignSelf: "flex-end", marginBottom: 12, marginLeft: 4, fontWeight: 700 }}>{plan.priceSuffix}</span>
+                    </div>
+                  )}
+                  {/* Yearly savings badge — driven by the catalog row's yearlyDiscountPercent
+                      DATA field (not computed). Shown only when the current-effective yearly
+                      row carries a discount and this isn't a grandfathered/current-plan card. */}
+                  {!plan.isEnterprise && !isCurrentPlan && plan.yearlyDiscountPercent && (
+                    <div
+                      data-testid={`yearly-discount-${plan.id}`}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: plan.featured ? "rgba(255,255,255,.18)" : "rgba(16,185,129,.14)",
+                        color: plan.featured ? "white" : "#0f9d68",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        letterSpacing: "0.02em",
+                        padding: "5px 12px",
+                        borderRadius: 20,
+                        marginBottom: 18,
+                      }}
+                    >
+                      <span aria-hidden="true">✓</span>
+                      Save {plan.yearlyDiscountPercent}% billed yearly
                     </div>
                   )}
                   {plan.isEnterprise && (

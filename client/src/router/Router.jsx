@@ -149,6 +149,19 @@ const ServiceLanding = lazy(() => import("../views/ServiceLanding/ServiceLanding
 const MarketIntelligence = lazy(() => import("../views/ServiceLanding/MarketIntelligence"));
 const JumpPage = lazy(() => import("../views/JumpPage/JumpPage"));
 
+// Marketing site views (public for all visitors, including authenticated).
+// Route-level code splitting keeps the marketing bundle separate from the dashboard.
+const MarketingLayout = lazy(() => import("../views/Marketing/MarketingLayout"));
+const Homepage = lazy(() => import("../views/Marketing/Homepage"));
+const ProductPage = lazy(() => import("../views/Marketing/products/ProductPage"));
+const UseCasePage = lazy(() => import("../views/Marketing/solutions/UseCasePage"));
+const MarketingNotFound = lazy(() => import("../views/Marketing/MarketingNotFound"));
+const AboutPage = lazy(() => import("../views/Marketing/company/AboutPage"));
+const CareersPage = lazy(() => import("../views/Marketing/company/CareersPage"));
+const ContactPage = lazy(() => import("../views/Marketing/company/ContactPage"));
+const RestaurantsPage = lazy(() => import("../views/Marketing/solutions/RestaurantsPage"));
+const PricingPage = lazy(() => import("../views/Marketing/pricing/PricingPage"));
+
 // Wrapper component for lazy-loaded routes
 const LazyRoute = ({ children }) => (
   <ErrorBoundary>
@@ -186,14 +199,47 @@ const router = createBrowserRouter([
     errorElement: <ErrorPage />,
     children: [
       {
+        // Public marketing site served at the root for ALL visitors, including
+        // authenticated users — no auth loader/guard (Req 19.3). This replaces the
+        // former redirect-only loader that bounced visitors to /admin/home or /login.
         path: "/",
-        loader: () => {
-          if (hasValidSession()) {
-            return redirect("/admin/home");
-          }
-          clearSession();
-          return redirect("/login");
-        },
+        element: <LazyRoute><MarketingLayout /></LazyRoute>,
+        children: [
+          {
+            index: true,
+            element: <LazyRoute><Homepage /></LazyRoute>,
+          },
+          {
+            path: "products/:productSlug",
+            element: <LazyRoute><ProductPage /></LazyRoute>,
+          },
+          {
+            path: "about",
+            element: <LazyRoute><AboutPage /></LazyRoute>,
+          },
+          {
+            path: "careers",
+            element: <LazyRoute><CareersPage /></LazyRoute>,
+          },
+          {
+            path: "contact",
+            element: <LazyRoute><ContactPage /></LazyRoute>,
+          },
+          {
+            path: "pricing",
+            element: <LazyRoute><PricingPage /></LazyRoute>,
+          },
+          {
+            // Bespoke restaurants solutions page — MUST precede the :useCaseSlug
+            // param route so "restaurants" is not captured as a generic slug.
+            path: "solutions/restaurants",
+            element: <LazyRoute><RestaurantsPage /></LazyRoute>,
+          },
+          {
+            path: "solutions/:useCaseSlug",
+            element: <LazyRoute><UseCasePage /></LazyRoute>,
+          },
+        ],
       },
       {
         path: "login",
@@ -482,6 +528,19 @@ const router = createBrowserRouter([
                 element: <LazyRoute><AiAgentDetail /></LazyRoute>,
               },
             ],
+          },
+        ],
+      },
+      {
+        // Marketing catch-all: placed LAST so it only matches routes no other
+        // top-level route claimed. Renders MarketingNotFound inside MarketingLayout
+        // so Nav/Footer stay present (Req 19.10). No auth loader/guard.
+        path: "*",
+        element: <LazyRoute><MarketingLayout /></LazyRoute>,
+        children: [
+          {
+            index: true,
+            element: <LazyRoute><MarketingNotFound /></LazyRoute>,
           },
         ],
       },
