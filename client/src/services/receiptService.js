@@ -539,4 +539,5 @@ Receipt #: ${data.receipt.number}
 }
 
 // Export singleton instance
-export default new ReceiptService();
+const receiptService = new ReceiptService();
+export default receiptService;

@@ -1,3 +1,9 @@
+/* Mobile-only header that links back to the main marketing site.
+   Hidden on desktop; the branded left panel already carries the logo there. */
+.Mobile-auth-header {
+  display: none;
+}
+
 .Login-view {
   display: flex;
   flex: 1;
@@ -362,13 +368,100 @@
 
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
+  /* Header chrome mirrors the marketing NavigationBar (.marketing-nav):
+     translucent cream, blurred, hairline bottom border. Sticky to the top so
+     it stays visible as the page scrolls. */
+  .Mobile-auth-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    /* Counteract the .Login-view horizontal padding so the bar is full-bleed. */
+    margin: 0 -10px 12px;
+    width: calc(100% + 20px);
+    box-sizing: border-box;
+    /* Flush to the very top; extra top padding respects the notch/safe area. */
+    padding: calc(14px + env(safe-area-inset-top, 0px)) 24px 14px;
+    z-index: 100;
+    background: rgba(251, 246, 236, 0.92);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid rgba(18, 38, 47, 0.1);
+  }
+
+  .Mobile-auth-header__logo {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .Mobile-auth-header__logo img {
+    height: 30px;
+    width: auto;
+    display: block;
+  }
+
+  /* Back button mirrors the marketing "Log in" ghost pill
+     (.marketing-nav__login): transparent, ink text, hairline pill border. */
+  .Mobile-auth-header__back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: Nunito, "Segoe UI", system-ui, sans-serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #12262f;
+    background: transparent;
+    border: 1.5px solid rgba(18, 38, 47, 0.1);
+    border-radius: 999px;
+    padding: 10px 18px;
+    min-height: 44px;
+    cursor: pointer;
+    white-space: nowrap;
+    touch-action: manipulation;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .Mobile-auth-header__back:hover {
+    transform: translateY(-1px);
+    border-color: #12262f;
+    background: rgba(18, 38, 47, 0.04);
+  }
+
+  /* Hide the desktop absolutely-positioned logo image so it doesn't float
+     over the form on mobile — the header logo replaces it. The inline style
+     sets position:absolute, so override with a targeted rule. */
+  .Login-view > img {
+    display: none !important;
+  }
+
   .Login-view {
     min-height: 100vh;
+    /* Use dynamic viewport height where supported so the gradient fills the
+       screen even as the mobile browser URL bar shows/hides. */
+    min-height: 100dvh;
     height: auto;
+    flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    padding: 10px;
+    padding: 0 10px 10px;
     overflow-y: visible;
+    /* On mobile the decorative Rectangle.png is positioned with fixed pixel
+       offsets and only covers the top of the page, leaving the flat gradient
+       stop-color (light blue) as a solid block at the bottom. Replace it with
+       a full-bleed, fixed gradient that always covers the whole viewport. */
+    background: linear-gradient(
+      160deg,
+      rgba(255, 247, 226, 1) 0%,
+      rgba(255, 255, 255, 1) 35%,
+      rgba(207, 245, 255, 1) 70%,
+      rgba(182, 240, 254, 1) 100%
+    ) no-repeat;
+    background-attachment: fixed;
+    background-size: cover;
   }
 
   .rectangle {
@@ -548,22 +641,31 @@
     font-size: 13px;
   }
 
+  /* Stack the Email/Username row vertically on mobile so each field gets a
+     full-width row (the inline style sets flex-direction:row, so override it). */
+  .reg-field-row {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
   /* Fix input width overflow on mobile */
   .MTB-input,
   .input-container {
     width: 100% !important;
     max-width: 100% !important;
     height: auto !important;
-    min-height: 60px !important;
+    min-height: 50px !important;
   }
 
+  /* Match the input height to the Log In button (50px) so the fields are a
+     comfortable finger-sized touch target on mobile. */
   .MTB-input input,
   .input-container input {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    height: 40px !important;
-    font-size: 14px !important;
+    height: 50px !important;
+    font-size: 16px !important;
   }
 
   /* Fix Actions section for password recovery and registration */

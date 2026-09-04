@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
+import { setHelpRoute, getPendingHelpRoute } from "./helpRoute";
 
 /**
  * TabsHelp
@@ -67,12 +68,19 @@ export default function TabsHelp({ apiUrl, chatUrl, role = "public", brand = "He
       if (cancelled) return;
       try {
         helpRef.current = window.TabsHelp.init({ apiUrl, chatUrl, role, brand, headless, panelTopOffset, helpSiteUrl, helpSitePathPrefix });
-        // Include the hash so a direct landing on /admin/configuration#profile
-        // gets the right per-section doc on first paint, before any nav event.
-        helpRef.current.setRoute(location.pathname + (location.hash || ""));
         // Expose globally so any header/menu component can drive it without
         // prop-drilling. Safe — there's only ever one help instance per app.
+        // Set this BEFORE the initial setRoute so buffered pushes see it ready.
         window.tabsHelp = helpRef.current;
+        // Replay the app's intended route if a screen asked for one (via
+        // setHelpRoute) while the SDK was still loading — the common cold-load /
+        // private-mode case where those calls would otherwise have been dropped.
+        // Screens that write a hash via replaceState (Admin Portal tabs, the
+        // pricing/event wizards) are invisible to react-router's useLocation,
+        // so the buffer is the source of truth when present. Fall back to the
+        // router location for a direct landing (e.g. /admin/configuration#profile).
+        const pending = getPendingHelpRoute();
+        helpRef.current.setRoute(pending || location.pathname + (location.hash || ""));
         if (typeof onReady === "function") onReady(helpRef.current);
       } catch (e) {
         console.warn("[TabsHelp] init failed:", e);
@@ -96,11 +104,11 @@ export default function TabsHelp({ apiUrl, chatUrl, role = "public", brand = "He
 
   // Push every route change down to the SDK. We include the hash so
   // multi-section pages like /admin/configuration#organization can have
-  // one help doc per section.
+  // one help doc per section. Route through setHelpRoute so the shared
+  // buffer stays in sync with what's actually displayed (and so a push
+  // that arrives before the SDK boots is replayed rather than dropped).
   useEffect(() => {
-    if (helpRef.current && typeof helpRef.current.setRoute === "function") {
-      helpRef.current.setRoute(location.pathname + (location.hash || ""));
-    }
+    setHelpRoute(location.pathname + (location.hash || ""));
   }, [location.pathname, location.hash]);
 
   return null;

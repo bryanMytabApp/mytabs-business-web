@@ -58,21 +58,21 @@ export default function ChangePasswordView() {
     if (invalid.oldPassword) {
       setInvalid({ ...invalid, oldPassword: undefined });
     }
-    setOldPassword(value);
+    setOldPassword(value.slice(0, 50));
   };
 
   const handleNewPassword = (value) => {
     if (invalid.newPassword) {
       setInvalid({ ...invalid, newPassword: undefined });
     }
-    setNewPassword(value);
+    setNewPassword(value.slice(0, 50));
   };
 
   const handleConfirmPassword = (value) => {
     if (invalid.confirmPassword) {
       setInvalid({ ...invalid, confirmPassword: undefined });
     }
-    setConfirmPassword(value);
+    setConfirmPassword(value.slice(0, 50));
   };
 
   const validatePassword = (password) => {
@@ -86,16 +86,16 @@ export default function ChangePasswordView() {
       return "Password must be at least 8 characters long";
     }
     if (!hasUpperCase) {
-      return "Password must contain at least one uppercase letter";
+      return "Password must contain at least 1 uppercase letter";
     }
     if (!hasLowerCase) {
-      return "Password must contain at least one lowercase letter";
+      return "Password must contain at least 1 lowercase letter";
     }
     if (!hasNumber) {
-      return "Password must contain at least one number";
+      return "Password must contain at least 1 number";
     }
     if (!hasSpecialChar) {
-      return "Password must contain at least one special character (!@#$%^&*)";
+      return "Password must contain at least 1 special character (!@#$%^&*)";
     }
     return null;
   };
@@ -348,10 +348,10 @@ export default function ChangePasswordView() {
             <p>Password must contain:</p>
             <ul>
               <li>At least 8 characters</li>
-              <li>One uppercase letter</li>
-              <li>One lowercase letter</li>
-              <li>One number</li>
-              <li>One special character (!@#$%^&*)</li>
+              <li>At least 1 uppercase letter</li>
+              <li>At least 1 lowercase letter</li>
+              <li>At least 1 number</li>
+              <li>At least 1 special character (!@#$%^&*)</li>
             </ul>
           </div>
         </form>

@@ -159,6 +159,12 @@ div.MTB-input input:focus-visible {
     background-color: transparent;
     border: none;
   }
+
+  /* On mobile, don't show the warning helper text/icon — the red input border
+     already signals the error, and the messages crowd the small screen. */
+  .MTB-input.warning .Helper-text {
+    display: none;
+  }
 }
 
 .Helper-text img {

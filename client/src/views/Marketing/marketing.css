@@ -1,0 +1,1475 @@
+/*
+ * Feature: tabs-homepage-redesign
+ *
+ * marketing.css — Design_Document styling ported into the CRA app and scoped
+ * entirely under `.marketing-root` (the wrapper MarketingLayout renders) so the
+ * public Marketing_Site is consistently branded WITHOUT affecting the
+ * authenticated dashboard theme (Req 22.1).
+ *
+ * SCOPING CONTRACT (do not break):
+ *   Every selector in this file MUST be nested under `.marketing-root`. The
+ *   dashboard uses its own global styles; leaking palette/typography/reset rules
+ *   outside `.marketing-root` would restyle it. Palette custom properties are
+ *   declared on `.marketing-root` (not `:root`) for the same reason.
+ *
+ * FILE LAYOUT (task 10.1 owns the first sections; task 10.2 APPENDS below):
+ *   1. Font import (Nunito)
+ *   2. Palette + radius/shadow custom properties  ....... task 10.1
+ *   3. Base typography, resets, link resets ............. task 10.1
+ *   4. Layout container (.wrap) ......................... task 10.1
+ *   5. Shared button styles (.btn + marketing CTAs) ..... task 10.1
+ *   6. Sticky navigation base (.marketing-nav) .......... task 10.1  (Req 1.8)
+ *   --- BELOW THIS LINE IS TASK 10.2 ---
+ *   7. Hero section + float animation ................... task 10.2
+ *   8. Section-specific layout (stat band, products, ...) task 10.2
+ *   9. Responsive breakpoints ........................... task 10.2
+ *
+ * _Requirements: 1.8, 3.5, 4.3, 7.2, 8.2, 22.1_
+ */
+
+/* ==========================================================================
+ * 1. Font import — Nunito (Design_Document body font).
+ *
+ * MarketingLayout injects the fonts.googleapis.com / fonts.gstatic.com
+ * `preconnect` links; this @import pulls the actual stylesheet. Kept at the top
+ * of the file per CSS @import ordering rules. If the network is unavailable the
+ * system-font fallback stack below keeps the site readable.
+ * ========================================================================== */
+@import url("https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap");
+
+/* ==========================================================================
+ * 2. Palette + radius/shadow custom properties (Design_Document tokens).
+ *
+ * Declared on `.marketing-root` so the tokens are scoped to the marketing
+ * subtree. These are the authoritative values; MarketingLayout also sets a
+ * minimal inline fallback for resilience before this stylesheet loads.
+ * ========================================================================== */
+.marketing-root {
+  /* Ink / text */
+  --ink: #12262f;
+  --ink-soft: #3e5b63;
+
+  /* Surfaces */
+  --cream: #fbf6ec;
+  --cream-deep: #f3ecdc;
+  --tint: #f5f2ea;
+  --panel: #ffffff;
+
+  /* Brand accents */
+  --teal: #0e7c93;
+  --cyan: #18a8d8;
+  --amber: #f5a623;
+  --orange: #e8641f;
+
+  /* Hairlines */
+  --line: rgba(18, 38, 47, 0.1);
+
+  /* Radii */
+  --radius-lg: 28px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+
+  /* Elevation */
+  --shadow-soft: 0 20px 50px -25px rgba(18, 38, 47, 0.35);
+
+  /* Shared font stack — Nunito with sensible system fallbacks. */
+  --font-sans: "Nunito", "Segoe UI", system-ui, -apple-system,
+    BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ==========================================================================
+ * 3. Base typography, resets, link resets (scoped).
+ * ========================================================================== */
+.marketing-root {
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background: var(--panel);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Predictable box model for everything inside the marketing subtree. */
+.marketing-root *,
+.marketing-root *::before,
+.marketing-root *::after {
+  box-sizing: border-box;
+}
+
+.marketing-root h1,
+.marketing-root h2,
+.marketing-root h3,
+.marketing-root h4 {
+  margin: 0 0 0.5em;
+  color: var(--ink);
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.marketing-root p {
+  margin: 0 0 1em;
+  color: var(--ink-soft);
+}
+
+.marketing-root ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Link reset — marketing links inherit color and drop the default underline;
+ * individual components opt back into accent color / underline as needed. */
+.marketing-root a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.marketing-root a:hover {
+  color: var(--teal);
+}
+
+.marketing-root img {
+  max-width: 100%;
+  display: block;
+}
+
+/* Visible focus indicator for keyboard users (accessibility baseline). */
+.marketing-root a:focus-visible,
+.marketing-root button:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ==========================================================================
+ * 4. Layout container (.wrap).
+ *
+ * Centered, max-width content column shared by sections. Section-specific
+ * padding/spacing is task 10.2; this establishes the horizontal rhythm.
+ * ========================================================================== */
+.marketing-root .wrap {
+  width: 100%;
+  max-width: 1180px;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+/* ==========================================================================
+ * 5. Shared button styles.
+ *
+ * `.btn` is the shared base. Variants:
+ *   .btn--primary  gradient orange → amber, light text (primary CTA)
+ *   .btn--ghost    transparent, bordered (secondary)
+ *   .btn--dark     solid ink (dark on light surfaces)
+ *
+ * The marketing components already ship their own CTA class names; those are
+ * mapped onto the same visual treatment here so both the semantic `.btn`
+ * classes and the component classes render identically. Primary/secondary
+ * variant modifiers map to primary/ghost respectively.
+ * ========================================================================== */
+.marketing-root .btn,
+.marketing-root .marketing-hero__cta,
+.marketing-root .marketing-cta-band__cta,
+.marketing-root .marketing-product__cta,
+.marketing-root .marketing-use-case__cta-primary,
+.marketing-root .marketing-use-case__cta-secondary,
+.marketing-root .marketing-nav__login,
+.marketing-root .marketing-nav__cta,
+.marketing-root .pricing__talk-to-sales,
+.marketing-root .marketing-careers__apply {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* Pill radius */
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-family: var(--font-sans);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease,
+    background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.marketing-root .btn:hover,
+.marketing-root .marketing-hero__cta:hover,
+.marketing-root .marketing-cta-band__cta:hover,
+.marketing-root .marketing-product__cta:hover,
+.marketing-root .marketing-use-case__cta-primary:hover,
+.marketing-root .marketing-use-case__cta-secondary:hover,
+.marketing-root .marketing-nav__login:hover,
+.marketing-root .marketing-nav__cta:hover,
+.marketing-root .pricing__talk-to-sales:hover,
+.marketing-root .marketing-careers__apply:hover {
+  transform: translateY(-1px);
+}
+
+/* --- Primary variant: gradient orange → amber, white text (Design_Document) --- */
+.marketing-root .btn--primary,
+.marketing-root .marketing-hero__cta--primary,
+.marketing-root .marketing-cta-band__cta--primary,
+.marketing-root .marketing-product__cta--primary,
+.marketing-root .marketing-use-case__cta-primary,
+.marketing-root .marketing-nav__cta {
+  background: linear-gradient(120deg, var(--orange), var(--amber));
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: var(--shadow-soft);
+}
+
+.marketing-root .btn--primary:hover,
+.marketing-root .marketing-hero__cta--primary:hover,
+.marketing-root .marketing-cta-band__cta--primary:hover,
+.marketing-root .marketing-product__cta--primary:hover,
+.marketing-root .marketing-use-case__cta-primary:hover,
+.marketing-root .marketing-nav__cta:hover {
+  color: #ffffff;
+  box-shadow: 0 24px 55px -22px rgba(232, 100, 31, 0.55);
+}
+
+/* --- Ghost variant: transparent, bordered (secondary CTAs) --- */
+.marketing-root .btn--ghost,
+.marketing-root .marketing-hero__cta--secondary,
+.marketing-root .marketing-cta-band__cta--secondary,
+.marketing-root .marketing-product__cta--secondary,
+.marketing-root .marketing-use-case__cta-secondary,
+.marketing-root .marketing-nav__login,
+.marketing-root .pricing__talk-to-sales,
+.marketing-root .marketing-careers__apply {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.marketing-root .btn--ghost:hover,
+.marketing-root .marketing-hero__cta--secondary:hover,
+.marketing-root .marketing-cta-band__cta--secondary:hover,
+.marketing-root .marketing-product__cta--secondary:hover,
+.marketing-root .marketing-use-case__cta-secondary:hover,
+.marketing-root .marketing-nav__login:hover,
+.marketing-root .pricing__talk-to-sales:hover,
+.marketing-root .marketing-careers__apply:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+  background: rgba(18, 38, 47, 0.04);
+}
+
+/* --- Dark variant: solid ink, light text --- */
+.marketing-root .btn--dark {
+  background: var(--ink);
+  color: var(--cream);
+  border-color: var(--ink);
+}
+
+.marketing-root .btn--dark:hover {
+  color: var(--cream);
+  background: #0b1a21;
+}
+
+/* ==========================================================================
+ * 6. Sticky navigation base (.marketing-nav) — Req 1.8.
+ *
+ * The Design_Document header is sticky to the top with a translucent blurred
+ * backdrop and a bottom hairline border. It must not vertically displace
+ * content on scroll (Req 1.1) — `position: sticky` keeps it in flow at the top.
+ * Mega-menu panel layout / dropdown positioning and responsive collapse are
+ * task 10.2; this establishes the sticky bar chrome + base link/action styling.
+ * ========================================================================== */
+.marketing-root .marketing-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(251, 246, 236, 0.82);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+
+.marketing-root .marketing-nav__inner {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+  max-width: 1180px;
+  margin-inline: auto;
+  padding: 14px 24px;
+}
+
+.marketing-root .marketing-nav__logo {
+  font-weight: 900;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.marketing-root .marketing-nav__logo:hover {
+  color: var(--ink);
+}
+
+/* Primary link cluster sits between the logo and the actions. */
+.marketing-root .marketing-nav__links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.marketing-root .marketing-nav__link {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.marketing-root .marketing-nav__link:hover {
+  color: var(--ink);
+  background: rgba(18, 38, 47, 0.05);
+}
+
+/* Actions cluster pinned to the far right. */
+.marketing-root .marketing-nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+/* Slightly tighter sizing for the nav-scale CTA/login buttons. */
+.marketing-root .marketing-nav__login,
+.marketing-root .marketing-nav__cta {
+  padding: 10px 18px;
+  font-size: 0.92rem;
+}
+
+/* ==========================================================================
+ * 7. Mega-menu (nav dropdown) base — Req 1.3, 1.4, 1.8.
+ *
+ * The MegaMenu trigger is a plain text button that visually matches the other
+ * nav links; the panel is an absolutely-positioned dropdown card (white bg,
+ * radius, soft shadow) anchored beneath the trigger. Visibility is driven by
+ * the `hidden` attribute (toggled by the component) — the browser hides
+ * `[hidden]` by default, so only the visible/open chrome is styled here.
+ * Panel dropdown grid columns and responsive collapse are task 10.2.
+ * ========================================================================== */
+.marketing-root .mega-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Trigger styled to match `.marketing-nav__link` (text button, no chrome). */
+.marketing-root .mega-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.marketing-root .mega-menu__trigger:hover,
+.marketing-root .mega-menu__trigger[aria-expanded="true"] {
+  color: var(--ink);
+  background: rgba(18, 38, 47, 0.05);
+}
+
+/* Dropdown card. `[hidden]` (closed) is hidden by the UA default; when open the
+ * panel is an absolutely-positioned elevated card beneath the trigger. */
+.marketing-root .mega-menu__panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 90;
+  min-width: 240px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Ensure the panel stays hidden when closed even if display is overridden. */
+.marketing-root .mega-menu__panel[hidden] {
+  display: none;
+}
+
+.marketing-root .mega-menu__item {
+  display: block;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.marketing-root .mega-menu__item:hover {
+  color: var(--ink);
+  background: var(--tint);
+}
+
+/* ==========================================================================
+ * 8. Accessibility utilities.
+ *
+ * `.sr-only` visually hides content while keeping it available to assistive
+ * technology (used by CareersBand's apply-link role suffix, Req 15). Standard
+ * clip pattern so the text is not announced with layout artifacts.
+ * ========================================================================== */
+.marketing-root .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================================================
+ * Section layouts, hero animation, responsive — task 10.2
+ *
+ * Task 10.2 APPENDS below this marker: hero animated-mockup float keyframes,
+ * per-section grid/layout styling, and the Design_Document responsive
+ * breakpoints (980/960/900/860/800/760/700/640/560/520/500). Nothing above
+ * this line should be modified by 10.2.
+ * ========================================================================== */
+
+/* ==========================================================================
+ * TASK 10.2 — Section layouts, hero animation, responsive breakpoints.
+ * All selectors scoped under `.marketing-root`. (Req 2.5,2.7,2.8,14.1-14.5,15.4,20.5,21.4)
+ * ========================================================================== */
+
+.marketing-root section { padding-block: 72px; }
+.marketing-root .marketing-homepage > section,
+.marketing-root .marketing-homepage > div > section { padding-inline: 24px; }
+.marketing-root .marketing-homepage h2 { font-size: clamp(1.6rem, 2.6vw, 2.3rem); letter-spacing: -0.02em; }
+
+.marketing-root .marketing-hero__inner,
+.marketing-root .marketing-statband__list,
+.marketing-root .marketing-products,
+.marketing-root .marketing-platform,
+.marketing-root .marketing-proof,
+.marketing-root .marketing-revenue-engines__inner,
+.marketing-root .marketing-segments__inner,
+.marketing-root .marketing-company__inner,
+.marketing-root .pricing__inner,
+.marketing-root .marketing-careers__inner,
+.marketing-root .marketing-cta-band__inner { width: 100%; max-width: 1180px; margin-inline: auto; }
+
+/* HERO */
+.marketing-root .marketing-hero { background: linear-gradient(180deg, var(--cream) 0%, var(--panel) 100%); padding-block: 8px 96px; }
+.marketing-root .marketing-hero__inner { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: center; }
+/* The source logo is a square PNG with transparent padding above/below the
+   pin, so it reads as "floating" far from the headline. Crop that vertical
+   whitespace with object-fit:cover on a reduced height so the visible mark
+   sits tight to the text; negative margins pull it in further. */
+.marketing-root .marketing-hero__logo {
+  display: block;
+  width: 150px;
+  height: 100px;
+  object-fit: cover;
+  object-position: center;
+  margin: -14px 0 -6px -12px;
+}
+.marketing-root .marketing-hero__headline { font-size: clamp(2.4rem, 5vw, 3.75rem); font-weight: 900; line-height: 1.05; letter-spacing: -0.03em; margin-bottom: 18px; }
+.marketing-root .marketing-hero__lede { font-size: 1.15rem; max-width: 34em; margin-bottom: 28px; }
+.marketing-root .marketing-hero__ctas { display: flex; flex-wrap: wrap; gap: 14px; }
+.marketing-root .marketing-hero__mockup-region { position: relative; min-height: 420px; }
+.marketing-root .marketing-hero__browser { position: absolute; top: 8px; left: 0; width: 90%; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); box-shadow: var(--shadow-soft); overflow: hidden; }
+.marketing-root .marketing-hero__browser-bar { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--tint); border-bottom: 1px solid var(--line); }
+.marketing-root .marketing-hero__dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(18,38,47,0.18); }
+.marketing-root .marketing-hero__url { margin-left: 10px; font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; }
+.marketing-root .marketing-hero__browser-body { display: flex; min-height: 220px; }
+.marketing-root .marketing-hero__browser-sidebar { width: 68px; background: var(--cream-deep); border-right: 1px solid var(--line); }
+.marketing-root .marketing-hero__browser-content { flex: 1; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.marketing-root .marketing-hero__browser-row { height: 14px; border-radius: 7px; background: var(--tint); }
+.marketing-root .marketing-hero__browser-row:first-child { width: 55%; background: linear-gradient(90deg, var(--cyan), var(--teal)); opacity: 0.85; }
+.marketing-root .marketing-hero__browser-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 6px; }
+.marketing-root .marketing-hero__browser-card { height: 70px; border-radius: var(--radius-sm); background: var(--tint); border: 1px solid var(--line); }
+.marketing-root .marketing-hero__browser-card:nth-child(1) { background: linear-gradient(160deg, rgba(24,168,216,0.16), transparent); }
+.marketing-root .marketing-hero__browser-card:nth-child(2) { background: linear-gradient(160deg, rgba(245,166,35,0.18), transparent); }
+.marketing-root .marketing-hero__browser-card:nth-child(3) { background: linear-gradient(160deg, rgba(14,124,147,0.16), transparent); }
+.marketing-root .marketing-hero__phone { position: absolute; right: 0; bottom: 0; width: 168px; background: var(--ink); border-radius: 28px; padding: 10px; box-shadow: var(--shadow-soft); }
+.marketing-root .marketing-hero__phone-notch { width: 46px; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.25); margin: 2px auto 8px; }
+.marketing-root .marketing-hero__phone-screen { background: var(--panel); border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-height: 260px; }
+.marketing-root .marketing-hero__phone-header { height: 60px; border-radius: var(--radius-sm); background: linear-gradient(135deg, var(--orange), var(--amber)); }
+.marketing-root .marketing-hero__phone-row { height: 34px; border-radius: var(--radius-sm); background: var(--tint); }
+@keyframes marketing-hero-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+.marketing-root .marketing-hero__mockup-region.is-animated .marketing-hero__browser { animation: marketing-hero-float 6s ease-in-out infinite; }
+.marketing-root .marketing-hero__mockup-region.is-animated .marketing-hero__phone { animation: marketing-hero-float 6s ease-in-out infinite; animation-delay: 0.8s; }
+@media (prefers-reduced-motion: reduce) { .marketing-root .marketing-hero__browser, .marketing-root .marketing-hero__phone { animation: none !important; } }
+
+/* STAT BAND — slim banner with inline white icons */
+.marketing-root .marketing-statband { background: linear-gradient(115deg, var(--teal) 0%, #0b5566 55%, var(--ink) 100%); color: #fff; padding-block: 18px; }
+.marketing-root .marketing-statband__list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding-inline: 24px; align-items: center; }
+.marketing-root .marketing-statband__item { position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; text-align: left; }
+.marketing-root .marketing-statband__icon { display: inline-flex; flex: none; color: #fff; opacity: 0.9; }
+.marketing-root .marketing-statband__icon svg { width: 22px; height: 22px; display: block; }
+.marketing-root .marketing-statband__value { font-size: 1.7rem; font-weight: 900; color: var(--amber); line-height: 1; }
+.marketing-root .marketing-statband__item + .marketing-statband__item::before { content: ""; position: absolute; left: -8px; top: 15%; height: 70%; width: 1px; background: rgba(255,255,255,0.18); }
+.marketing-root .marketing-statband__label { font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.82); line-height: 1.15; }
+
+/* SECTION HEADINGS */
+.marketing-root .marketing-products__heading,
+.marketing-root .marketing-platform__heading,
+.marketing-root .marketing-proof__heading,
+.marketing-root .marketing-revenue-engines__title,
+.marketing-root .marketing-segments__title,
+.marketing-root .marketing-company__title,
+.marketing-root .pricing__heading,
+.marketing-root .marketing-careers__title { text-align: center; margin-bottom: 12px; }
+.marketing-root .marketing-revenue-engines__lede,
+.marketing-root .marketing-segments__lede,
+.marketing-root .marketing-company__lede,
+.marketing-root .marketing-careers__lede { text-align: center; max-width: 46em; margin-inline: auto; margin-bottom: 36px; }
+
+/* PRODUCTS */
+.marketing-root .marketing-products__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 32px; }
+.marketing-root .marketing-products__card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 22px; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.marketing-root .marketing-products__card:hover { transform: translateY(-3px); box-shadow: var(--shadow-soft); }
+.marketing-root .marketing-products__card-link { display: block; color: inherit; }
+.marketing-root .marketing-products__card-link:hover { color: inherit; }
+.marketing-root .marketing-products__card-title { font-size: 1.1rem; margin-bottom: 8px; }
+.marketing-root .marketing-products__card-desc { font-size: 0.92rem; margin: 0; }
+.marketing-root .marketing-products__card--advertising { grid-column: 1 / -1; background: linear-gradient(120deg, var(--tint), var(--cream-deep)); }
+
+/* PLATFORM */
+.marketing-root .marketing-platform__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 32px; }
+.marketing-root .marketing-platform__card { border-radius: var(--radius-lg); padding: 28px; color: #fff; }
+.marketing-root .marketing-platform__card:nth-child(1) { background: linear-gradient(155deg, var(--cyan), var(--teal)); }
+.marketing-root .marketing-platform__card:nth-child(2) { background: linear-gradient(155deg, var(--orange), var(--amber)); }
+.marketing-root .marketing-platform__card:nth-child(3) { background: linear-gradient(155deg, #26424b, var(--ink)); }
+.marketing-root .marketing-platform__card-title { color: #fff; font-size: 1.25rem; }
+.marketing-root .marketing-platform__availability { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.9; margin: 0 0 8px; color: #fff; }
+.marketing-root .marketing-platform__card-desc { color: rgba(255,255,255,0.92); margin-bottom: 16px; }
+.marketing-root .marketing-platform__card-link { color: #fff; font-weight: 800; text-decoration: underline; }
+.marketing-root .marketing-platform__card-link:hover { color: #fff; }
+
+/* PROOF */
+.marketing-root .marketing-proof { background: var(--panel); }
+.marketing-root .marketing-proof__figure { max-width: 760px; margin: 0 auto 28px; text-align: center; }
+.marketing-root .marketing-proof__quote { margin: 0 0 12px; font-size: 1.3rem; font-weight: 700; color: var(--ink); line-height: 1.4; }
+.marketing-root .marketing-proof__caption { color: var(--ink-soft); font-weight: 600; }
+.marketing-root .marketing-proof__metrics { display: flex; justify-content: center; gap: 48px; flex-wrap: wrap; }
+.marketing-root .marketing-proof__metric { font-size: 1.5rem; font-weight: 900; color: var(--teal); }
+
+/* REVENUE ENGINES + SEGMENTS */
+.marketing-root .marketing-revenue-engines__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+.marketing-root .marketing-revenue-engines__item,
+.marketing-root .marketing-segments__item { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 22px; }
+.marketing-root .marketing-revenue-engines__item-name { font-size: 1.05rem; margin-bottom: 8px; color: var(--teal); }
+.marketing-root .marketing-segments__list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.marketing-root .marketing-segments__link { display: block; color: inherit; }
+.marketing-root .marketing-segments__link:hover { color: inherit; }
+.marketing-root .marketing-segments__item:hover { transform: translateY(-3px); box-shadow: var(--shadow-soft); transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.marketing-root .marketing-segments__item-name { font-size: 1.05rem; margin-bottom: 8px; }
+
+/* COMPANY */
+.marketing-root .marketing-company { background: var(--panel); }
+.marketing-root .marketing-company__group-title { text-align: center; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); margin: 24px 0 16px; }
+.marketing-root .marketing-company__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+.marketing-root .marketing-company__person { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 22px; text-align: center; }
+.marketing-root .marketing-company__person-name { font-weight: 800; margin: 0 0 4px; color: var(--ink); }
+.marketing-root .marketing-company__person-title { color: var(--teal); font-weight: 700; margin: 0 0 8px; }
+
+/* PRICING */
+.marketing-root .pricing__cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 32px; align-items: start; }
+.marketing-root .pricing__card { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 28px 24px; display: flex; flex-direction: column; gap: 8px; }
+.marketing-root .pricing__card--popular { border-color: var(--teal); box-shadow: var(--shadow-soft); transform: translateY(-6px); }
+.marketing-root .pricing__badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--amber); color: var(--ink); font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
+.marketing-root .pricing__plan-name { font-size: 1.2rem; margin: 0; }
+.marketing-root .pricing__price { margin: 4px 0 12px; }
+.marketing-root .pricing__amount { font-size: 2.2rem; font-weight: 900; color: var(--ink); }
+.marketing-root .pricing__suffix { font-size: 0.95rem; font-weight: 700; color: var(--ink-soft); }
+.marketing-root .pricing__custom { font-size: 1.3rem; font-weight: 800; color: var(--ink); }
+.marketing-root .pricing__included { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 18px; flex: 1; }
+.marketing-root .pricing__included-item { font-size: 0.9rem; color: var(--ink-soft); padding-left: 22px; position: relative; }
+.marketing-root .pricing__included-item::before { content: "\2713"; position: absolute; left: 0; color: var(--teal); font-weight: 900; }
+.marketing-root .pricing__card .pricing__talk-to-sales { margin-top: auto; }
+.marketing-root .pricing__card--skeleton { min-height: 360px; }
+.marketing-root .pricing__skeleton { display: block; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--tint), var(--cream-deep), var(--tint)); background-size: 200% 100%; animation: marketing-skeleton 1.4s ease-in-out infinite; }
+.marketing-root .pricing__skeleton--name { width: 50%; height: 22px; margin-bottom: 10px; }
+.marketing-root .pricing__skeleton--price { width: 70%; height: 40px; margin-bottom: 18px; }
+.marketing-root .pricing__skeleton--line { width: 100%; height: 14px; margin-bottom: 8px; }
+@keyframes marketing-skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .marketing-root .pricing__skeleton { animation: none; } }
+.marketing-root .pricing__fallback { text-align: center; max-width: 40em; margin: 24px auto 0; padding: 28px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.marketing-root .pricing__addons { margin-top: 40px; }
+.marketing-root .pricing__addons-heading { text-align: center; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); margin-bottom: 16px; }
+.marketing-root .pricing__addons-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 760px; margin-inline: auto; }
+.marketing-root .pricing__addon { background: var(--tint); border: 1px dashed var(--line); border-radius: var(--radius-md); padding: 22px; text-align: center; }
+.marketing-root .pricing__addon-name { font-size: 1.05rem; margin: 0 0 6px; }
+.marketing-root .pricing__addon-baseline { color: var(--ink-soft); font-weight: 700; margin-bottom: 14px; }
+
+/* CAREERS */
+.marketing-root .marketing-careers__list { display: flex; flex-direction: column; gap: 12px; max-width: 760px; margin-inline: auto; }
+.marketing-root .marketing-careers__role { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 18px 22px; }
+.marketing-root .marketing-careers__role-title { font-weight: 800; margin: 0 0 2px; color: var(--ink); }
+.marketing-root .marketing-careers__role-meta { font-size: 0.85rem; color: var(--ink-soft); margin: 0; }
+.marketing-root .marketing-careers__empty { text-align: center; color: var(--ink-soft); }
+
+/* CTA BAND */
+.marketing-root .marketing-cta-band__inner { background: linear-gradient(120deg, #0b5566 0%, var(--teal) 50%, var(--cyan) 100%); color: #fff; border-radius: var(--radius-lg); padding: 56px 40px; text-align: center; }
+.marketing-root .marketing-cta-band__title { color: #fff; font-size: clamp(1.6rem, 3vw, 2.2rem); max-width: 20em; margin-inline: auto; }
+.marketing-root .marketing-cta-band__lede { color: rgba(255,255,255,0.9); max-width: 36em; margin: 0 auto 24px; }
+.marketing-root .marketing-cta-band__actions { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.marketing-root .marketing-cta-band__cta--secondary { color: #fff; border-color: rgba(255,255,255,0.6); }
+.marketing-root .marketing-cta-band__cta--secondary:hover { color: #fff; border-color: #fff; background: rgba(255,255,255,0.12); }
+
+/* FOOTER */
+.marketing-root .marketing-footer { background: var(--ink); color: var(--cream); padding: 56px 24px 32px; }
+.marketing-root .marketing-footer__columns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 28px; max-width: 1180px; margin: 0 auto 32px; }
+.marketing-root .marketing-footer__column-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(251,246,236,0.6); margin-bottom: 14px; }
+.marketing-root .marketing-footer__list { display: flex; flex-direction: column; gap: 10px; }
+.marketing-root .marketing-footer__list--inline { flex-direction: row; flex-wrap: wrap; gap: 18px; }
+.marketing-root .marketing-footer a { color: rgba(251,246,236,0.82); font-size: 0.9rem; }
+.marketing-root .marketing-footer a:hover { color: #fff; }
+.marketing-root .marketing-footer__social,
+.marketing-root .marketing-footer__legal { max-width: 1180px; margin: 0 auto; padding-top: 18px; border-top: 1px solid rgba(251,246,236,0.12); }
+.marketing-root .marketing-footer__copyright { max-width: 1180px; margin: 18px auto 0; color: rgba(251,246,236,0.6); font-size: 0.85rem; }
+
+/* PRODUCT + USE-CASE PAGES */
+.marketing-root .marketing-product,
+.marketing-root .marketing-use-case { max-width: 900px; margin-inline: auto; padding: 56px 24px 72px; }
+.marketing-root .marketing-product__eyebrow,
+.marketing-root .marketing-use-case__eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.82rem; font-weight: 800; color: var(--teal); margin-bottom: 10px; }
+
+/* Use-case hero: full-width horizontal segment photo behind the title, with a
+   dark scrim for legibility. The hero bleeds to the edges of the centered
+   .marketing-use-case column via negative margins that cancel its padding. */
+.marketing-root .marketing-use-case__hero {
+  position: relative;
+  margin: -56px -24px 40px;
+  padding: 72px 24px 64px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.marketing-root .marketing-use-case__hero--fallback {
+  background-image: linear-gradient(120deg, var(--teal) 0%, #0b5566 55%, var(--ink) 100%);
+}
+/* Scrim: darken photo backgrounds so white text stays readable (fallback
+   gradient is already dark, so it skips the extra overlay). */
+.marketing-root .marketing-use-case__hero--photo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(6,20,26,0.82) 0%, rgba(6,20,26,0.62) 45%, rgba(6,20,26,0.38) 100%);
+}
+.marketing-root .marketing-use-case__hero > * { position: relative; z-index: 1; }
+.marketing-root .marketing-use-case__hero .marketing-use-case__eyebrow { color: #fff; opacity: 0.92; }
+.marketing-root .marketing-use-case__hero .marketing-use-case__title { color: #fff; }
+/* Secondary CTA is dark-on-light by default; make it legible on the dark hero. */
+.marketing-root .marketing-use-case__hero .marketing-use-case__cta-secondary {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.55);
+}
+.marketing-root .marketing-use-case__hero .marketing-use-case__cta-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+@media (max-width: 500px) {
+  .marketing-root .marketing-use-case__hero { padding-block: 48px 44px; }
+}
+/* Product page title row: large gradient product icon beside the eyebrow, matching the mega-menu chip theme at hero scale. */
+.marketing-root .marketing-product__title-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.marketing-root .marketing-product__title-row .marketing-product__eyebrow { margin-bottom: 0; }
+.marketing-root .marketing-product__icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 56px; height: 56px; border-radius: 14px; color: #fff; box-shadow: var(--shadow-soft); }
+.marketing-root .marketing-product__icon svg { width: 30px; height: 30px; }
+@media (max-width: 500px) {
+  .marketing-root .marketing-product__icon { width: 46px; height: 46px; border-radius: 12px; }
+  .marketing-root .marketing-product__icon svg { width: 24px; height: 24px; }
+}
+.marketing-root .marketing-product__headline,
+.marketing-root .marketing-use-case__title { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 16px; }
+.marketing-root .marketing-product__description { font-size: 1.15rem; margin-bottom: 24px; }
+.marketing-root .marketing-product__actions,
+.marketing-root .marketing-use-case__cta { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 40px; }
+.marketing-root .marketing-product__section,
+.marketing-root .marketing-use-case__section { padding-block: 24px; border-top: 1px solid var(--line); }
+.marketing-root .marketing-product__plans-list,
+.marketing-root .marketing-use-case__product-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.marketing-root .marketing-product__plan,
+.marketing-root .marketing-use-case__product { background: var(--tint); border: 1px solid var(--line); border-radius: 999px; padding: 6px 16px; font-weight: 700; font-size: 0.9rem; }
+.marketing-root .marketing-use-case__problem-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; }
+.marketing-root .marketing-use-case__problem { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--orange); border-radius: var(--radius-sm); padding: 14px 16px; color: var(--ink-soft); }
+.marketing-root .marketing-use-case__media-placeholder { margin-top: 16px; height: 220px; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--cyan), var(--teal)); opacity: 0.85; }
+
+/* NOT FOUND */
+.marketing-root .marketing-not-found { max-width: 560px; margin-inline: auto; padding: 96px 24px; text-align: center; }
+.marketing-root .marketing-not-found__code { font-size: 3rem; font-weight: 900; color: var(--teal); margin: 0; }
+
+/* RESPONSIVE */
+@media (max-width: 980px) {
+  .marketing-root .marketing-hero__inner { grid-template-columns: 1fr; gap: 32px; }
+  .marketing-root .marketing-hero__mockup-region { min-height: 360px; }
+  .marketing-root .pricing__cards { grid-template-columns: repeat(2, 1fr); }
+  .marketing-root .pricing__card--popular { transform: none; }
+  .marketing-root .marketing-products__grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 900px) {
+  .marketing-root .marketing-platform__grid { grid-template-columns: 1fr; }
+  .marketing-root .marketing-segments__list { grid-template-columns: repeat(2, 1fr); }
+  .marketing-root .marketing-footer__columns { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 760px) {
+  .marketing-root section { padding-block: 52px; }
+  /* Mobile links are handled by the hamburger drawer rules below. */
+  .marketing-root .marketing-statband__list { grid-template-columns: repeat(2, 1fr); gap: 14px 16px; }
+  .marketing-root .marketing-use-case__problem-list { grid-template-columns: 1fr; }
+  .marketing-root .marketing-proof__metrics { gap: 28px; }
+}
+@media (max-width: 640px) {
+  .marketing-root .marketing-products__grid,
+  .marketing-root .pricing__cards,
+  .marketing-root .pricing__addons-list,
+  .marketing-root .marketing-segments__list { grid-template-columns: 1fr; }
+  .marketing-root .marketing-footer__columns { grid-template-columns: repeat(2, 1fr); }
+  .marketing-root .marketing-careers__role { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
+@media (max-width: 500px) {
+  .marketing-root .marketing-hero { padding-block: 28px 64px; }
+  .marketing-root .marketing-hero__phone { width: 132px; }
+  .marketing-root .marketing-footer__columns { grid-template-columns: 1fr; }
+  /* The decorative phone mockup (aria-hidden) floats absolutely and overlaps
+     the hero CTAs on narrow phones. Hide just the phone here — the browser
+     dashboard graphic stays — so the "Get started" / "See pricing" buttons
+     stay tappable. */
+  .marketing-root .marketing-hero__phone { display: none; }
+}
+
+/* ==========================================================================
+ * FULL-BLEED FIX — the marketing site renders inside the app's `.App`
+ * container, which is `display:flex; height:100vh` for the authenticated
+ * dashboard shell. Those constraints make `.marketing-root` (a flex item) size
+ * to its content width and clip to one viewport height, leaving the dark page
+ * background showing on the right and top/bottom. Scope a reset here so the
+ * marketing subtree fills the width and flows to its natural height. The
+ * dashboard is untouched (these selectors only match when `.marketing-root`
+ * is present).
+ * ========================================================================== */
+
+/* Neutralize the parent flex item sizing so marketing spans the full width. */
+.App:has(> .marketing-root) {
+  display: block;
+  height: auto;
+  min-height: 100vh;
+  background: var(--panel);
+}
+
+.marketing-root {
+  flex: 1 1 auto;      /* fallback for browsers without :has() — fill the flex row */
+  width: 100%;
+  min-height: 100vh;   /* cover the viewport so no dark band shows below */
+  background: var(--panel);
+}
+
+/* ==========================================================================
+ * HERO DETAIL + LOGO MARK — close port of the Design_Document hero internals
+ * (gradient blob, logo mark, realistic dashboard mockup, phone Discover feed).
+ * ========================================================================== */
+
+/* Logo mark: rounded gradient square + amber dot, next to the "tabs" wordmark. */
+.marketing-root .marketing-nav__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.marketing-root .marketing-nav__logo-mark {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--cyan), var(--teal));
+  flex-shrink: 0;
+}
+.marketing-root .marketing-nav__logo-mark::after {
+  content: "";
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+.marketing-root .marketing-nav__logo-text {
+  font-weight: 900;
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+/* Hero positioning + ambient gradient blob behind the mockups. */
+.marketing-root .marketing-hero { position: relative; overflow: hidden; }
+.marketing-root .marketing-hero__inner { position: relative; z-index: 1; }
+.marketing-root .marketing-hero__blob {
+  position: absolute;
+  top: -220px;
+  right: -240px;
+  width: 720px;
+  height: 720px;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 35% 35%, rgba(24,168,216,0.28), rgba(245,166,35,0.18) 55%, transparent 72%);
+  filter: blur(10px);
+}
+
+/* Dashboard sidebar icons. */
+.marketing-root .marketing-hero__browser-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 0;
+  background: var(--ink);
+}
+.marketing-root .marketing-hero__side-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(251,246,236,0.35);
+}
+.marketing-root .marketing-hero__side-icon.is-active { background: var(--amber); }
+
+/* Stat chips row. */
+.marketing-root .marketing-hero__stat-row { display: flex; gap: 10px; margin-bottom: 14px; }
+.marketing-root .marketing-hero__stat-chip {
+  flex: 1;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.marketing-root .marketing-hero__stat-num { font-weight: 900; font-size: 1.05rem; color: var(--ink); }
+.marketing-root .marketing-hero__stat-lbl { font-size: 0.7rem; font-weight: 700; color: var(--ink-soft); }
+
+/* Event rows. */
+.marketing-root .marketing-hero__ev-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+.marketing-root .marketing-hero__ev-thumb {
+  width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+}
+.marketing-root .marketing-hero__ev-text { display: flex; flex-direction: column; }
+.marketing-root .marketing-hero__ev-title { font-weight: 800; font-size: 0.8rem; color: var(--ink); }
+.marketing-root .marketing-hero__ev-meta { font-size: 0.72rem; color: var(--ink-soft); font-weight: 600; }
+
+/* Phone "Discover" feed. */
+.marketing-root .marketing-hero__phone-screen {
+  background: var(--cream);
+  border-radius: 20px;
+  overflow: hidden;
+  min-height: 260px;
+  padding: 0;
+}
+.marketing-root .marketing-hero__phone-status {
+  display: flex; justify-content: space-between;
+  padding: 10px 16px 4px; font-size: 0.62rem; font-weight: 800; color: var(--ink);
+}
+.marketing-root .marketing-hero__phone-head {
+  padding: 4px 16px 12px; font-weight: 900; font-size: 1.15rem; color: var(--ink);
+}
+.marketing-root .marketing-hero__phone-card {
+  margin: 0 12px 10px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.marketing-root .marketing-hero__phone-card-img { height: 60px; }
+.marketing-root .marketing-hero__phone-card-body { padding: 9px 11px 11px; }
+.marketing-root .marketing-hero__phone-card-title { font-weight: 800; font-size: 0.78rem; color: var(--ink); }
+.marketing-root .marketing-hero__phone-card-meta { font-size: 0.68rem; color: var(--ink-soft); font-weight: 700; }
+
+/* ==========================================================================
+ * FONT FIX + MEGA-MENU GRID.
+ *
+ * App.css declares a global `* { font-family: system-ui... }` that overrides
+ * the marketing typography. Re-assert Nunito on the marketing subtree AND all
+ * its descendants with higher specificity so the whole marketing site renders
+ * in Nunito (the dashboard, outside `.marketing-root`, is unaffected).
+ * ========================================================================== */
+.marketing-root,
+.marketing-root * {
+  font-family: var(--font-sans) !important;
+}
+/* Keep monospace-y bits (none currently) and icon fonts out of the override if
+ * ever added; the SVG caret is unaffected. */
+
+/* Trigger caret (Products/Solutions chevron). */
+.marketing-root .mega-menu__caret {
+  width: 10px;
+  height: 10px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* Rich mega-menu items: gradient icon + (title over subtitle). */
+.marketing-root .mega-menu__item {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+.marketing-root .mega-menu__item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: #fff;
+}
+.marketing-root .mega-menu__item-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.marketing-root .mega-menu__item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.marketing-root .mega-menu__item-title {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.marketing-root .mega-menu__item-sub {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  line-height: 1.2;
+}
+
+/* Products panel as a 2-column grid card (Design_Document). */
+.marketing-root .mega-menu__panel--grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  width: 480px;
+  padding: 14px;
+}
+.marketing-root .mega-menu__panel--grid[hidden] { display: none; }
+
+@media (max-width: 640px) {
+  .marketing-root .mega-menu__panel--grid {
+    grid-template-columns: 1fr;
+    width: min(88vw, 320px);
+  }
+}
+
+/* ==========================================================================
+ * BRAND LOGO IMAGE — use the real Tabs SVG mark in the nav instead of the CSS
+ * gradient square. Sized to sit next to the "tabs" wordmark.
+ * ========================================================================== */
+.marketing-root .marketing-nav__logo-img {
+  width: 30px;
+  height: 30px;
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+/* ==========================================================================
+ * SECONDARY PAGES (About, Careers, Contact, Restaurants) — files-2 designs.
+ * Shared `mkt-*` layout scoped under `.marketing-root`.
+ * ========================================================================== */
+.marketing-root .mkt-page { padding: 40px 0 72px; }
+.marketing-root .mkt-breadcrumb {
+  font-size: 0.82rem; font-weight: 700; color: var(--ink-soft);
+  text-transform: none; margin: 0 0 18px;
+}
+.marketing-root .mkt-page__hero { max-width: 760px; margin-bottom: 48px; }
+.marketing-root .mkt-page__hero h1 {
+  font-size: clamp(2rem, 4vw, 3rem); line-height: 1.08; letter-spacing: -0.02em; margin-bottom: 16px;
+}
+.marketing-root .mkt-page__lede { font-size: 1.15rem; color: var(--ink-soft); }
+.marketing-root .mkt-page__ctas { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 24px; }
+
+.marketing-root .mkt-section { padding: 40px 0; border-top: 1px solid var(--line); }
+.marketing-root .mkt-section > h2 { font-size: clamp(1.5rem, 2.6vw, 2rem); margin-bottom: 10px; }
+.marketing-root .mkt-section__intro { color: var(--ink-soft); max-width: 60ch; margin-bottom: 28px; }
+.marketing-root .mkt-tag {
+  display: inline-block; font-size: 0.85rem; font-weight: 800; color: var(--teal);
+  background: var(--tint); border-radius: 999px; padding: 6px 14px; margin-top: 8px;
+}
+
+/* Card grids */
+.marketing-root .mkt-card-grid { display: grid; gap: 20px; }
+.marketing-root .mkt-card-grid--2 { grid-template-columns: repeat(2, 1fr); }
+.marketing-root .mkt-card-grid--3 { grid-template-columns: repeat(3, 1fr); }
+.marketing-root .mkt-card-grid--4 { grid-template-columns: repeat(4, 1fr); }
+.marketing-root .mkt-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 24px;
+}
+.marketing-root .mkt-card h3 { font-size: 1.1rem; margin-bottom: 8px; }
+.marketing-root .mkt-card p { margin: 0; color: var(--ink-soft); }
+.marketing-root .mkt-card--problem { border-left: 3px solid var(--orange); }
+.marketing-root .mkt-card__icon {
+  display: block; width: 42px; height: 42px; border-radius: 12px; margin-bottom: 16px;
+}
+
+/* Steps */
+.marketing-root .mkt-step {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 24px;
+}
+.marketing-root .mkt-step__num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%; margin-bottom: 12px;
+  background: linear-gradient(135deg, var(--orange), var(--amber)); color: #fff; font-weight: 900;
+}
+.marketing-root .mkt-step h3 { font-size: 1rem; margin-bottom: 6px; }
+.marketing-root .mkt-step p { margin: 0; color: var(--ink-soft); font-size: 0.92rem; }
+
+/* Leaders + advisors */
+.marketing-root .mkt-leader-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 28px; }
+.marketing-root .mkt-leader-card {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 18px;
+}
+.marketing-root .mkt-leader-card h4 { margin: 0 0 2px; }
+.marketing-root .mkt-role { color: var(--teal); font-weight: 700; font-size: 0.88rem; }
+.marketing-root .mkt-avatar {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 52px; height: 52px; border-radius: 50%; color: #fff; font-weight: 900; font-size: 1rem;
+  background: linear-gradient(135deg, var(--teal), var(--ink));
+}
+.marketing-root .mkt-avatar--sm { width: 40px; height: 40px; font-size: 0.85rem; margin: 0 auto 10px; }
+.marketing-root .mkt-advisor-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.marketing-root .mkt-advisor-card {
+  background: var(--tint); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 16px; text-align: center;
+}
+.marketing-root .mkt-advisor-name { font-weight: 800; font-size: 0.85rem; }
+.marketing-root .mkt-advisor-role { color: var(--ink-soft); font-size: 0.78rem; margin-top: 2px; }
+
+/* Role list (careers) */
+.marketing-root .mkt-role-list { display: flex; flex-direction: column; gap: 12px; }
+.marketing-root .mkt-role {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 18px 22px;
+}
+.marketing-root .mkt-role__title { font-weight: 800; margin: 0 0 2px; }
+.marketing-root .mkt-role__meta { color: var(--ink-soft); font-size: 0.85rem; margin: 0; }
+
+/* Feature rows (restaurants) */
+.marketing-root .mkt-feature-rows { display: flex; flex-direction: column; gap: 20px; }
+.marketing-root .mkt-feature-row {
+  display: grid; grid-template-columns: 48px 1fr; gap: 18px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 24px;
+}
+.marketing-root .mkt-feature-row__num {
+  width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--cyan), var(--teal)); color: #fff; font-weight: 900;
+}
+.marketing-root .mkt-feature-row__body h3 { font-size: 1.15rem; margin-bottom: 6px; }
+.marketing-root .mkt-feature-row__points { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; }
+.marketing-root .mkt-feature-row__points li {
+  position: relative; padding-left: 20px; font-size: 0.88rem; font-weight: 600; color: var(--ink-soft);
+}
+.marketing-root .mkt-feature-row__points li::before {
+  content: "\2713"; position: absolute; left: 0; color: var(--teal); font-weight: 900;
+}
+
+/* Plans (restaurants) */
+.marketing-root .mkt-plan {
+  position: relative; background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: 28px 24px; display: flex; flex-direction: column; gap: 8px;
+}
+.marketing-root .mkt-plan--popular { border-color: var(--teal); box-shadow: var(--shadow-soft); }
+.marketing-root .mkt-plan__badge {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  background: var(--amber); color: var(--ink); font-size: 0.7rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.03em; padding: 5px 12px; border-radius: 999px; white-space: nowrap;
+}
+.marketing-root .mkt-plan__amount { font-size: 2rem; font-weight: 900; }
+.marketing-root .mkt-plan__suffix { font-weight: 700; color: var(--ink-soft); }
+.marketing-root .mkt-plan__for { color: var(--ink-soft); margin-bottom: 8px; }
+.marketing-root .mkt-plan .btn { margin-top: auto; }
+.marketing-root .mkt-footnote { color: var(--ink-soft); font-size: 0.9rem; margin-top: 18px; }
+
+/* Contact form */
+.marketing-root .mkt-contact__grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 40px; align-items: start; }
+.marketing-root .mkt-form { display: flex; flex-direction: column; gap: 16px; }
+.marketing-root .mkt-field { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: 0.9rem; }
+.marketing-root .mkt-field input,
+.marketing-root .mkt-field select,
+.marketing-root .mkt-field textarea {
+  font-family: var(--font-sans); font-size: 1rem; font-weight: 500; color: var(--ink);
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel);
+}
+.marketing-root .mkt-field input:focus,
+.marketing-root .mkt-field select:focus,
+.marketing-root .mkt-field textarea:focus { outline: 3px solid var(--cyan); outline-offset: 1px; border-color: var(--teal); }
+.marketing-root .mkt-form .btn { align-self: flex-start; }
+.marketing-root .mkt-form__note { color: var(--teal); font-weight: 700; font-size: 0.9rem; }
+.marketing-root .mkt-contact__aside { display: flex; flex-direction: column; gap: 16px; }
+.marketing-root .mkt-info-card {
+  background: var(--tint); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 20px;
+}
+.marketing-root .mkt-info-card h3 { font-size: 1rem; margin-bottom: 4px; }
+.marketing-root .mkt-info-card p { color: var(--ink-soft); margin: 0 0 6px; }
+.marketing-root .mkt-info-card a { color: var(--teal); font-weight: 700; }
+
+/* Closing CTA band (secondary pages) */
+.marketing-root .mkt-closing { padding: 48px 0 0; }
+.marketing-root .mkt-closing__inner {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  background: linear-gradient(120deg, #0b5566 0%, var(--teal) 50%, var(--cyan) 100%); color: #fff;
+  border-radius: var(--radius-lg); padding: 40px 36px;
+}
+.marketing-root .mkt-closing__inner h2 { color: #fff; margin-bottom: 6px; }
+.marketing-root .mkt-closing__inner p { color: rgba(255,255,255,0.9); margin: 0; }
+.marketing-root .mkt-closing__actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.marketing-root .mkt-closing__actions .btn--ghost { color: #fff; border-color: rgba(255,255,255,0.6); }
+.marketing-root .mkt-closing__actions .btn--ghost:hover { color: #fff; border-color: #fff; background: rgba(255,255,255,0.12); }
+
+/* Secondary-page responsive */
+@media (max-width: 900px) {
+  .marketing-root .mkt-card-grid--4 { grid-template-columns: repeat(2, 1fr); }
+  .marketing-root .mkt-advisor-grid { grid-template-columns: repeat(3, 1fr); }
+  .marketing-root .mkt-contact__grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .marketing-root .mkt-card-grid--2,
+  .marketing-root .mkt-card-grid--3,
+  .marketing-root .mkt-card-grid--4,
+  .marketing-root .mkt-leader-grid { grid-template-columns: 1fr; }
+  .marketing-root .mkt-advisor-grid { grid-template-columns: repeat(2, 1fr); }
+  .marketing-root .mkt-role { flex-direction: column; align-items: flex-start; }
+  .marketing-root .mkt-feature-row { grid-template-columns: 1fr; }
+}
+
+/* Contact form error note */
+.marketing-root .mkt-form__note--error { color: var(--orange); }
+
+/* ==========================================================================
+ * RICH PRODUCT PAGE blocks (subhead, problems intro, feature rows, FAQ).
+ * ========================================================================== */
+.marketing-root .marketing-product__subhead {
+  font-size: 1.05rem; color: var(--ink-soft); max-width: 62ch; margin: -8px 0 32px;
+}
+.marketing-root .marketing-product__problems,
+.marketing-root .marketing-product__features,
+.marketing-root .marketing-product__faq { padding: 36px 0; border-top: 1px solid var(--line); }
+.marketing-root .marketing-product__section-intro { color: var(--ink-soft); max-width: 60ch; margin-bottom: 24px; }
+
+.marketing-root .mkt-faq { display: flex; flex-direction: column; gap: 10px; max-width: 760px; }
+.marketing-root .mkt-faq__item {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 4px 18px;
+}
+.marketing-root .mkt-faq__item summary {
+  cursor: pointer; font-weight: 800; padding: 14px 0; list-style: none; color: var(--ink);
+}
+.marketing-root .mkt-faq__item summary::-webkit-details-marker { display: none; }
+.marketing-root .mkt-faq__item summary::after {
+  content: "+"; float: right; font-weight: 900; color: var(--teal); font-size: 1.2rem; line-height: 1;
+}
+.marketing-root .mkt-faq__item[open] summary::after { content: "\2013"; }
+.marketing-root .mkt-faq__item p { margin: 0 0 16px; color: var(--ink-soft); line-height: 1.55; }
+
+/* ==========================================================================
+ * MOBILE HAMBURGER NAV.
+ * Desktop: hamburger + mobile-action links hidden; links show inline.
+ * <= 760px: inline links hide, hamburger shows, and the links container becomes
+ * a full-width dropdown drawer toggled by `.is-mobile-open`.
+ * ========================================================================== */
+
+/* Hamburger button — hidden on desktop. */
+.marketing-root .marketing-nav__hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-left: auto;
+  order: 3;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  cursor: pointer;
+}
+.marketing-root .marketing-nav__hamburger-bars {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 18px;
+}
+.marketing-root .marketing-nav__hamburger-bars span {
+  display: block;
+  height: 2px;
+  width: 100%;
+  border-radius: 2px;
+  background: var(--ink);
+}
+
+/* The "Log in / Join Tabs" links that live inside the drawer are hidden on
+ * desktop (the top-right actions cover them there). */
+.marketing-root .marketing-nav__link--mobile-action { display: none; }
+
+@media (max-width: 760px) {
+  /* Show the hamburger. Log in + Join Tabs stay visible in the top-right on
+   * mobile too — only the navigation links move into the drawer. */
+  .marketing-root .marketing-nav__hamburger { display: inline-flex; }
+
+  /* Links container becomes a dropdown drawer, hidden until opened. */
+  .marketing-root .marketing-nav__links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 12px;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    box-shadow: var(--shadow-soft);
+  }
+  .marketing-root .marketing-nav__links.is-mobile-open { display: flex; }
+
+  /* Anchor/route links stack full width in the drawer. */
+  .marketing-root .marketing-nav__link {
+    display: block;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Log in / Join Tabs remain in the top-right actions cluster (not the drawer),
+   * so the in-drawer duplicates stay hidden. */
+
+  /* Mega-menu triggers span the drawer; their panels sit inline (not floating). */
+  .marketing-root .marketing-nav__links .mega-menu { display: block; width: 100%; }
+  .marketing-root .marketing-nav__links .mega-menu__trigger { width: 100%; justify-content: space-between; }
+  .marketing-root .marketing-nav__links .mega-menu__panel {
+    position: static;
+    width: 100%;
+    box-shadow: none;
+    border: none;
+    padding: 4px 0 8px;
+  }
+  .marketing-root .marketing-nav__links .mega-menu__panel--grid {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  /* The nav-inner needs relative positioning so the drawer anchors to it. */
+  .marketing-root .marketing-nav__inner { position: relative; }
+}
+
+/* Mobile nav bar arrangement: logo | (spacer) | Log in · Join Tabs | hamburger */
+@media (max-width: 760px) {
+  .marketing-root .marketing-nav__actions { margin-left: auto; gap: 8px; }
+  .marketing-root .marketing-nav__hamburger { margin-left: 10px; }
+  /* Tighten the action buttons so logo + actions + hamburger fit small widths. */
+  .marketing-root .marketing-nav__login,
+  .marketing-root .marketing-nav__cta { padding: 8px 14px; font-size: 0.85rem; }
+}
+@media (max-width: 420px) {
+  /* Very narrow: the wordmark can hide, keeping the logo mark + actions + burger. */
+  .marketing-root .marketing-nav__logo-text { display: none; }
+  .marketing-root .marketing-nav__login,
+  .marketing-root .marketing-nav__cta { padding: 7px 12px; font-size: 0.8rem; }
+}
+
+/* ==========================================================================
+ * DEDICATED /pricing PAGE (from files-2/pricing.html).
+ * ========================================================================== */
+.marketing-root .mkt-pricing__hero { padding: 40px 0 20px; text-align: center; }
+.marketing-root .mkt-pricing__hero h1 { font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.02em; margin-bottom: 14px; }
+
+/* Billing toggle */
+.marketing-root .billing-toggle {
+  display: inline-flex;
+  gap: 4px;
+  margin: 26px auto 0;
+  padding: 5px;
+  background: var(--tint);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.marketing-root .billing-toggle button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  padding: 9px 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.marketing-root .billing-toggle button.active {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(18,38,47,0.12);
+}
+.marketing-root .billing-save {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--teal);
+  background: rgba(14,124,147,0.12);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+/* Price cards (design values) */
+.marketing-root .mkt-pricing__cards { padding: 20px 0 56px; }
+.marketing-root .price-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; align-items: stretch; }
+.marketing-root .price-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 28px 24px; display: flex; flex-direction: column;
+}
+.marketing-root .price-card.featured {
+  background: linear-gradient(160deg, var(--teal), #095866); color: #fff; border-color: var(--teal);
+  box-shadow: var(--shadow-soft); transform: translateY(-8px);
+}
+.marketing-root .price-card.featured h3,
+.marketing-root .price-card.featured .amt,
+.marketing-root .price-card.featured .for,
+.marketing-root .price-card.featured li { color: #fff; }
+.marketing-root .price-badge {
+  display: inline-block; font-size: 0.72rem; font-weight: 800; padding: 5px 12px; border-radius: 999px;
+  background: var(--amber); color: var(--ink); margin-bottom: 14px; width: fit-content;
+}
+.marketing-root .price-card h3 { font-size: 1.2rem; font-weight: 900; margin: 0 0 6px; }
+.marketing-root .price-card .amt { font-size: 2.1rem; font-weight: 900; margin: 6px 0 2px; letter-spacing: -0.02em; }
+.marketing-root .price-card .amt .cycle { font-size: 0.9rem; font-weight: 700; opacity: 0.7; margin-left: 2px; }
+.marketing-root .price-card .for { font-size: 0.82rem; font-weight: 700; opacity: 0.75; margin-bottom: 18px; }
+.marketing-root .price-card ul { list-style: none; padding: 0; margin: 0 0 22px; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.marketing-root .price-card li { display: flex; gap: 8px; font-size: 0.86rem; font-weight: 700; padding: 6px 0; align-items: flex-start; }
+.marketing-root .price-card li svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 3px; color: var(--teal); }
+.marketing-root .price-card.featured li svg { color: var(--amber); }
+.marketing-root .price-card .btn { width: 100%; }
+.marketing-root .price-card.featured .btn--ghost { color: #fff; border-color: rgba(255,255,255,0.5); }
+.marketing-root .price-card--skeleton { min-height: 320px; gap: 12px; }
+
+/* Add-ons + note */
+.marketing-root .addon-row { display: flex; gap: 16px; margin-top: 22px; flex-wrap: wrap; }
+.marketing-root .addon { flex: 1; min-width: 260px; border: 1px dashed var(--line); border-radius: var(--radius-md); padding: 18px 20px; background: var(--tint); }
+.marketing-root .addon h4 { margin: 0 0 4px; font-size: 0.95rem; font-weight: 800; }
+.marketing-root .addon p { margin: 0; font-size: 0.85rem; color: var(--ink-soft); font-weight: 600; }
+.marketing-root .price-note { font-size: 0.78rem; color: var(--ink-soft); font-weight: 600; margin-top: 18px; }
+
+/* Section head shared by compare/faq */
+.marketing-root .mkt-section-head { max-width: 640px; margin: 0 auto 40px; text-align: center; }
+.marketing-root .mkt-section-head h2 { font-size: clamp(1.5rem, 2.6vw, 2rem); margin-bottom: 10px; }
+.marketing-root .mkt-section-head p { color: var(--ink-soft); margin: 0; }
+.marketing-root .mkt-pricing__compare { background: var(--panel); border-top: 1px solid var(--line); padding: 56px 0; }
+
+/* Comparison table */
+.marketing-root .compare-table-wrap { overflow-x: auto; }
+.marketing-root .compare-table { width: 100%; border-collapse: collapse; min-width: 640px; }
+.marketing-root .compare-table th,
+.marketing-root .compare-table td { padding: 14px 16px; text-align: center; border-bottom: 1px solid var(--line); font-size: 0.88rem; }
+.marketing-root .compare-table thead th { font-size: 1rem; font-weight: 900; color: var(--ink); }
+.marketing-root .compare-table td:first-child,
+.marketing-root .compare-table th:first-child { text-align: left; font-weight: 700; color: var(--ink-soft); }
+.marketing-root .compare-table .plan-col.featured { color: var(--teal); }
+.marketing-root .compare-table .row-group-label { text-align: left; font-weight: 900; color: var(--ink); background: var(--tint); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.74rem; }
+.marketing-root .compare-table .tick { width: 20px; height: 20px; color: var(--teal); display: inline-block; }
+.marketing-root .compare-table .dash { color: var(--ink-soft); opacity: 0.5; }
+
+/* Pricing FAQ (reuses mkt-faq item shell, adds accordion button) */
+.marketing-root .mkt-pricing__faq { background: var(--tint); padding: 56px 0; }
+.marketing-root .mkt-pricing__faq .mkt-faq { margin-inline: auto; }
+.marketing-root .mkt-faq__q {
+  width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius-md); padding: 16px 18px; cursor: pointer; font-family: var(--font-sans);
+  font-weight: 800; font-size: 0.95rem; color: var(--ink); display: flex; justify-content: space-between; align-items: center;
+}
+.marketing-root .mkt-faq__q::after { content: "+"; color: var(--teal); font-weight: 900; font-size: 1.2rem; }
+.marketing-root .mkt-faq__item.is-open .mkt-faq__q::after { content: "\2013"; }
+.marketing-root .mkt-pricing__faq .mkt-faq__item { border: none; background: transparent; padding: 0; }
+.marketing-root .mkt-faq__a { margin: 8px 2px 4px; color: var(--ink-soft); line-height: 1.55; }
+
+@media (max-width: 960px) { .marketing-root .price-grid { grid-template-columns: repeat(2, 1fr); } .marketing-root .price-card.featured { transform: none; } }
+@media (max-width: 560px) { .marketing-root .price-grid { grid-template-columns: 1fr; } }
+
+/* ==========================================================================
+ * HOMEPAGE SECTION POLISH — tighten spacing, add color + rhythm so sections
+ * feel connected rather than floating in flat white.
+ * ========================================================================== */
+
+/* Tighten the hero's bottom gap so it sits closer to the stat band, and keep
+   the top tight to the nav so the logo/headline sit high on the page. */
+.marketing-root .marketing-hero { padding-block: 12px 56px; }
+
+/* Alternate section surfaces for rhythm: every other content section gets a
+ * faint tint so the eye reads them as distinct, connected bands. Products and
+ * Platform stay white; Proof / Revenue Engines / Segments get the tint. */
+.marketing-root .marketing-proof,
+.marketing-root .marketing-segments { background: var(--tint); }
+
+/* Colored, connected section headings: a short accent rule under each. */
+.marketing-root .marketing-products__heading,
+.marketing-root .marketing-platform__heading,
+.marketing-root .marketing-proof__heading,
+.marketing-root .marketing-revenue-engines__title,
+.marketing-root .marketing-segments__title {
+  position: relative;
+  padding-bottom: 14px;
+}
+.marketing-root .marketing-products__heading::after,
+.marketing-root .marketing-platform__heading::after,
+.marketing-root .marketing-proof__heading::after,
+.marketing-root .marketing-revenue-engines__title::after,
+.marketing-root .marketing-segments__title::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--cyan), var(--amber));
+}
+
+/* Product cards: colored top accent + stronger hover so the grid feels alive. */
+.marketing-root .marketing-products__card {
+  border-top: 3px solid var(--cyan);
+}
+.marketing-root .marketing-products__card:nth-child(4n+2) { border-top-color: var(--orange); }
+.marketing-root .marketing-products__card:nth-child(4n+3) { border-top-color: var(--amber); }
+.marketing-root .marketing-products__card:nth-child(4n+4) { border-top-color: var(--teal); }
+.marketing-root .marketing-products__card-title { color: var(--teal); }
+
+/* Revenue engine cards: accent left border for a connected, colorful list. */
+.marketing-root .marketing-revenue-engines__item {
+  border-left: 3px solid var(--amber);
+  background: var(--panel);
+}
+.marketing-root .marketing-revenue-engines__item-name { color: var(--orange); }
+
+/* Segment cards: teal accent + lift on hover. */
+.marketing-root .marketing-segments__item { border-top: 3px solid var(--cyan); }
+.marketing-root .marketing-segments__item-name { color: var(--teal); }
+
+/* Proof metrics pop in brand color (already teal); make the band feel anchored. */
+.marketing-root .marketing-proof__metric { color: var(--orange); }

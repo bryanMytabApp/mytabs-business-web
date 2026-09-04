@@ -22,7 +22,7 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import http from "../../utils/axios/http";
 import { listAllExperiences, deleteInstance } from "../../services/experienceService";
-import { getCurrentUserId } from "../../utils/authUtils";
+import { getCurrentUserId, buildAuthenticatedReturnUrl } from "../../utils/authUtils";
 import ExperienceCard from "../../components/Experiences/ExperienceCard";
 
 const ACCENT = "#F09925";
@@ -50,15 +50,17 @@ const AllExperiencesDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      // Always use the personal userId for the "all engagements" view.
-      // The events page may switch selectedBusinessId to an org business, but
-      // engagements should show across ALL of the user's events, not just the
-      // currently-selected business. The per-event experiences query inside
-      // listAllExperiences doesn't need business context — it queries by eventId.
+      // Resolve the effective user id for the events fetch. This mirrors
+      // EventsView: we pass a userId in the path but the real scoping is done
+      // by the X-Business-Id header (attached by the http interceptor from the
+      // selected business). The backend's resolveEffectiveUserId turns that
+      // header into the correct partition, so the engagements list follows the
+      // business the user selected in the switcher — the same events they see
+      // on the Events page.
       const userId =
         localStorage.getItem("userId") || localStorage.getItem("sub") || getCurrentUserId();
 
-      console.log("📋 [Engagements] userId:", userId);
+      console.log("📋 [Engagements] userId:", userId, "selectedBusinessId:", sessionStorage.getItem("selectedBusinessId"));
 
       if (!userId) {
         setEvents([]);
@@ -68,11 +70,10 @@ const AllExperiencesDashboard = () => {
         return;
       }
 
-      // Fetch ALL events for this user, bypassing the business header.
-      // The events page switches selectedBusinessId based on org membership,
-      // which scopes the events list to one business. The engagements dashboard
-      // must show engagements across ALL events regardless of business context.
-      const eventsRes = await http.get(`/event/${userId}/all`, { skipBusinessContext: true });
+      // Scope events to the selected business by letting the X-Business-Id
+      // header apply (no skipBusinessContext). This matches EventsView so the
+      // engagements shown belong to the currently-selected business.
+      const eventsRes = await http.get(`/event/${userId}/all`);
       const events = eventsRes?.data?.data || eventsRes?.data || [];
       console.log("📋 [Engagements] getEventsByUserId response:", { eventsCount: events.length, rawKeys: Object.keys(eventsRes?.data || {}), firstEvent: events[0] ? { id: events[0]._id || events[0].id, name: events[0].name } : null });
       setEvents(events);
@@ -246,6 +247,18 @@ const AllExperiencesDashboard = () => {
     }
   };
 
+  // Open the engagement verification app with the current session so the
+  // operator isn't forced to log in again. The verify app accepts token +
+  // userId query params for cross-subdomain SSO (mirrors the Verify Tickets
+  // handoff on the Ticket Management page).
+  const openVerifyApp = () => {
+    const base = "https://verify.engage.keeptabs.app";
+    const token = localStorage.getItem("idToken");
+    const userId = getCurrentUserId();
+    const url = token && userId ? buildAuthenticatedReturnUrl(base, token, userId) : base;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
@@ -260,7 +273,7 @@ const AllExperiencesDashboard = () => {
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 800, color: "#1D1B20", fontSize: { xs: "1.5rem", md: "2rem" } }}>
-            Tab Engagements
+            Tab <span style={{ color: "#f97316" }}>Engagements</span>
           </Typography>
           <Typography sx={{ color: "#71727A", fontSize: 14, mt: 0.5 }}>
             All interactive engagements across your events.
@@ -283,6 +296,20 @@ const AllExperiencesDashboard = () => {
                   Select
                 </Button>
               )}
+              <Button
+                variant="outlined"
+                onClick={openVerifyApp}
+                sx={{
+                  textTransform: "none",
+                  fontWeight: 700,
+                  borderRadius: 2,
+                  color: ACCENT,
+                  borderColor: ACCENT,
+                  "&:hover": { borderColor: "#D4820F", background: "rgba(240,153,37,0.08)" },
+                }}
+              >
+                Verify Engagements
+              </Button>
               <Button
                 variant="contained"
                 startIcon={<AddCircleOutlineIcon />}

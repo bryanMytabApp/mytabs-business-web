@@ -10,6 +10,7 @@ import { getBusiness } from "../../services/businessService";
 import { getCustomerSubscription, getSystemSubscriptions } from "../../services/paymentService";
 import { getMyOrganizations, getOrganizationBusinesses } from "../../services/organizationService";
 import { getWeatherPreview } from "../../services/weatherPreviewService";
+import { setHelpRoute } from "../../components/TabsHelp/helpRoute";
 import axios from "axios";
 const EventMembers = React.lazy(() => import("./EventMembers"));
 
@@ -2408,28 +2409,33 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
           setIsUrbanHTXOrg(isUrbanHTX);
           const allBiz = [];
           if (orgRole === 'owner') {
-            let ownerBizId = userId;
+            // The owner's primary context MUST be keyed by userId (the partition
+            // events are stored under, and what the backend expects for the owner's
+            // own data). We still fetch the business record for its businessCode
+            // (used in the event-code preview), but we must NOT use its _id as the
+            // context key — doing so strands the owner's events under a different
+            // partition.
             let ownerBizCode = '';
             try {
               const ownerBizRes = await getBusiness(userId);
               const ownerBiz = ownerBizRes?.data || ownerBizRes;
-              if (ownerBiz?._id) ownerBizId = ownerBiz._id;
               if (ownerBiz?.businessCode) ownerBizCode = ownerBiz.businessCode;
-            } catch (e) { /* fallback to userId */ }
-            allBiz.push({ linkedBusinessId: ownerBizId, userId: userId, name: orgName, isPayer: true, businessCode: ownerBizCode });
+            } catch (e) { /* businessCode is best-effort */ }
+            allBiz.push({ linkedBusinessId: userId, userId: userId, name: orgName, isPayer: true, businessCode: ownerBizCode });
           }
           allBiz.push(...businesses.filter(b => b.linkedBusinessId !== userId));
           setAllBusinesses(allBiz);
 
-          // Validate that the saved selectedBusinessId is still valid
+          // selectedBusinessId is USER-OWNED session state — this load effect must
+          // only READ it, never write it. We reflect the saved (or default) value
+          // in local state for the business selector, but persisting is reserved
+          // for explicit user actions (the onBusinessChange handler / switcher).
           const eventBizId = editMode && editData?.businessId ? editData.businessId : null;
           const savedBiz = eventBizId || sessionStorage.getItem("selectedBusinessId");
           if (savedBiz && allBiz.some(b => b.linkedBusinessId === savedBiz)) {
             setSelectedBusinessId(savedBiz);
           } else if (allBiz.length > 0) {
-            const defaultBiz = allBiz[0].linkedBusinessId;
-            setSelectedBusinessId(defaultBiz);
-            sessionStorage.setItem("selectedBusinessId", defaultBiz);
+            setSelectedBusinessId(allBiz[0].linkedBusinessId);
           }
         }
       } catch (e) { console.error("Plan data fetch error:", e); }
@@ -2454,9 +2460,9 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
   // Update URL hash and notify help SDK when step changes
   const updateHelpHash = (stepNum) => {
     const hash = stepHashMap[stepNum] || "setup";
-    if (window.tabsHelp && typeof window.tabsHelp.setRoute === "function") {
-      window.tabsHelp.setRoute(window.location.pathname + `#${hash}`);
-    }
+    // Buffer + forward to the help SDK. setHelpRoute survives the SDK not being
+    // loaded yet (cold/incognito loads) — the route is replayed on boot.
+    setHelpRoute(window.location.pathname + `#${hash}`);
   };
 
   const next = () => setStep(s => s + 1);

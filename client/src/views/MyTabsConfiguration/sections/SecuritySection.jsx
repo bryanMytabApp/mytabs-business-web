@@ -118,6 +118,9 @@ const SecuritySection = () => {
     localStorage.removeItem('refToken');
     localStorage.removeItem('username');
     localStorage.removeItem('sessionId');
+    // Clear session-scoped context (business selection, etc.) so a stale
+    // selectedBusinessId never carries into the next login.
+    sessionStorage.clear();
     setSignOutDialogOpen(false);
     window.location.href = '/login';
   };

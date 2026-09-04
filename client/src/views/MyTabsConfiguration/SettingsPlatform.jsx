@@ -11,6 +11,7 @@ const SecuritySection = lazy(() => import('./sections/SecuritySection'));
 const OrganizationSection = lazy(() => import('./sections/OrganizationSection'));
 const TeamSection = lazy(() => import('./sections/TeamSection'));
 const BillingSection = lazy(() => import('./sections/BillingSection'));
+const PayoutsSection = lazy(() => import('./sections/PayoutsSection'));
 const AppearanceSection = lazy(() => import('./sections/AppearanceSection'));
 const NotificationsSection = lazy(() => import('./sections/NotificationsSection'));
 const PrivacySection = lazy(() => import('./sections/PrivacySection'));
@@ -22,6 +23,7 @@ const sectionComponents = {
   organization: OrganizationSection,
   team: TeamSection,
   billing: BillingSection,
+  payouts: PayoutsSection,
   appearance: AppearanceSection,
   notifications: NotificationsSection,
   privacy: PrivacySection,
@@ -187,7 +189,14 @@ const SettingsContent = () => {
           <Box sx={platformStyles.navPanel}>
             <SettingsNav />
           </Box>
-          <Box sx={platformStyles.content}>
+          <Box
+            sx={{
+              ...platformStyles.content,
+              // Payouts has its own multi-panel layout (main card + side status card),
+              // so let it use the full available width instead of the single-card cap.
+              ...(activeSection === 'payouts' ? { maxWidth: 'none' } : {}),
+            }}
+          >
             <Suspense fallback={<LoadingFallback />}>
               {ActiveComponent && <ActiveComponent />}
             </Suspense>

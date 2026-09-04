@@ -147,15 +147,15 @@ export default function TopHeaderProfile({ onSignOut }) {
                 if (selectedBiz) resolvedBiz = { name: selectedBiz.name || "" };
               }
             } else if (bizList.length > 0) {
-              // Only set default if nothing is saved — never overwrite an existing value
+              // selectedBusinessId is USER-OWNED session state. This load effect
+              // must NEVER write it — only handleBusinessSwitch (an explicit user
+              // action) may. Silently defaulting here changed the X-Business-Id
+              // header out from under the user and collapsed their event list.
+              // We only reflect a default in local UI state (never persisted).
               if (!savedBiz) {
-                console.log("[TopHeaderProfile] No savedBiz, defaulting to first:", bizList[0].linkedBusinessId);
-                const defaultId = bizList[0].linkedBusinessId || bizList[0]._id;
-                setSelectedBusinessId(defaultId);
-                sessionStorage.setItem("selectedBusinessId", defaultId);
+                setSelectedBusinessId(bizList[0].linkedBusinessId || bizList[0]._id);
               } else {
-                // savedBiz exists but doesn't match list — keep it, don't overwrite
-                console.log("[TopHeaderProfile] savedBiz not in list, keeping as-is:", savedBiz);
+                // savedBiz exists but isn't in this list — keep it as-is.
                 setSelectedBusinessId(savedBiz);
               }
               resolvedBiz = { name: bizList[0].name || "" };

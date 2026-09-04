@@ -51,6 +51,7 @@ import {
 import { parseJwt } from '../../../utils/common';
 import { formatPhone, unformatPhone } from '../../../utils/phoneMask';
 import categoriesData from '../../../utils/data/categories';
+import { setHelpRoute } from '../../../components/TabsHelp/helpRoute';
 
 const statBoxStyle = {
   flex: 1,
@@ -222,10 +223,9 @@ const OrganizationSection = () => {
     // Update hash to organization/subtab for help context
     const subHash = orgTabNames[newTab];
     window.history.replaceState(null, '', `#organization/${subHash}`);
-    // Notify help SDK of route change
-    if (window.tabsHelp && typeof window.tabsHelp.setRoute === 'function') {
-      window.tabsHelp.setRoute(window.location.pathname + `#organization/${subHash}`);
-    }
+    // Notify help SDK of route change. setHelpRoute survives the SDK not being
+    // loaded yet (cold/incognito loads) — the route is replayed on boot.
+    setHelpRoute(window.location.pathname + `#organization/${subHash}`);
   };
 
   useEffect(() => {

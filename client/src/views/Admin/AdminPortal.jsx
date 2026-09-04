@@ -10,18 +10,39 @@ import QRCodeLib from 'qrcode';
 import { jsPDF } from 'jspdf';
 import { PrintAssetGenerator } from '../../components/QR/PrintAssetGenerator';
 import { getBusinessPicture } from '../../utils/common';
+import PricingConsole from './PricingConsole';
+import PricingSystem from './PricingSystem';
+import { versionForDate } from '../../config/pricingVersions';
+import { subscriptionActiveState, deriveSubscriberColumns } from '../../utils/subscriptionStatus';
+import { setHelpRoute } from '../../components/TabsHelp/helpRoute';
+import config from '../../config.json';
 
 const AdminPortal = () => {
   const navigate = useNavigate();
-  const [environment, setEnvironment] = useState('prod'); // dev or prod
   const [businesses, setBusinesses] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [orgRequests, setOrgRequests] = useState([]);
   const [subscriptions, setSubscriptions] = useState({});
+  // Per-row "confirm via Stripe" reconciliation status, keyed by subscriberId.
+  // Mirrors the Pricing Console's source of truth (GET admin/pricing/subscriber/
+  // {id}/status) so the grid's Subscription column reflects the same active/
+  // exempt/none/mismatch state the console reconciles against.
+  const [subStatuses, setSubStatuses] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [hasAccess, setHasAccess] = useState(false);
-  const [activeTab, setActiveTab] = useState('businesses'); // 'businesses' | 'organizations'
+  // 'businesses' | 'organizations' | 'pricing' | 'pricing-system'.
+  // Initialize from the URL hash so a direct link like /admin-portal#pricing
+  // opens the right tab (mirrors how the Settings page reads #profile etc.).
+  const VALID_TABS = ['businesses', 'organizations', 'pricing', 'pricing-system'];
+  const tabFromHash = () => {
+    // Accept both the bare tab (`#pricing`) and a wizard sub-step hash the
+    // Pricing console pushes (`#pricing/plan`) — the top-level tab is the part
+    // before any slash.
+    const h = (window.location.hash || '').replace(/^#/, '').split('/')[0];
+    return VALID_TABS.includes(h) ? h : 'businesses';
+  };
+  const [activeTab, setActiveTab] = useState(tabFromHash);
   const [orgSubTab, setOrgSubTab] = useState('active'); // 'active' | 'requests'
   const [deleteOrgConfirm, setDeleteOrgConfirm] = useState({ open: false, org: null });
   const [deletingOrg, setDeletingOrg] = useState(false);
@@ -29,6 +50,8 @@ const AdminPortal = () => {
   const [printingQR, setPrintingQR] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'Active', 'Inactive'
   const [printAssetDialog, setPrintAssetDialog] = useState({ open: false, business: null });
+  // The business a per-row "Pricing" action pre-selects in the pricing tab.
+  const [pricingBusinessId, setPricingBusinessId] = useState(null);
 
   // Check access on component mount
   useEffect(() => {
@@ -45,20 +68,40 @@ const AdminPortal = () => {
 
     checkAccess();
   }, []);
+
+  // Reflect the active tab in the URL hash and give each tab its own help-doc
+  // key. The tabs switch via local `activeTab` state, so without this the URL
+  // stays `/admin-portal` and the TabsHelp SDK sees the same route for every
+  // tab. Mirroring the Settings page (which uses #profile / #account / etc.),
+  // we write the hash with replaceState and notify the help SDK, so the Help
+  // panel resolves a distinct, PRIVATE doc per tab (e.g. `/admin-portal#pricing`).
+  // These docs are seeded manually and excluded from the public publisher.
+  useEffect(() => {
+    const current = (window.location.hash || '').replace(/^#/, '');
+    // If the hash already targets this tab (possibly with a wizard sub-step,
+    // e.g. `pricing/plan`), leave it alone — the child console owns the finer
+    // sub-step hash and we don't want to stomp it back to the bare tab.
+    const alreadyOnTab = current === activeTab || current.startsWith(`${activeTab}/`);
+    const desiredHash = alreadyOnTab ? `#${current}` : `#${activeTab}`;
+    if (window.location.hash !== desiredHash) {
+      window.history.replaceState(null, '', window.location.pathname + desiredHash);
+    }
+    // Buffer + forward to the help SDK. setHelpRoute survives the SDK not being
+    // loaded yet (cold/incognito loads) — the route is replayed on boot.
+    setHelpRoute(window.location.pathname + desiredHash);
+  }, [activeTab]);
   
-  // Environment-specific API URLs
-  const API_URLS = {
-    dev: 'https://7gwwat7uwc.execute-api.us-east-1.amazonaws.com/dev/',
-    prod: 'https://cte36laj2i.execute-api.us-east-2.amazonaws.com/prod/'
-  };
-  
-  const API_URL = API_URLS[environment];
+  // API base — everything is PRODUCTION (there is no dev/test stage). Sourced from
+  // the web client's central config (config.json -> backendUrl, the us-east-1
+  // `16psjhr9ni/prod` base) so AdminPortal reads the same us-east-1 data set the
+  // Pricing Console acts on.
+  const API_URL = (config.backendUrl || 'https://16psjhr9ni.execute-api.us-east-1.amazonaws.com/prod/').replace(/\/?$/, '/');
 
   useEffect(() => {
     fetchBusinesses();
     fetchOrganizations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [environment]); // Refetch when environment changes
+  }, []); // Production only — load once on mount.
 
   const fetchOrganizations = async () => {
     try {
@@ -141,11 +184,57 @@ const AdminPortal = () => {
       });
       setSubscriptions(subsMap);
       console.log('Subscriptions loaded:', Object.keys(subsMap).length);
+
+      // Confirm each business's REAL subscription state via the same pricing-admin
+      // reconciliation endpoint the Pricing Console uses (GET admin/pricing/
+      // subscriber/{subscriberId}/status?userId=<ownerUserId>). The path id is the
+      // subscriberId (pin + exempt lookups key on it); the ?userId= is the OWNER/
+      // payer userId (the Stripe customer + subscription row are keyed under it).
+      // Failures record an honest `{ reconciliation: 'unknown' }` rather than
+      // faking a state — the column then reads "Unknown".
+      fetchSubStatuses(businessArray, idToken);
     } catch (error) {
       console.error('Error fetching businesses:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch the Stripe reconciliation status for each business in parallel and store
+  // it in `subStatuses`, keyed by subscriberId. Runs after the business list loads;
+  // it does NOT block the grid render (the Subscription column shows "Unknown"
+  // until each row resolves).
+  const fetchSubStatuses = async (businessArray, idToken) => {
+    const headers = { Authorization: `Bearer ${idToken}` };
+    const results = await Promise.all(
+      (Array.isArray(businessArray) ? businessArray : []).map(async (business) => {
+        const subscriberId = business.businessId || business._id || business.userId;
+        const ownerUserId = business.userId;
+        if (!subscriberId) return null;
+        try {
+          const ownerQuery = ownerUserId ? `?userId=${encodeURIComponent(ownerUserId)}` : '';
+          const res = await fetch(
+            `${API_URL}admin/pricing/subscriber/${encodeURIComponent(subscriberId)}/status${ownerQuery}`,
+            { headers }
+          );
+          if (!res.ok) {
+            return { subscriberId, status: { reconciliation: 'unknown' } };
+          }
+          const text = await res.text();
+          return { subscriberId, status: text ? JSON.parse(text) : { reconciliation: 'unknown' } };
+        } catch (error) {
+          // Honest unknown state — never fabricate a match/mismatch.
+          return { subscriberId, status: { reconciliation: 'unknown' } };
+        }
+      })
+    );
+
+    const statusMap = {};
+    results.forEach((r) => {
+      if (r && r.subscriberId) statusMap[r.subscriberId] = r.status;
+    });
+    setSubStatuses(statusMap);
+    console.log('Subscription statuses loaded:', Object.keys(statusMap).length);
   };
 
   const toggleBusinessStatus = async (business) => {
@@ -262,9 +351,37 @@ const AdminPortal = () => {
     }
   };
 
+  // Open the pricing tab focused on a single business (per-row action). The
+  // pricing console keys off the business's subscriberId (same value the grid
+  // rows carry), so no id typing is needed.
+  const openPricingForBusiness = (row) => {
+    const id = row.subscriberId || row.businessId || row._id || row.userId || row.id;
+    setPricingBusinessId(id);
+    setActiveTab('pricing');
+  };
+
+  // Open the pricing tab focused on a single organization (per-row action from
+  // the Organizations tab). Orgs are keyed by organizationId/id — the same id
+  // `orgCandidates` carry into the pricing console — so the console pre-selects
+  // the org and its per-business actions send subscriberType 'organization'.
+  const openPricingForOrganization = (row) => {
+    const id = row.organizationId || row.id || row._id;
+    setPricingBusinessId(id);
+    setActiveTab('pricing');
+  };
+
   // DataGrid columns
   const businessColumns = [
-    { field: 'name', headerName: 'Business Name', flex: 1.5, minWidth: 180 },
+    // Business Name. A row with no real `name` renders an explicit placeholder
+    // ("(unnamed business) — <id8>") instead of falling back to the session /
+    // logged-in user's business name. That bad fallback caused many empty stub
+    // rows to all appear as the session business (e.g. "UrbanHTX").
+    { field: 'name', headerName: 'Business Name', flex: 1.5, minWidth: 180, renderCell: (params) => {
+      const realName = typeof params.value === 'string' ? params.value.trim() : '';
+      if (realName) return realName;
+      const idShort = String(params.row?._id || params.row?.userId || params.row?.id || '').slice(0, 8);
+      return <span style={{ color: '#999', fontStyle: 'italic' }}>(unnamed business){idShort ? ` — ${idShort}` : ''}</span>;
+    }},
     { field: 'location', headerName: 'Location', flex: 1, minWidth: 120, valueGetter: (params) => `${params.row.city || ''}${params.row.city && params.row.state ? ', ' : ''}${params.row.state || ''}` },
     { field: 'businessCode', headerName: 'Code', flex: 1, minWidth: 160, renderCell: (params) => params.value ? <Chip label={params.value} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: '11px' }} /> : <span style={{color: '#999'}}>—</span> },
     { field: 'status', headerName: 'Status', width: 110, renderCell: (params) => {
@@ -272,7 +389,43 @@ const AdminPortal = () => {
       return <Chip label={params.value || 'Active'} size="small" color={isActive ? 'success' : 'default'} variant="outlined" />;
     }},
     { field: 'userId', headerName: 'User ID', width: 120, renderCell: (params) => <span style={{fontFamily: 'monospace', fontSize: '11px'}}>{params.value?.substring(0, 8)}...</span> },
-    { field: 'actions', headerName: 'Actions', width: 200, sortable: false, filterable: false, renderCell: (params) => {
+    // Subscription — the REAL Stripe-confirmed state (active / exempt / none /
+    // inactive / unknown), reconciled the same way the Pricing Console does. Sorts
+    // and filters by the resolved state string.
+    { field: 'subscription', headerName: 'Subscription', width: 140,
+      valueGetter: (params) => params.row.subscription?.state || 'unknown',
+      sortComparator: (a, b) => String(a).localeCompare(String(b)),
+      renderCell: (params) => {
+        const sub = params.row.subscription || { label: 'Unknown', color: 'default' };
+        return (
+          <Chip
+            label={sub.label}
+            size="small"
+            color={sub.color}
+            variant="outlined"
+            title={sub.stripeStatus ? `Stripe: ${sub.stripeStatus}` : undefined}
+            sx={{ fontSize: '11px' }}
+          />
+        );
+      },
+    },
+    // Pricing-migration columns (Req 12.9): pinned version, exempt status, contract add-ons.
+    { field: 'pinnedVersion', headerName: 'Pricing Version', width: 130, renderCell: (params) => (
+      params.value
+        ? <Chip label={params.value} size="small" variant="outlined" sx={{ fontSize: '11px' }} />
+        : <span style={{ color: '#999' }}>—</span>
+    )},
+    { field: 'exempt', headerName: 'Exempt', width: 90, renderCell: (params) => (
+      params.value
+        ? <Chip label="Exempt" size="small" color="warning" variant="outlined" />
+        : <span style={{ color: '#999' }}>—</span>
+    )},
+    { field: 'addons', headerName: 'Add-ons', width: 140, renderCell: (params) => (
+      (params.value && params.value.length)
+        ? <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>{params.value.map((a) => <Chip key={a} label={a} size="small" variant="outlined" sx={{ fontSize: '10px' }} />)}</Box>
+        : <span style={{ color: '#999' }}>—</span>
+    )},
+    { field: 'actions', headerName: 'Actions', width: 290, sortable: false, filterable: false, renderCell: (params) => {
       const isActive = params.row.status === 'Active';
       return (
         <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -281,6 +434,9 @@ const AdminPortal = () => {
           </Button>
           <Button size="small" variant="outlined" color="info" onClick={() => setPrintAssetDialog({ open: true, business: params.row })} sx={{ textTransform: 'none', fontSize: '11px' }}>
             🖨️ Print
+          </Button>
+          <Button size="small" variant="outlined" color="secondary" onClick={() => openPricingForBusiness(params.row)} sx={{ textTransform: 'none', fontSize: '11px' }}>
+            💲 Pricing
           </Button>
         </Box>
       );
@@ -291,10 +447,73 @@ const AdminPortal = () => {
   const businessRows = (Array.isArray(businesses) ? businesses : []).map(b => {
     const sub = subscriptions[b.userId];
     const isActive = !sub || sub.isActive !== false;
+
+    // Real subscription state confirmed via Stripe (same source as the Pricing
+    // Console). Keyed by subscriberId; 'unknown' until the reconciliation fetch
+    // resolves for this row.
+    const subscriberId = b.businessId || b._id || b.userId;
+    const subStatus = subStatuses[subscriberId];
+    const subscription = subscriptionActiveState(subStatus);
+
+    // Pricing-migration columns (Req 12.9): pinned pricing VERSION, EXEMPT status,
+    // and contract ADD-ONS. These are derived from the SAME authoritative
+    // reconciliation payload the Subscription column reads (admin/pricing/
+    // subscriber/{id}/status), via the shared helper that also backs the Pricing
+    // Console — so the grid and the console never disagree. The lightweight
+    // /subscription payload (`sub`) is kept only as a legacy fallback for a stale
+    // planId/exempt/addons when the status payload has not resolved yet.
+    const { pinnedVersion, exempt, addons } = deriveSubscriberColumns(
+      subStatus,
+      versionForDate,
+      sub || {}
+    );
+
     return {
       ...b,
       id: b._id || b.userId,
       status: isActive ? 'Active' : 'Inactive',
+      subscriberId,
+      subscription,
+      // The OWNER/payer userId (Business PK). Subscriptions + the Stripe customer
+      // are keyed under this, NOT the businessId, so the pricing console passes it
+      // through (?userId=) to resolve the real subscription/Stripe state. `...b`
+      // already carries `userId`; surfacing it explicitly as `ownerUserId` keeps
+      // it stable even if the underlying business shape changes.
+      userId: b.userId,
+      ownerUserId: b.userId,
+      pinnedVersion,
+      exempt,
+      addons,
+    };
+  });
+
+  // ORGANIZATION candidates for the Pricing Console.
+  //
+  // Organization-type accounts (accountType 'organization', e.g. "Urban HTX")
+  // are excluded from the `business/admin/all` list, so they never reach
+  // `businessRows` and were invisible in the pricing picker. The pricing model
+  // already supports orgs (subscriberType 'organization'), so this is purely a
+  // UI-inclusion fix: map the already-fetched `organizations` into pricing
+  // candidate rows and hand them to <PricingConsole/> alongside the businesses.
+  //
+  // We carry only what we honestly know from the org record — id/subscriberId,
+  // name, and the org marker — and DO NOT invent plan/exempt/addon state (the
+  // /subscription fetch doesn't return it for orgs either). The console shows an
+  // explicit "unknown"/derived state for those, same as for businesses.
+  const orgCandidates = (Array.isArray(organizations) ? organizations : []).map((o) => {
+    const id = o.organizationId || o.id || o._id;
+    return {
+      ...o,
+      id,
+      subscriberId: id,
+      name: o.name,
+      // Orgs carry their owner userId too; pass it through as ownerUserId so the
+      // console resolves the org owner's subscription/Stripe customer the same way.
+      userId: o.userId || null,
+      ownerUserId: o.userId || null,
+      subscriberType: 'organization',
+      isOrganization: true,
+      accountType: 'organization',
     };
   });
 
@@ -362,30 +581,6 @@ const AdminPortal = () => {
         <p>Manage all business accounts and subscriptions</p>
         
         <div style={{marginTop: '15px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap'}}>
-          <div>
-            <label style={{marginRight: '10px', fontWeight: '600'}}>Environment:</label>
-            <select 
-              value={environment} 
-              onChange={(e) => setEnvironment(e.target.value)}
-              style={{
-                padding: '8px 15px',
-                borderRadius: '6px',
-                border: '2px solid #00AAD6',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                backgroundColor: environment === 'prod' ? '#dc3545' : '#28a745',
-                color: 'white'
-              }}
-            >
-              <option value="dev">Development</option>
-              <option value="prod">Production</option>
-            </select>
-            <span style={{marginLeft: '10px', color: '#666', fontSize: '14px'}}>
-              ({businesses.length} businesses)
-            </span>
-          </div>
-
           <div className="tab-buttons" style={{marginLeft: '16px'}}>
             <button
               className={activeTab === 'businesses' ? 'active' : ''}
@@ -399,6 +594,18 @@ const AdminPortal = () => {
             >
               Organizations ({organizations.length})
             </button>
+            <button
+              className={activeTab === 'pricing' ? 'active' : ''}
+              onClick={() => setActiveTab('pricing')}
+            >
+              Pricing
+            </button>
+            <button
+              className={activeTab === 'pricing-system' ? 'active' : ''}
+              onClick={() => setActiveTab('pricing-system')}
+            >
+              Pricing System
+            </button>
           </div>
 
           <input
@@ -410,12 +617,6 @@ const AdminPortal = () => {
             style={{flex: 1, minWidth: '200px', display: activeTab === 'organizations' ? 'block' : 'none'}}
           />
 
-          <button onClick={() => { fetchBusinesses(); fetchOrganizations(); }} style={{
-            padding: '8px 16px', borderRadius: '6px', border: '1px solid #ccc',
-            background: '#fff', color: '#333', fontSize: '14px', cursor: 'pointer', fontWeight: '500',
-          }}>
-            🔄 Refresh
-          </button>
         </div>
 
         {activeTab === 'businesses' && (
@@ -503,9 +704,10 @@ const AdminPortal = () => {
               { field: 'memberCount', headerName: 'Members', width: 90, type: 'number' },
               { field: 'businessCount', headerName: 'Businesses', width: 100, type: 'number' },
               { field: 'createdAt', headerName: 'Created', width: 120, valueGetter: (params) => params.value ? new Date(params.value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
-              { field: 'actions', headerName: 'Actions', width: 150, sortable: false, filterable: false, renderCell: (params) => (
+              { field: 'actions', headerName: 'Actions', width: 240, sortable: false, filterable: false, renderCell: (params) => (
                 <Box sx={{ display: 'flex', gap: 0.5 }}>
                   <Button size="small" variant="outlined" color="primary" onClick={() => navigate(`/admin/organization/${params.row.id}`)} sx={{ textTransform: 'none', fontSize: '11px' }}>View</Button>
+                  <Button size="small" variant="outlined" color="secondary" onClick={() => openPricingForOrganization(params.row)} sx={{ textTransform: 'none', fontSize: '11px' }}>💲 Pricing</Button>
                   {params.row.role === 'owner' && (
                     <Button size="small" variant="outlined" color="error" onClick={() => setDeleteOrgConfirm({ open: true, org: params.row })} sx={{ textTransform: 'none', fontSize: '11px' }}>Delete</Button>
                   )}
@@ -620,6 +822,23 @@ const AdminPortal = () => {
           )}
         </>
         )}
+      </div>
+      )}
+
+      {activeTab === 'pricing' && (
+      <div className="business-list" style={{ padding: 16 }}>
+        <PricingConsole
+          selectedSubscribers={businessRows.filter(b => selectedRows.includes(b.id))}
+          businesses={businessRows}
+          organizations={orgCandidates}
+          initialBusinessId={pricingBusinessId}
+        />
+      </div>
+      )}
+
+      {activeTab === 'pricing-system' && (
+      <div className="business-list" style={{ padding: 16 }}>
+        <PricingSystem />
       </div>
       )}
 

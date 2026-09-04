@@ -208,36 +208,29 @@ const EventsView = () => {
             const bizRes = await getOrganizationBusinesses(orgId).catch(() => null);
             const businesses = bizRes?.data?.businesses || bizRes?.data || [];
             const allBiz = [];
-            // For org owner, use the actual business _id (not userId)
+            // For org owner, the primary/"Organization" context MUST be keyed by
+            // userId — that is the partition events are stored under, and it is the
+            // value the backend's resolveEffectiveUserId expects for the owner's own
+            // data (X-Business-Id === jwtUserId → owner partition). Using the Business
+            // record's _id here strands the owner's events under a different partition
+            // and collapses the list to whatever that _id resolves to.
             if (orgRole === 'owner') {
-              let ownerBizId = userId;
-              try {
-                const ownerBizRes = await getBusiness(userId);
-                const ownerBiz = ownerBizRes?.data || ownerBizRes;
-                if (ownerBiz?._id) ownerBizId = ownerBiz._id;
-              } catch (e) { /* fallback to userId */ }
-              allBiz.push({ linkedBusinessId: ownerBizId, userId: userId, name: orgName, isPayer: true });
+              allBiz.push({ linkedBusinessId: userId, userId: userId, name: orgName, isPayer: true });
             }
             allBiz.push(...businesses.filter(b => b.linkedBusinessId !== userId));
             setAllBusinesses(allBiz);
 
-            // Determine which business to select:
-            // 1. If savedBiz exists AND is still in the list → use it.
-            // 2. Otherwise → first business in the list.
-            let targetBizId;
-            if (savedBiz && allBiz.some(b => b.linkedBusinessId === savedBiz)) {
-              targetBizId = savedBiz;
-            } else {
-              targetBizId = allBiz.length > 0 ? allBiz[0].linkedBusinessId : userId;
-              sessionStorage.setItem("selectedBusinessId", targetBizId);
-            }
+            // Business context (selectedBusinessId) is USER-OWNED session state.
+            // A background loader must NEVER silently change it — only an explicit
+            // user action (the business switcher) may write it. Doing otherwise
+            // flips the X-Business-Id header out from under the user and collapses
+            // their event list. So here we only READ the saved value to drive the
+            // local UI; we never persist a new one.
+            const targetBizId =
+              savedBiz && allBiz.some(b => b.linkedBusinessId === savedBiz)
+                ? savedBiz
+                : userId; // in-memory default for display only — NOT persisted
             setSelectedBusinessId(targetBizId);
-
-            // Store the owner userId for the selected business so other pages
-            // (Dashboard, etc.) can fetch events without re-resolving.
-            const selectedBizEntry = allBiz.find(b => b.linkedBusinessId === targetBizId);
-            const ownerUserId = selectedBizEntry?.userId || userId;
-            sessionStorage.setItem("selectedBusinessUserId", ownerUserId);
 
             // No need to re-fetch events here — the X-Business-Id header on the
             // initial fetch already told the backend which business to use.

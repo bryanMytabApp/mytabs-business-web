@@ -6,6 +6,7 @@ import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import BusinessOutlined from '@mui/icons-material/BusinessOutlined';
 import GroupOutlined from '@mui/icons-material/GroupOutlined';
 import CreditCardOutlined from '@mui/icons-material/CreditCardOutlined';
+import AccountBalanceOutlined from '@mui/icons-material/AccountBalanceOutlined';
 import PaletteOutlined from '@mui/icons-material/PaletteOutlined';
 import NotificationsOutlined from '@mui/icons-material/NotificationsOutlined';
 import VisibilityOffOutlined from '@mui/icons-material/VisibilityOffOutlined';
@@ -20,6 +21,7 @@ const iconMap = {
   BusinessOutlined,
   GroupOutlined,
   CreditCardOutlined,
+  AccountBalanceOutlined,
   PaletteOutlined,
   NotificationsOutlined,
   VisibilityOffOutlined,

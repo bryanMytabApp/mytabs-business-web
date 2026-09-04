@@ -9,7 +9,7 @@ import {
 } from "../../components";
 import MTBDropZone from "../../components/MTBDropZone/MTBDropZone";
 import {toast} from "react-toastify";
-import {useNavigate} from "react-router-dom";
+import {useNavigate, Link} from "react-router-dom";
 import {signUp} from "../../services/authService";
 import chevronIcon from "../../assets/atoms/chevron.svg";
 import {getUserExistance} from "../../services/userService";
@@ -277,9 +277,17 @@ export default function RegistrationView() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleInputChange = useCallback((value, name) => {
-    if(name === "username" || name === "email") {
-      const noSpaceValue = value.replace(/\s+/g, '');
-      value = noSpaceValue;
+    if (name === "username") {
+      // Usernames are alphanumeric only (strip spaces/symbols) and capped at 25 chars.
+      value = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 25);
+    }
+    if (name === "email") {
+      // Strip spaces and cap at 150 chars.
+      value = value.replace(/\s+/g, '').slice(0, 150);
+    }
+    if (name === "password" || name === "confirmPassword") {
+      // Cap passwords at 50 chars.
+      value = value.slice(0, 50);
     }
     if (name === "zipCode" && (value.length > 5 || isNaN(value))) {
       return;
@@ -379,6 +387,18 @@ export default function RegistrationView() {
         errors.lastName = "Please enter your last name.";
       }
 
+      if (!formData.address1 || !formData.city || !formData.state) {
+        errors.address1 = "Please select your address.";
+      }
+
+      if (!formData.businessName) {
+        errors.businessName = "Please enter your business name.";
+      }
+
+      if (!formData.designation) {
+        errors.designation = "Please enter your designation.";
+      }
+
       if (!formData.zipCode.trim() && !formData.city.trim()) {
         errors.city = "Either Zip Code or City must be provided.";
       } else {
@@ -429,23 +449,24 @@ export default function RegistrationView() {
 
   const handleNextPart = async () => {
     let newErrors = validateForm();
-    setErrors(newErrors);
-    if (filteredSubCategories.length === 0) {
-    }
     if (part === 0) {
       const asyncErrors = await validateUserExistence(formData);
       newErrors = {...newErrors, ...asyncErrors};
     }
+    setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0 && part < 3) {
       setPart((prevPart) => prevPart + 1);
-    } else {
-      setErrors(newErrors);
-      if (part === 0) {
+      return;
+    }
+
+    // The Continue button is always clickable — surface why we can't advance
+    // as a failure alert instead of disabling the button.
+    if (Object.keys(newErrors).length > 0) {
+      const messages = Object.values(newErrors).filter(Boolean);
+      messages.forEach((msg) => toast.error(msg));
+      if (messages.length === 0) {
         toast.error("Please correct the errors before proceeding.");
-      }
-      if (part === 2 && !uploadedImage) {
-        toast.error("Upload a logo.");
       }
     }
   };
@@ -496,8 +517,31 @@ export default function RegistrationView() {
     return errors;
   };
 
+  // The Submit button is always clickable; validate the final step and surface
+  // any problems as failure alerts instead of hiding/disabling the button.
+  const handleSubmitClick = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+
+    const finalErrors = [];
+    if (!uploadedImage) finalErrors.push("Upload a logo.");
+    if (formData.subcategory.length === 0) finalErrors.push("Select three subcategories.");
+    if (!formData.email || !formData.phoneNumber || !formData.password || !formData.confirmPassword) {
+      finalErrors.push("Complete your account details.");
+    }
+    if (!formData.firstName || !formData.lastName || (!formData.city && !formData.zipCode)) {
+      finalErrors.push("Complete your personal info.");
+    }
+
+    if (finalErrors.length > 0) {
+      finalErrors.forEach((msg) => toast.error(msg));
+      return;
+    }
+
+    handleSubmit(e);
+  };
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const phoneNumberInput = formData.phoneNumber.replace(/[^0-9]/g, "");
     let phoneNumberWithPlus = `+1${phoneNumberInput}`;
 
@@ -565,6 +609,20 @@ export default function RegistrationView() {
   return (
     <div className='Login-view' ref={myRef}>
       <div className='rectangle'></div>
+      {/* Mobile-only header: lets users go back to the previous page.
+          Hidden on desktop (see LoginView.css). */}
+      <header className='Mobile-auth-header'>
+        <Link to='/' className='Mobile-auth-header__logo' aria-label='Home'>
+          <img src={logo} alt='My Tabs' />
+        </Link>
+        <button
+          type='button'
+          className='Mobile-auth-header__back'
+          onClick={() => navigate(-1)}
+          aria-label='Go back'>
+          ‹ Back
+        </button>
+      </header>
       <img
         style={{borderRadius: 20, top: "10%", left: "5%", position: "absolute"}}
         src={logo}
@@ -601,7 +659,7 @@ export default function RegistrationView() {
           </div>
           {part === 0 && (
             <>
-              <div style={{display: "flex", gap: "20px", width: "100%"}}>
+              <div className='reg-field-row' style={{display: "flex", gap: "20px", width: "100%"}}>
                 <div style={{flex: 1}}>
                   <MTBInput
                     name='email'
@@ -619,7 +677,7 @@ export default function RegistrationView() {
                     autoComplete='username'
                     value={formData.username}
                     onChange={handleInputChange}
-                    helper={errors.username ? {type: "warning", text: errors.username} : {type: "info", text: "One word, no spaces (e.g., johndoe123)"}}
+                    helper={errors.username && {type: "warning", text: errors.username}}
                   />
                 </div>
               </div>
@@ -656,15 +714,15 @@ export default function RegistrationView() {
               />
               <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px"}}>
                 <MTBInputValidator
-                  textRequirement={"One uppercase letter"}
+                  textRequirement={"At least 1 uppercase letter"}
                   isValid={validationState.hasUppercase}
                 />
                 <MTBInputValidator
-                  textRequirement={"One special character"}
+                  textRequirement={"At least 1 special character"}
                   isValid={validationState.hasSymbol}
                 />
                 <MTBInputValidator
-                  textRequirement={"One number"}
+                  textRequirement={"At least 1 number"}
                   isValid={validationState.hasNumber}
                 />
                 <MTBInputValidator
@@ -672,7 +730,7 @@ export default function RegistrationView() {
                   isValid={validationState.hasAtLeastNumCharacters}
                 />
                 <MTBInputValidator
-                  textRequirement={"One lowercase letter"}
+                  textRequirement={"At least 1 lowercase letter"}
                   isValid={validationState.hasLowercase}
                 />
               </div>
@@ -885,13 +943,7 @@ export default function RegistrationView() {
                 borderRadius: "16px",
                 width: "10px",
                 flex: 1,
-                backgroundColor:
-                  formData.email &&
-                  formData.phoneNumber &&
-                  formData.password &&
-                  formData.confirmPassword
-                    ? "#F18926"
-                    : "#D9D9D9",
+                backgroundColor: "#F18926",
               }}
               onClick={handleNextPart}
               isLoading={isLoading}>
@@ -904,28 +956,8 @@ export default function RegistrationView() {
                 borderRadius: "16px",
                 width: "10px",
                 flex: 1,
-                backgroundColor:
-                  formData.firstName &&
-                  formData.lastName &&
-                  formData.city &&
-                  formData.state &&
-                  formData.address1 &&
-                  formData.businessName &&
-                  formData.designation &&
-                  formData.zipCode
-                    ? "#F18926"
-                    : "#D9D9D9",
+                backgroundColor: "#F18926",
               }}
-              disabled={
-                !formData.firstName ||
-                !formData.lastName ||
-                !formData.city ||
-                !formData.state ||
-                !formData.address1 ||
-                !formData.businessName ||
-                !formData.designation ||
-                !formData.zipCode
-              }
               onClick={handleNextPart}
               isLoading={isLoading}>
               Continue
@@ -937,56 +969,26 @@ export default function RegistrationView() {
                 borderRadius: "16px",
                 width: "10px",
                 flex: 1,
-                backgroundColor:
-                  formData.firstName &&
-                  formData.lastName &&
-                  (formData.city !== "" || formData.zipCode !== "")
-                    ? "#F18926"
-                    : "#D9D9D9",
+                backgroundColor: "#F18926",
               }}
               onClick={handleNextPart}
               isLoading={isLoading}>
               Continue
             </MTBButton>
           )}
-          {part === 3 &&
-            !(
-              formData.email &&
-              formData.phoneNumber &&
-              formData.password &&
-              formData.confirmPassword &&
-              formData.firstName &&
-              formData.lastName &&
-              (formData.city !== "" || formData.zipCode !== "") &&
-              formData.subcategory.length !== 0 &&
-              !!uploadedImage
-            ) && (
-              <MTBButton
-                style={{
-                  borderRadius: "16px",
-                  width: "10px",
-                  flex: 1,
-                  backgroundColor: formData.subcategory.length > 2 ? "#F18926" : "#D9D9D9",
-                }}
-                onClick={handleNextPart}
-                isLoading={isLoading}>
-                Continue
-              </MTBButton>
-            )}
-          {part === 3 &&
-            formData.email &&
-            formData.phoneNumber &&
-            formData.password &&
-            formData.confirmPassword &&
-            formData.firstName &&
-            formData.lastName &&
-            (formData.city !== "" || formData.zipCode !== "") &&
-            formData.subcategory.length !== 0 &&
-            !!uploadedImage && (
-              <MTBButton onClick={handleSubmit} isLoading={isLoading}>
-                Submit
-              </MTBButton>
-            )}
+          {part === 3 && (
+            <MTBButton
+              style={{
+                borderRadius: "16px",
+                width: "10px",
+                flex: 1,
+                backgroundColor: "#F18926",
+              }}
+              onClick={handleSubmitClick}
+              isLoading={isLoading}>
+              Submit
+            </MTBButton>
+          )}
         </div>
       </div>
       <div className='welcome-back'>Welcome!</div>

@@ -1,9 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { getEventsByUserId } from '../../services/eventService';
-import { getBusiness } from '../../services/businessService';
 import { getTicketsByEvent } from '../../services/ticketManagementService';
-import { getCurrentUserId } from '../../utils/authUtils';
+import { getCurrentUserId, buildAuthenticatedReturnUrl } from '../../utils/authUtils';
+import { getEventPayouts } from '../../services/paymentService';
+import CustomerServiceView from './CustomerServiceView';
 import moment from 'moment';
+
+// Map a raw ticket row (as stored in the tickets table) to the `purchase`
+// shape CustomerServiceView expects. The purchase/checkout pipeline writes
+// buyerName/buyerEmail, while the direct-payment path uses customerName/
+// customerEmail, so read both defensively.
+export const ticketToPurchase = (t = {}) => {
+  const name = t.buyerName || t.customerName || 'Guest';
+  const email = t.buyerEmail || t.customerEmail || '';
+  const price = parseFloat(t.price) || 0;
+  const purchasedAt = t.purchasedAt || t.createdAt || null;
+  return {
+    customerName: name,
+    customerEmail: email,
+    confirmationNumber: t.ticketId || t._id || '',
+    totalAmount: price.toFixed(2),
+    paymentMethod: t.paymentMethod || 'Card',
+    purchaseDate: purchasedAt ? moment(purchasedAt).format('MMM D, YYYY') : '—',
+    timeAgo: purchasedAt ? moment(purchasedAt).fromNow() : '',
+    ticketDetails: `1x ${t.ticketType || 'General Admission'}`,
+    status: t.status || 'active',
+    raw: t,
+  };
+};
+
+// Cents (integer minor units) → "$1,234.56".
+const fmtCents = (cents, currency = 'usd') => {
+  const n = Number.isFinite(cents) ? cents : 0;
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: (currency || 'usd').toUpperCase() }).format(n / 100);
+  } catch {
+    return `$${(n / 100).toFixed(2)}`;
+  }
+};
 
 const S = `
 @keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
@@ -31,6 +65,8 @@ const S = `
 .tv-bar{height:8px;background:rgba(13,27,53,0.08);border-radius:6px;overflow:hidden}
 .tv-bar-fill{height:100%;border-radius:6px;transition:width 1.2s cubic-bezier(.23,1,.32,1)}
 .tv-search{padding:10px 14px 10px 34px;border-radius:12px;border:1px solid rgba(255,255,255,0.65);background:rgba(255,255,255,0.55);backdrop-filter:blur(14px);font-size:13px;font-weight:600;color:#0d1b35;outline:none;width:190px;font-family:'Outfit',sans-serif}
+.tv-verify{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:12px;border:none;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;font-size:13px;font-weight:800;font-family:'Outfit','Nunito',sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(249,115,22,.32);transition:all .25s cubic-bezier(.23,1,.32,1);white-space:nowrap;text-decoration:none}
+.tv-verify:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(249,115,22,.42)}
 .tv-empty{background:rgba(255,255,255,0.48);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.65);border-radius:24px;padding:64px 40px;text-align:center}
 .tv-footer{background:rgba(255,255,255,0.45);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.62);border-radius:20px;padding:18px 26px;display:flex;justify-content:space-between;align-items:center}
 @media(max-width:768px){.tv-wrap{padding:16px}.tv-stats{display:grid;grid-template-columns:1fr 1fr}.tv-col-header{display:none}.tv-card-row{grid-template-columns:1fr;gap:12px}.tv-expand-row{grid-template-columns:1fr 1fr;gap:10px}.tv-header{flex-direction:column;gap:12px}.tv-footer{flex-direction:column;gap:12px;align-items:flex-start}}
@@ -47,9 +83,68 @@ function CapacityBar({ sold, capacity, color }) {
   );
 }
 
-function TicketEventCard({ event, index }) {
+export function TicketEventCard({ event, index, onSelectPurchase }) {
   const [expanded, setExpanded] = useState(false);
-  const tickets = event.tickets || [];
+  const [payouts, setPayouts] = useState(null); // { summary, rows } for this event
+  const [detail, setDetail] = useState(null);    // { tickets, stats } from getTicketsByEvent
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [showBuyers, setShowBuyers] = useState(false);
+
+  // Prefer real-time sold counts from the tickets table (loaded lazily on
+  // expand) and fall back to the ticket config attached to the event.
+  const tickets = React.useMemo(() => {
+    const base = event.tickets || [];
+    const realTypes = detail?.stats?.ticketTypes || [];
+    if (realTypes.length === 0) return base;
+    return base.map((t) => {
+      const real = realTypes.find(
+        (st) => st.type?.toLowerCase() === (t.type || '').toLowerCase()
+      );
+      return real ? { ...t, sold: real.sold, ticketsSold: real.sold } : t;
+    });
+  }, [event.tickets, detail]);
+
+  const buyers = detail?.tickets || [];
+
+  // Lazily load this event's payout details the first time the card is expanded.
+  useEffect(() => {
+    if (!expanded || payouts !== null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await getEventPayouts(event._id);
+        if (!cancelled) setPayouts(data || { summary: null, rows: [] });
+      } catch {
+        if (!cancelled) setPayouts({ summary: null, rows: [] });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [expanded, payouts, event._id]);
+
+  // Lazily load this event's real ticket stats + per-buyer list on first expand.
+  // Note: detailLoading is intentionally NOT in the dependency array — including
+  // it would re-run the effect the moment we flip it true, whose cleanup would
+  // cancel the in-flight fetch before it resolves.
+  useEffect(() => {
+    if (!expanded || detail !== null) return;
+    let cancelled = false;
+    setDetailLoading(true);
+    (async () => {
+      try {
+        const eventId = event._id || event.id;
+        const res = await getTicketsByEvent(eventId);
+        if (!cancelled) setDetail({ tickets: res?.tickets || [], stats: res?.stats || {} });
+      } catch (e) {
+        console.warn(`Could not fetch ticket detail for event ${event._id}:`, e.message);
+        if (!cancelled) setDetail({ tickets: [], stats: {} });
+      } finally {
+        if (!cancelled) setDetailLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded, detail, event._id, event.id]);
+
   const totalSold = tickets.reduce((s, t) => s + (parseInt(t.sold || t.ticketsSold) || 0), 0);
   const totalCap = tickets.reduce((s, t) => s + (parseInt(t.quantity || t.capacity) || 0), 0);
   const totalRev = tickets.reduce((s, t) => s + (parseInt(t.sold || t.ticketsSold) || 0) * (parseFloat(t.price) || 0), 0);
@@ -127,6 +222,113 @@ function TicketEventCard({ event, index }) {
               </div>
             );
           })}
+
+          {/* ── Ticket buyers / customers for this event ── */}
+          <div data-testid="event-buyers" style={{ marginTop: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#4a6080", letterSpacing: "0.14em", textTransform: "uppercase" }}>
+                {"\uD83D\uDC65"} Customers {buyers.length > 0 ? `(${buyers.length})` : ""}
+              </div>
+              {buyers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowBuyers((v) => !v)}
+                  style={{ fontSize: 11, fontWeight: 800, color: color, background: `${color}18`, border: `1px solid ${color}30`, borderRadius: 8, padding: "5px 12px", cursor: "pointer" }}
+                >
+                  {showBuyers ? "Hide" : "View buyers"}
+                </button>
+              )}
+            </div>
+
+            {detailLoading && (
+              <div data-testid="event-buyers-loading" style={{ fontSize: 12, color: "#6a7f9a", fontWeight: 600, padding: "6px 0" }}>
+                Loading customers…
+              </div>
+            )}
+
+            {!detailLoading && buyers.length === 0 && (
+              <div data-testid="event-buyers-empty" style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 600, padding: "6px 0" }}>
+                No tickets purchased for this event yet.
+              </div>
+            )}
+
+            {showBuyers && buyers.length > 0 && (
+              <div>
+                {buyers.map((t) => {
+                  const p = ticketToPurchase(t);
+                  const cancelled = (p.status || "").toLowerCase() === "cancelled" || (p.status || "").toLowerCase() === "refunded";
+                  return (
+                    <div
+                      key={p.confirmationNumber || t._id}
+                      data-testid="event-buyer-row"
+                      onClick={() => onSelectPurchase && onSelectPurchase(p)}
+                      style={{ display: "grid", gridTemplateColumns: "1.6fr 1.2fr 0.9fr 0.9fr 0.7fr", gap: 12, alignItems: "center", padding: "12px 16px", background: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.7)", borderRadius: 12, marginBottom: 8, cursor: "pointer", transition: "background .2s" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.85)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.6)")}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: "#0d1b35", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.customerName}</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "#6a7f9a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.customerEmail || "—"}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: color }}>{t.ticketType || "General Admission"}</div>
+                        <div style={{ fontSize: 10, color: "#4a6080", fontWeight: 600, marginTop: 2 }}>#{p.confirmationNumber}</div>
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#0d1b35" }}>${p.totalAmount}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#6a7f9a" }}>{p.purchaseDate}</div>
+                      <div>
+                        <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 8, background: cancelled ? "rgba(220,38,38,0.12)" : "rgba(52,211,153,0.14)", color: cancelled ? "#DC2626" : "#059669", border: `1px solid ${cancelled ? "rgba(220,38,38,0.25)" : "rgba(52,211,153,0.3)"}`, textTransform: "capitalize" }}>
+                          {p.status}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── Payout details (journal-derived) for this event ── */}
+          {payouts && (payouts.summary || (payouts.rows && payouts.rows.length > 0)) && (
+            <div data-testid="event-payout-details" style={{ marginTop: 18 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#4a6080", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 12 }}>
+                Your Payouts
+              </div>
+              {payouts.summary && (
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+                  <div data-testid="event-payout-outstanding" style={{ flex: "1 1 140px", background: "rgba(167,139,250,0.12)", borderRadius: 12, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 11, color: "#6a7f9a", fontWeight: 700 }}>Available to pay out</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "#7c3aed" }}>{fmtCents(payouts.summary.outstandingPayableCents, payouts.summary.currency)}</div>
+                  </div>
+                  <div style={{ flex: "1 1 140px", background: "rgba(255,255,255,0.6)", borderRadius: 12, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 11, color: "#6a7f9a", fontWeight: 700 }}>Earned from this event</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "#0d1b35" }}>{fmtCents(payouts.summary.lifetimeEarnedCents, payouts.summary.currency)}</div>
+                  </div>
+                </div>
+              )}
+              {payouts.rows && payouts.rows.length > 0 ? (
+                payouts.rows.map((row) => (
+                  <div
+                    key={row.transactionId}
+                    data-testid="event-payout-row"
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "rgba(255,255,255,0.6)", borderRadius: 12, marginBottom: 8 }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#0d1b35" }}>{row.type === "SALE" ? "Ticket sale" : row.type}</div>
+                      <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>{row.effectiveAt ? moment(row.effectiveAt).format("MMM D, YYYY") : ""}</div>
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 900, color: row.organizerAmountCents >= 0 ? "#059669" : "#DC2626" }}>
+                      {row.organizerAmountCents >= 0 ? "+" : ""}{fmtCents(row.organizerAmountCents, row.currency)}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div data-testid="event-payout-empty" style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 600, padding: "6px 0" }}>
+                  No payouts recorded for this event yet.
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -137,6 +339,7 @@ const MyTicketsView = () => {
   const [events, setEvents] = useState([]);
   const [, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedPurchase, setSelectedPurchase] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -146,60 +349,27 @@ const MyTicketsView = () => {
 
         const savedBizId = sessionStorage.getItem("selectedBusinessId");
 
-        // Determine primary business for untagged events
-        let primaryBizId = null;
-        try {
-          const primaryRes = await getBusiness(userId);
-          primaryBizId = primaryRes?.data?._id || null;
-        } catch (e) { /* ignore */ }
-
         const res = await getEventsByUserId(userId);
-        // Only show events that have Tabs tickets
-        const withTickets = (res.data || []).filter(ev =>
+        const allEvents = res.data || [];
+        // The backend already scopes events to the selected business partition
+        // (via the X-Business-Id header), so we only need to keep the ones that
+        // have Tabs tickets enabled.
+        const withTickets = allEvents.filter(ev =>
           ev.tickets && ev.tickets.length > 0 &&
           ev.tickets.some(t => t.option === 'Tabs Tickets' || t.option === 'Tickets with Tabs')
         );
 
-        // Filter by selected business
-        const bizFiltered = savedBizId
-          ? withTickets.filter(ev => {
-              if (ev.businessId === savedBizId) return true;
-              if (!ev.businessId && savedBizId === primaryBizId) return true;
-              return false;
-            })
-          : withTickets;
-
-        // Fetch real-time ticket stats for each event from the tickets table
-        const eventsWithRealStats = await Promise.all(
-          bizFiltered.map(async (ev) => {
-            try {
-              const eventId = ev._id || ev.id;
-              const statsRes = await getTicketsByEvent(eventId);
-              const stats = statsRes?.stats || {};
-              const ticketTypes = stats.ticketTypes || [];
-
-              // Merge real sold counts into the event's tickets array
-              if (ticketTypes.length > 0 && ev.tickets) {
-                const updatedTickets = ev.tickets.map(t => {
-                  const realStat = ticketTypes.find(
-                    st => st.type?.toLowerCase() === (t.type || '').toLowerCase()
-                  );
-                  if (realStat) {
-                    return { ...t, sold: realStat.sold, ticketsSold: realStat.sold };
-                  }
-                  return t;
-                });
-                return { ...ev, tickets: updatedTickets };
-              }
-            } catch (e) {
-              // If stats fetch fails for this event, use existing data
-              console.warn(`Could not fetch ticket stats for event ${ev._id}:`, e.message);
-            }
-            return ev;
-          })
+        console.info(
+          `[Tickets] fetched=${allEvents.length} withTabsTickets=${withTickets.length} ` +
+          `savedBizId=${savedBizId || 'none'}`
         );
 
-        setEvents(eventsWithRealStats);
+        // Render the list immediately using the ticket config already attached
+        // to each event. Real-time sold counts and the per-buyer list are loaded
+        // lazily per event when a card is expanded (see TicketEventCard), which
+        // avoids an N+1 request fan-out that previously blocked the whole page
+        // on the slowest full-table scan.
+        setEvents(withTickets);
       } catch (e) { console.error("Tickets load error:", e); }
       setLoading(false);
     };
@@ -211,6 +381,27 @@ const MyTicketsView = () => {
   const totalSold = filtered.reduce((s, e) => s + (e.tickets || []).reduce((ts, t) => ts + (parseInt(t.sold || t.ticketsSold) || 0), 0), 0);
   const totalCap = filtered.reduce((s, e) => s + (e.tickets || []).reduce((ts, t) => ts + (parseInt(t.quantity || t.capacity) || 0), 0), 0);
   const avgPrice = totalSold > 0 ? totalRevenue / totalSold : 0;
+
+  // Open the ticket verification app with the current session so the operator
+  // isn't forced to log in again. The verify app accepts token + userId query
+  // params for cross-subdomain SSO (same handoff the team-member login uses).
+  const openVerifyApp = () => {
+    const base = 'https://verify.ticket.keeptabs.app';
+    const token = localStorage.getItem('idToken');
+    const userId = getCurrentUserId();
+    const url = token && userId ? buildAuthenticatedReturnUrl(base, token, userId) : base;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  // Drill into a single customer's purchase for service actions.
+  if (selectedPurchase) {
+    return (
+      <CustomerServiceView
+        purchase={selectedPurchase}
+        onBack={() => setSelectedPurchase(null)}
+      />
+    );
+  }
 
   // Render the shell immediately — the Router's Suspense fallback already
   // covered chunk load, and a second full-screen spinner here just stacks
@@ -225,12 +416,17 @@ const MyTicketsView = () => {
           {/* Header */}
           <div className="tv-header">
             <div>
-              <div className="tv-title"><span style={{ fontSize: 28 }}>{"\uD83C\uDF9F"}</span> Ticket <span style={{ color: "#f97316" }}>Management</span></div>
+              <div className="tv-title">Ticket <span style={{ color: "#f97316" }}>Management</span></div>
               <div className="tv-subtitle">Manage ticket sales, capacity and revenue across all events</div>
             </div>
-            <div style={{ position: "relative" }}>
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#4a6080" }}>{"\u2315"}</span>
-              <input className="tv-search" placeholder="Search events..." value={search} onChange={e => setSearch(e.target.value)} />
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#4a6080" }}>{"\u2315"}</span>
+                <input className="tv-search" placeholder="Search events..." value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
+              <button type="button" className="tv-verify" onClick={openVerifyApp}>
+                Verify Tickets
+              </button>
             </div>
           </div>
 
@@ -262,7 +458,7 @@ const MyTicketsView = () => {
 
           {/* Event cards or empty state */}
           {filtered.length > 0 ? (
-            filtered.map((ev, i) => <TicketEventCard key={ev._id} event={ev} index={i} />)
+            filtered.map((ev, i) => <TicketEventCard key={ev._id} event={ev} index={i} onSelectPurchase={setSelectedPurchase} />)
           ) : (
             <div className="tv-empty">
               <div style={{ width: 80, height: 80, borderRadius: 24, background: "linear-gradient(135deg,rgba(77,217,224,0.18),rgba(249,115,22,0.12))", border: "1.5px solid rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, margin: "0 auto 24px" }}>{"\uD83C\uDF9F"}</div>

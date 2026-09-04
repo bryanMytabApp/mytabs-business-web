@@ -3,7 +3,7 @@ import logo from "../../assets/logo.png";
 import "./LoginView.css";
 import {MTBButton, MTBInput } from "../../components";
 import {toast} from "react-toastify";
-import {useNavigate} from "react-router-dom";
+import {useNavigate, Link} from "react-router-dom";
 import {requestResetPassword, confirmResetPassword} from "../../services/authService";
 import chevronIcon from "../../assets/atoms/chevron.svg";
 import styles from "./PasswordRecovery.module.css";
@@ -193,6 +193,20 @@ export default function PasswordRecovery() {
   return (
     <div className='Login-view' ref={myRef}>
       <div className='rectangle'></div>
+      {/* Mobile-only header: lets users go back to the previous page.
+          Hidden on desktop (see LoginView.css). */}
+      <header className='Mobile-auth-header'>
+        <Link to='/' className='Mobile-auth-header__logo' aria-label='Home'>
+          <img src={logo} alt='My Tabs' />
+        </Link>
+        <button
+          type='button'
+          className='Mobile-auth-header__back'
+          onClick={() => navigate(-1)}
+          aria-label='Go back'>
+          ‹ Back
+        </button>
+      </header>
       <img
         style={{borderRadius: 20, top: "10%", left: "5%", position: "absolute"}}
         src={logo}

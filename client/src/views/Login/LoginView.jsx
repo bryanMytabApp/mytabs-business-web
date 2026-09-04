@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import logo from "../../assets/logo.png";
 import "./LoginView.css";
@@ -85,6 +85,22 @@ export default function LoginView() {
 
   return (
     <div className='Login-view'>
+      {/* Mobile-only header: lets users go back to the previous page.
+          Hidden on desktop (see LoginView.css) where the branded panel already
+          shows the logo. */}
+      <header className='Mobile-auth-header'>
+        <Link to='/' className='Mobile-auth-header__logo' aria-label='Home'>
+          <img src={logo} alt='My Tabs' />
+        </Link>
+        <button
+          type='button'
+          className='Mobile-auth-header__back'
+          onClick={() => navigate(-1)}
+          aria-label='Go back'>
+          ‹ Back
+        </button>
+      </header>
+
       <img
         style={{borderRadius: 20, top: "10%", left: "5%", position: "absolute"}}
         src={logo}
