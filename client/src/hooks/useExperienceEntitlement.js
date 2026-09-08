@@ -4,15 +4,16 @@ import { getMyServices } from "../services/entitlementService";
 /**
  * Experience type tier requirements.
  * Maps each experience type to the minimum subscription tier required.
- * Types available in "starter" are available to all paid tiers.
+ * The lowest engagement tier is "growth" — starter has no engagement types.
+ * Types available in "growth" are available to all higher paid tiers.
  */
 const EXPERIENCE_TIER_REQUIREMENTS = {
-  raffles: "starter",
-  live_polls: "starter",
-  trivia: "starter",
-  surveys: "starter",
-  pulse_feedback: "starter",
-  check_in_challenges: "starter",
+  raffles: "growth",
+  live_polls: "growth",
+  trivia: "pro",
+  surveys: "growth",
+  pulse_feedback: "growth",
+  check_in_challenges: "growth",
   prediction_challenges: "pro",
   instant_win: "pro",
   digital_scratch_offs: "pro",
@@ -20,17 +21,43 @@ const EXPERIENCE_TIER_REQUIREMENTS = {
   photo_contests: "pro",
   social_wall: "pro",
   leaderboards: "pro",
-  digital_coupons: "enterprise",
-  sponsor_promotions: "enterprise",
-  loyalty_rewards: "enterprise",
+  digital_coupons: "growth",
+  sponsor_promotions: "pro",
+  loyalty_rewards: "pro",
   ai_concierge: "enterprise",
+};
+
+/**
+ * Resolve a type's required tier tolerant of key format. The catalog/backend use
+ * hyphenated type ids (e.g. 'digital-scratch-offs', 'instant-win',
+ * 'trivia-challenges') while EXPERIENCE_TIER_REQUIREMENTS is keyed by underscore
+ * ids (e.g. 'digital_scratch_offs'). Normalize hyphens→underscores (and map the
+ * catalog's 'trivia-challenges' to the map's 'trivia') so a lookup succeeds for
+ * either form. Returns the tier string or null.
+ */
+const resolveRequiredTier = (experienceType) => {
+  if (!experienceType) return null;
+  if (EXPERIENCE_TIER_REQUIREMENTS[experienceType]) {
+    return EXPERIENCE_TIER_REQUIREMENTS[experienceType];
+  }
+  const underscored = String(experienceType).replace(/-/g, "_");
+  if (EXPERIENCE_TIER_REQUIREMENTS[underscored]) {
+    return EXPERIENCE_TIER_REQUIREMENTS[underscored];
+  }
+  // The catalog id 'trivia-challenges' maps to the requirements key 'trivia'.
+  if (underscored === "trivia_challenges" && EXPERIENCE_TIER_REQUIREMENTS.trivia) {
+    return EXPERIENCE_TIER_REQUIREMENTS.trivia;
+  }
+  return null;
 };
 
 /**
  * Tier hierarchy — higher index means higher tier.
  * Used to compare whether a user's tier meets the requirement.
+ * NOTE: "organization" is NOT a separate rung here. It is an alias for the top
+ * tier "enterprise" (see meetsRequiredTier, which normalizes organization → enterprise).
  */
-const TIER_HIERARCHY = ["starter", "pro", "enterprise", "organization"];
+const TIER_HIERARCHY = ["starter", "growth", "pro", "enterprise"];
 
 /**
  * Tier limits for experience features.
@@ -42,6 +69,13 @@ const TIER_LIMITS = {
     maxDrawingsPerInstance: 5,
     analyticsRetentionDays: 30,
     customBranding: false,
+  },
+  experience_growth: {
+    tier: "growth",
+    maxInstances: 8,
+    maxDrawingsPerInstance: 10,
+    analyticsRetentionDays: 60,
+    customBranding: true,
   },
   experience_pro: {
     tier: "pro",
@@ -58,7 +92,9 @@ const TIER_LIMITS = {
     customBranding: true,
   },
   experience_organization: {
-    tier: "organization",
+    // "organization" is an alias for the top tier. Resolve it to "enterprise"
+    // so the exposed `tier` value is unambiguous and comparisons are correct.
+    tier: "enterprise",
     maxInstances: Infinity,
     maxDrawingsPerInstance: Infinity,
     analyticsRetentionDays: Infinity,
@@ -73,8 +109,13 @@ const TIER_LIMITS = {
  * @returns {boolean}
  */
 const meetsRequiredTier = (userTier, requiredTier) => {
-  const userIndex = TIER_HIERARCHY.indexOf(userTier);
-  const requiredIndex = TIER_HIERARCHY.indexOf(requiredTier);
+  // "organization" is an alias for the top tier "enterprise" (same subscription
+  // level). Normalize both arguments before comparing so a subscription tier of
+  // "organization" is treated exactly like "enterprise". Genuinely unknown tiers
+  // still resolve to index -1 and return false.
+  const normalize = (tier) => (tier === "organization" ? "enterprise" : tier);
+  const userIndex = TIER_HIERARCHY.indexOf(normalize(userTier));
+  const requiredIndex = TIER_HIERARCHY.indexOf(normalize(requiredTier));
   if (userIndex === -1 || requiredIndex === -1) return false;
   return userIndex >= requiredIndex;
 };
@@ -184,7 +225,7 @@ const useExperienceEntitlement = () => {
    */
   const isExperienceTypeAvailable = (experienceType) => {
     if (!state.hasSubscription || !state.tier) return false;
-    const requiredTier = EXPERIENCE_TIER_REQUIREMENTS[experienceType];
+    const requiredTier = resolveRequiredTier(experienceType);
     if (!requiredTier) return false;
     return meetsRequiredTier(state.tier, requiredTier);
   };
@@ -195,7 +236,7 @@ const useExperienceEntitlement = () => {
    * @returns {string|null}
    */
   const getRequiredTier = (experienceType) => {
-    return EXPERIENCE_TIER_REQUIREMENTS[experienceType] || null;
+    return resolveRequiredTier(experienceType);
   };
 
   return {

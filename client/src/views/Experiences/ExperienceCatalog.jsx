@@ -316,7 +316,9 @@ const ExperienceCatalog = () => {
         {filteredTypes.map((type) => {
           const typeKey = type.typeId || type.id || type.key;
           const isAvailable = isExperienceTypeAvailable(typeKey);
-          const requiredTier = getRequiredTier(typeKey);
+          // Prefer the entitlement hook's tier; fall back to the catalog item's
+          // own tier (from the API) so the "Upgrade to <tier>" label is never blank.
+          const requiredTier = getRequiredTier(typeKey) || type.requiredTier || type.tier || null;
           const Icon = TYPE_ICONS[typeKey] || DefaultIcon;
           const isCreatingThis = creating === typeKey;
           const catColor = CATEGORY_COLORS[type.category] || "#F09925";
