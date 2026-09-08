@@ -24,6 +24,7 @@ import SettingsCard from '../components/SettingsCard';
 import { useSettings } from '../context/SettingsContext';
 import {
   getCustomerSubscription,
+  getUserPremiumSubscription,
   cancelCustomerSubscription,
   getCustomerInvoices,
   getCustomerPaymentMethods,
@@ -53,6 +54,14 @@ const PLAN_META = {
     description: 'For established businesses',
     features: ['25 ad spaces', 'Tour/Season space included', 'All Plus features included'],
   },
+};
+
+// Extract the plan LEVEL name from a DynamoDB planId of the form "<YYYY-MM-DD><Level>"
+// e.g. "2026-09-01Enterprise" → "Enterprise". Returns null if nothing usable remains.
+const planLevelFromId = (planId) => {
+  if (!planId) return null;
+  const m = String(planId).replace(/^\d{4}-\d{2}-\d{2}/, '').trim();
+  return m || null;
 };
 
 const tableStyles = {
@@ -142,14 +151,55 @@ const BillingSection = () => {
             setSelectedBillingPeriod(subData.sublevel);
           }
         } else {
-          setPlan({
-            name: 'No Active Plan',
-            price: '$0',
-            period: '',
-            status: 'inactive',
-            nextBilling: 'N/A',
-            memberLimit: 0,
-          });
+          // No Stripe subscription. Before showing "No Active Plan", check the
+          // DynamoDB Subscription row — EXEMPT (comped/enterprise) accounts are
+          // entitled there with no Stripe sub. Mirrors SubscriptionGuard's logic.
+          let premiumRow = null;
+          try {
+            const premiumRes = await getUserPremiumSubscription(userId);
+            // Tolerate either envelope: axios response.data, or a nested { data }.
+            premiumRow = premiumRes?.data?.data || premiumRes?.data || null;
+          } catch (e) {
+            // 404/empty simply means the user has no row — fall through.
+            premiumRow = null;
+          }
+
+          const rowIsActive = !!(premiumRow && premiumRow.isActive);
+          const billingMode = premiumRow?.billingMode;
+          const levelName = planLevelFromId(premiumRow?.planId);
+
+          if (rowIsActive && billingMode === 'exempt') {
+            // Comped/enterprise grant — healthy state, managed by MyTabs.
+            setPlan({
+              name: levelName || 'Active',
+              price: 'Complimentary',
+              period: '',
+              status: 'active',
+              nextBilling: 'N/A',
+              memberLimit: subData?.memberLimit || 0,
+              exempt: true,
+              managedNote: 'Managed by MyTabs',
+            });
+          } else if (rowIsActive && billingMode === 'paid') {
+            // Safety net: entitled paid row but Stripe returned nothing.
+            setPlan({
+              name: levelName ? `${levelName} Plan` : 'Active Plan',
+              price: '—',
+              period: '',
+              status: 'active',
+              nextBilling: 'N/A',
+              memberLimit: subData?.memberLimit || 0,
+            });
+          } else {
+            setPlan({
+              name: 'No Active Plan',
+              price: '$0',
+              period: '',
+              status: 'inactive',
+              nextBilling: 'N/A',
+              memberLimit: 0,
+            });
+          }
         }
       } catch (err) {
         console.error('Failed to fetch subscription:', err);
@@ -459,26 +509,35 @@ const BillingSection = () => {
                   </Typography>
                 )}
               </Box>
+              {plan.exempt && plan.managedNote && (
+                <Typography sx={{ fontSize: '13px', opacity: 0.9, mt: 1 }} data-testid="plan-managed-note">
+                  {plan.managedNote}
+                </Typography>
+              )}
             </Box>
 
             <Box sx={{ display: 'flex', gap: '12px', mt: 3 }}>
-              <Button
-                variant="contained"
-                onClick={handleOpenChangePlan}
-                sx={{
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  fontSize: '14px',
-                  borderRadius: '8px',
-                  padding: '9px 18px',
-                  backgroundColor: '#4F46E5',
-                  '&:hover': { backgroundColor: '#4338CA' },
-                }}
-                data-testid="change-plan-button"
-              >
-                Change Plan
-              </Button>
-              {plan.status === 'active' && (
+              {/* Exempt (comped/enterprise) accounts are managed by MyTabs and must
+                  not be pushed into Stripe checkout, so the Change Plan button is hidden. */}
+              {!plan.exempt && (
+                <Button
+                  variant="contained"
+                  onClick={handleOpenChangePlan}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    fontSize: '14px',
+                    borderRadius: '8px',
+                    padding: '9px 18px',
+                    backgroundColor: '#4F46E5',
+                    '&:hover': { backgroundColor: '#4338CA' },
+                  }}
+                  data-testid="change-plan-button"
+                >
+                  Change Plan
+                </Button>
+              )}
+              {!plan.exempt && plan.status === 'active' && (
                 <Button
                   variant="outlined"
                   onClick={handleCancelSubscription}
