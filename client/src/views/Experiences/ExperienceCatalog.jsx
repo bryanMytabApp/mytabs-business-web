@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
 import AutoFixHighOutlinedIcon from "@mui/icons-material/AutoFixHighOutlined";
@@ -24,6 +25,7 @@ import EmojiEventsOutlinedIcon from "@mui/icons-material/EmojiEventsOutlined";
 import PollOutlinedIcon from "@mui/icons-material/PollOutlined";
 import QuizOutlinedIcon from "@mui/icons-material/QuizOutlined";
 import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";
+import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import FeedbackOutlinedIcon from "@mui/icons-material/FeedbackOutlined";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import CameraAltOutlinedIcon from "@mui/icons-material/CameraAltOutlined";
@@ -42,13 +44,29 @@ import useExperienceEntitlement from "../../hooks/useExperienceEntitlement";
 const ACCENT = "#F09925";
 
 /**
+ * Category → brand color map (categories match the API exactly).
+ */
+const CATEGORY_COLORS = {
+  "Contests & Giveaways": "#F47A20",
+  "Engagement & Loyalty": "#8B5CF6",
+  "Feedback & Surveys": "#3B82F6",
+  "Games & Challenges": "#22C55E",
+  "Social & Community": "#EC4899",
+};
+
+/**
+ * Capitalize the first letter of a string (e.g. "growth" → "Growth").
+ */
+const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
+/**
  * Map experience type keys to MUI icons.
  */
 const TYPE_ICONS = {
   'raffles': EmojiEventsOutlinedIcon,
   'live-polls': PollOutlinedIcon,
   'trivia-challenges': QuizOutlinedIcon,
-  'surveys': InsightsOutlinedIcon,
+  'surveys': AssignmentOutlinedIcon,
   'pulse-feedback': FeedbackOutlinedIcon,
   'prediction-challenges': InsightsOutlinedIcon,
   'instant-win': CasinoOutlinedIcon,
@@ -301,112 +319,170 @@ const ExperienceCatalog = () => {
           const requiredTier = getRequiredTier(typeKey);
           const Icon = TYPE_ICONS[typeKey] || DefaultIcon;
           const isCreatingThis = creating === typeKey;
+          const catColor = CATEGORY_COLORS[type.category] || "#F09925";
+          // Tier shown in the top-right badge: prefer catalog-provided tier, else
+          // fall back to the entitlement-derived required tier.
+          const badgeTier = cap(type.tier || type.requiredTier || requiredTier);
 
           return (
             <Grid item xs={12} sm={6} md={4} key={typeKey}>
               <Card
                 variant="outlined"
                 sx={{
-                  borderRadius: 2.5,
+                  borderRadius: "18px",
                   height: "100%",
                   cursor: "pointer",
-                  opacity: isAvailable ? 1 : 0.85,
-                  transition: "border-color 0.2s, box-shadow 0.2s",
+                  opacity: isAvailable ? 1 : 0.9,
+                  transition: "transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease",
                   position: "relative",
-                  "&:hover": { borderColor: ACCENT, boxShadow: "0 4px 20px rgba(240,153,37,0.1)" },
+                  borderColor: "#eef1f3",
+                  boxShadow: "0 10px 24px -16px rgba(13,27,42,0.18)",
+                  "&:hover": {
+                    transform: "translateY(-3px)",
+                    boxShadow: `0 16px 32px -16px rgba(13,27,42,0.28), 0 0 0 1.5px ${catColor}`,
+                    borderColor: catColor,
+                  },
+                  "&:hover .upgrade-link": { textDecoration: "underline" },
                 }}
                 onClick={() => handleSelectType(type)}
               >
-                <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
-                  {/* Lock overlay for gated types */}
-                  {!isAvailable && (
+                <CardContent sx={{ p: "20px 20px 18px", "&:last-child": { pb: "18px" } }}>
+                  {/* Tier badge (top-right) */}
+                  {badgeTier && (
                     <Box
                       sx={{
                         position: "absolute",
-                        top: 12,
-                        right: 12,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 0.5,
+                        top: 18,
+                        right: 20,
+                        fontSize: "10.5px",
+                        fontWeight: 800,
+                        color: "#6b7684",
+                        background: "#f2f4f6",
+                        px: "9px",
+                        py: "3px",
+                        borderRadius: "999px",
                       }}
                     >
-                      <LockOutlinedIcon sx={{ fontSize: 16, color: "#9E9E9E" }} />
-                      <Typography sx={{ fontSize: 10, fontWeight: 700, color: "#9E9E9E", textTransform: "capitalize" }}>
-                        {requiredTier}
-                      </Typography>
+                      {badgeTier}
                     </Box>
                   )}
 
-                  {/* Icon */}
+                  {/* Category-colored gradient icon tile */}
                   <Box
                     sx={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 2,
+                      position: "relative",
+                      width: 52,
+                      height: 52,
+                      borderRadius: "14px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      background: isAvailable ? `${ACCENT}14` : "#F5F5F5",
-                      mb: 1.5,
+                      background: `linear-gradient(150deg, ${catColor}, color-mix(in srgb, ${catColor} 70%, black))`,
+                      boxShadow: `0 8px 16px -8px color-mix(in srgb, ${catColor} 60%, transparent)`,
+                      mb: "14px",
                     }}
                   >
-                    <Icon sx={{ color: isAvailable ? ACCENT : "#BDBDBD", fontSize: 24 }} />
+                    <Icon sx={{ color: "#fff", fontSize: 24 }} />
+                    {/* Lock badge for gated types */}
+                    {!isAvailable && (
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          right: -6,
+                          bottom: -6,
+                          width: 22,
+                          height: 22,
+                          borderRadius: "50%",
+                          background: "#fff",
+                          color: "#8a94a0",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          boxShadow: "0 0 0 1px #e3e7eb, 0 3px 6px -2px rgba(13,27,42,0.25)",
+                        }}
+                      >
+                        <LockOutlinedIcon sx={{ fontSize: 13 }} />
+                      </Box>
+                    )}
                   </Box>
 
                   {/* Name */}
-                  <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#1D1B20", mb: 0.5 }}>
+                  <Typography sx={{ fontWeight: 900, fontSize: 17, color: "#0D1B2A", mb: "6px" }}>
                     {type.name}
                   </Typography>
 
                   {/* Description */}
-                  <Typography sx={{ fontSize: 12, color: "#71727A", mb: 1.5, minHeight: 36 }}>
+                  <Typography sx={{ fontSize: 13, lineHeight: 1.45, color: "#6b7684", mb: 2, minHeight: 38 }}>
                     {type.description || "Interactive engagement for your event."}
                   </Typography>
 
-                  {/* Category + action */}
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    {type.category && (
-                      <Chip
-                        label={type.category}
-                        size="small"
-                        sx={{ fontSize: 10, fontWeight: 600, height: 20, background: "#F5F5F5", color: "#757575" }}
-                      />
+                  {/* Footer row: category pill + action */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 1,
+                      pt: "12px",
+                      borderTop: "1px solid #f0f2f4",
+                    }}
+                  >
+                    {type.category ? (
+                      <Box
+                        sx={{
+                          fontSize: "10.5px",
+                          fontWeight: 800,
+                          px: "9px",
+                          py: "4px",
+                          borderRadius: "999px",
+                          color: catColor,
+                          background: `color-mix(in srgb, ${catColor} 12%, white)`,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {type.category}
+                      </Box>
+                    ) : (
+                      <Box />
                     )}
-                    {isAvailable && (
+                    {isAvailable ? (
                       <Button
                         size="small"
                         disabled={isCreatingThis}
                         sx={{
                           textTransform: "none",
-                          fontWeight: 700,
+                          fontWeight: 800,
                           fontSize: 12,
-                          color: ACCENT,
+                          color: catColor,
                           minWidth: 0,
                           px: 1,
-                          "&:hover": { background: `${ACCENT}0A` },
+                          "&:hover": { background: `color-mix(in srgb, ${catColor} 8%, white)` },
                         }}
                       >
-                        {isCreatingThis ? <CircularProgress size={14} sx={{ color: ACCENT }} /> : "Add"}
+                        {isCreatingThis ? <CircularProgress size={14} sx={{ color: catColor }} /> : "Add"}
                       </Button>
-                    )}
-                    {!isAvailable && (
-                      <Button
-                        size="small"
-                        sx={{
-                          textTransform: "none",
-                          fontWeight: 700,
-                          fontSize: 11,
-                          color: "#9E9E9E",
-                          minWidth: 0,
-                          px: 1,
-                        }}
+                    ) : (
+                      <Box
+                        className="upgrade-link"
+                        component="span"
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate("/admin/settings/subscription");
                         }}
+                        sx={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: 12,
+                          fontWeight: 800,
+                          color: catColor,
+                          whiteSpace: "nowrap",
+                          cursor: "pointer",
+                        }}
                       >
-                        Upgrade to {requiredTier}
-                      </Button>
+                        Upgrade to {cap(requiredTier)}
+                        <ArrowForwardIcon sx={{ fontSize: 14 }} />
+                      </Box>
                     )}
                   </Box>
                 </CardContent>
