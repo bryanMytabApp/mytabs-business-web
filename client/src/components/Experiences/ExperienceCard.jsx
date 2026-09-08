@@ -113,7 +113,7 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
     if (onClick) onClick(instance);
   };
 
-  const previewUrl = `https://engage.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId || ''}&userToken=${encodeURIComponent(localStorage.getItem('idToken') || '')}`;
+  const previewUrl = `https://engage.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId || ''}&type=${encodeURIComponent(experienceType || '')}&userToken=${encodeURIComponent(localStorage.getItem('idToken') || '')}`;
   const configureUrl = `/admin/my-events/${eventId}/experiences/${experienceId}/config?embedded=true`;
 
   return (
