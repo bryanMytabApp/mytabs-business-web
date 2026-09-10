@@ -1,0 +1,164 @@
+/* ============================================================
+   Engagement Config Chrome — shared form styling
+   Extracted from RaffleConfig's inline ECN_STYLES so every engagement
+   configuration form shares Raffle's look: soft blue gradient page,
+   Nunito type, a pill step-bar, a white content card, and a sticky
+   footer with primary/secondary buttons.
+
+   Namespaced `ecn-` to match the existing Raffle markup so the classes
+   are identical across all forms.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+.ecn-wrap {
+  --or: #F5A623;
+  --ord: #E09415;
+  --te: #5BB8C1;
+  --ted: #3D9DA6;
+  --tx: #2d3748;
+  --mu: #8a9ab0;
+  --li: #c4cdd6;
+  --ibr: #dde4ed;
+  --tr: .2s cubic-bezier(.4, 0, .2, 1);
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e8f4fd 0%, #dbeeff 35%, #f0f8ff 65%, #e2eeff 100%);
+  padding: 24px;
+  font-family: 'Nunito', sans-serif;
+  color: var(--tx);
+  overflow-x: hidden;
+}
+
+.ecn-wrap .MuiOutlinedInput-root { background: #fff; }
+.ecn-wrap .MuiInputLabel-shrink { background: #fff; padding: 0 6px; }
+
+.ecn-inner { max-width: 1100px; margin: 0 auto; }
+
+.ecn-pg-h {
+  font-size: 22px;
+  font-weight: 700;
+  color: #F09925;
+  margin-bottom: 5px;
+  font-family: 'Outfit', 'Nunito', sans-serif;
+}
+.ecn-pg-s { font-size: 13px; color: #6B7280; margin-bottom: 24px; line-height: 1.5; }
+
+.ecn-steps {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(18px) saturate(1.4);
+  border: 1.5px solid rgba(200, 220, 240, 0.6);
+  box-shadow: 0 4px 20px rgba(0, 100, 180, 0.06);
+  border-radius: 14px;
+  padding: 14px 18px;
+  width: 100%;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 24px;
+}
+.ecn-steps::-webkit-scrollbar { display: none; }
+
+.ecn-step-btn {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #5a738a;
+  cursor: default;
+  transition: all 0.22s;
+  font-family: 'Nunito', sans-serif;
+  background: none;
+  white-space: nowrap;
+}
+.ecn-step-btn.cur { background: #0077cc; color: #fff; font-weight: 700; box-shadow: 0 2px 8px rgba(0, 119, 204, 0.25); }
+.ecn-step-btn.done { color: #1ab76b; font-weight: 600; }
+
+.ecn-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, .06);
+  margin-bottom: 16px;
+}
+
+.ecn-foot {
+  position: sticky;
+  bottom: 0;
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid #E5E7EB;
+  padding: 13px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, .04);
+  border-radius: 0 0 16px 16px;
+  margin-top: 20px;
+}
+
+.ecn-bn {
+  background: var(--or);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 34px;
+  font-size: 14.5px;
+  font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(245, 166, 35, .33);
+  transition: all var(--tr);
+}
+.ecn-bn:hover { background: var(--ord); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(245, 166, 35, .40); }
+.ecn-bn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+.ecn-bb {
+  background: rgba(255, 255, 255, .80);
+  color: var(--tx);
+  border: 1.5px solid rgba(0, 0, 0, .09);
+  border-radius: 10px;
+  padding: 8px 17px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--tr);
+}
+.ecn-bb:hover { background: #fff; }
+
+.ecn-err-banner {
+  background: rgba(239, 68, 68, .06);
+  border: 1.5px solid rgba(239, 68, 68, .2);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.ecn-ok-banner {
+  background: rgba(26, 183, 107, .08);
+  border: 1.5px solid rgba(26, 183, 107, .25);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #1ab76b;
+  font-weight: 700;
+}

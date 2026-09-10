@@ -14,6 +14,12 @@ jest.mock('../../services/ticketManagementService', () => ({
   getTicketsByEvent: jest.fn(),
 }));
 
+// The card resolves the concrete business _id via getBusiness before fetching payouts;
+// mock it so the tests are deterministic and don't hit the network.
+jest.mock('../../services/businessService', () => ({
+  getBusiness: jest.fn().mockResolvedValue({ data: { _id: 'biz1' } }),
+}));
+
 beforeEach(() => getTicketsByEvent.mockResolvedValue({ tickets: [], stats: {} }));
 
 const event = {
@@ -45,7 +51,9 @@ describe('TicketEventCard — payout details', () => {
     // Expand by clicking the card row (the event name is inside it).
     fireEvent.click(screen.getByText('3rd Ward Back To School Drive'));
 
-    await waitFor(() => expect(getEventPayouts).toHaveBeenCalledWith('ev1'));
+    // Called with the eventId first; a resolved businessId may follow as a 2nd arg.
+    await waitFor(() => expect(getEventPayouts).toHaveBeenCalled());
+    expect(getEventPayouts.mock.calls[0][0]).toBe('ev1');
     await waitFor(() => expect(screen.getByTestId('event-payout-details')).toBeInTheDocument());
     expect(screen.getByTestId('event-payout-outstanding')).toHaveTextContent('96.00');
     expect(screen.getAllByTestId('event-payout-row').length).toBe(1);

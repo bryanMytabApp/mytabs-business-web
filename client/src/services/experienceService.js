@@ -147,6 +147,62 @@ export const listAllExperiences = async (eventIds = []) => {
 export const transitionState = (eventId, experienceId, transitionData) =>
   http.post(`v1/events/${eventId}/experiences/${experienceId}/transition`, transitionData);
 
+/**
+ * Opens or closes a single poll within a live-polls experience instance.
+ *
+ * The backend exposes poll open/close through the same transition route the
+ * lifecycle state machine uses; the plugin dispatches on `action` and applies
+ * the change to the poll identified by `pollId`.
+ *
+ * @param {string} eventId
+ * @param {string} experienceId
+ * @param {object} args
+ * @param {'open_poll'|'close_poll'} args.action - Which poll transition to run.
+ * @param {string} args.pollId - The target poll's id.
+ */
+export const setPollState = (eventId, experienceId, { action, pollId }) =>
+  transitionState(eventId, experienceId, { action, pollId });
+
+/**
+ * Reveals, locks, or reveals-the-answer-for a single question within a
+ * trivia-challenges experience instance.
+ *
+ * These are question-scoped host actions (not instance lifecycle transitions).
+ * The backend exposes them through the same transition route the poll
+ * open/close path uses; the core dispatches on `action` and applies the change
+ * to the question identified by `questionId` (calling the plugin's
+ * revealQuestion / lockQuestion / revealAnswer). Mirrors setPollState.
+ *
+ * @param {string} eventId
+ * @param {string} experienceId
+ * @param {object} args
+ * @param {'reveal_question'|'lock_question'|'reveal_answer'} args.action - Which question transition to run.
+ * @param {string} args.questionId - The target question's id.
+ */
+export const setQuestionState = (eventId, experienceId, { action, questionId }) =>
+  transitionState(eventId, experienceId, { action, questionId });
+
+/**
+ * Locks or resolves a single prediction market within a prediction-challenges
+ * experience instance.
+ *
+ * These are market-scoped host actions (not instance lifecycle transitions).
+ * The backend exposes them through the same transition route the trivia
+ * question and poll open/close paths use; the core dispatches on `action` and
+ * applies the change to the market identified by `marketId` (calling the
+ * plugin's lockMarket / resolveMarket). On resolve, the declared actual outcome
+ * is passed as `outcomeId`. Mirrors setQuestionState / setPollState.
+ *
+ * @param {string} eventId
+ * @param {string} experienceId
+ * @param {object} args
+ * @param {'lock_market'|'resolve_market'} args.action - Which market transition to run.
+ * @param {string} args.marketId - The target market's id.
+ * @param {string} [args.outcomeId] - The declared actual outcome (required on resolve_market).
+ */
+export const setMarketState = (eventId, experienceId, { action, marketId, outcomeId }) =>
+  transitionState(eventId, experienceId, { action, marketId, outcomeId });
+
 // ─── Participation ─────────────────────────────────────────────────────────────
 
 /**
@@ -185,6 +241,21 @@ export const getMyEntries = (eventId, experienceId) =>
  */
 export const getLiveStats = (eventId, experienceId, config) =>
   http.get(`v1/events/${eventId}/experiences/${experienceId}/live-stats`, config);
+
+/**
+ * Requests the Surveys results export document.
+ *
+ * The backend exposes the export on the same live-stats route via `?export=true`,
+ * returning `{ data: { experienceType: 'surveys', state, export: <document> } }`.
+ * This reuses `getLiveStats`' route with the `export` query param so it stays
+ * consistent with the existing live-stats helper.
+ * @param {string} eventId
+ * @param {string} experienceId
+ */
+export const exportSurveyResults = (eventId, experienceId) =>
+  http.get(`v1/events/${eventId}/experiences/${experienceId}/live-stats`, {
+    params: { export: "true" },
+  });
 
 // ─── Entries (Admin) ───────────────────────────────────────────────────────────
 

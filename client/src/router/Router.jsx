@@ -129,8 +129,11 @@ const SubscriptionGuard = lazy(() => import("../components/SubscriptionGuard"));
 const ExperiencesDashboard = lazy(() => import("../views/Experiences/ExperiencesDashboard"));
 const AllExperiencesDashboard = lazy(() => import("../views/Experiences/AllExperiencesDashboard"));
 const ExperienceCatalog = lazy(() => import("../views/Experiences/ExperienceCatalog"));
-const RaffleConfig = lazy(() => import("../views/Experiences/RaffleConfig"));
-const RaffleLiveDashboard = lazy(() => import("../views/Experiences/RaffleLiveDashboard"));
+// Per-experience config/live dispatchers: they read the instance's
+// experienceType and render the type-specific screen (Raffle or Live Polls),
+// keeping the shared /config and /live routes generic.
+const ExperienceConfigRouter = lazy(() => import("../views/Experiences/ExperienceConfigRouter"));
+const ExperienceLiveRouter = lazy(() => import("../views/Experiences/ExperienceLiveRouter"));
 const DrawingHistory = lazy(() => import("../views/Experiences/DrawingHistory"));
 const EntryManagement = lazy(() => import("../views/Experiences/EntryManagement"));
 const FulfillmentManagement = lazy(() => import("../views/Experiences/FulfillmentManagement"));
@@ -407,12 +410,12 @@ const router = createBrowserRouter([
           },
           {
             path: "my-events/:eventId/experiences/:experienceId/config",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><RaffleConfig /></UrbanHTXRouteGuard></LazyRoute>,
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><ExperienceConfigRouter /></UrbanHTXRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
             path: "my-events/:eventId/experiences/:experienceId/live",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><RaffleLiveDashboard /></UrbanHTXRouteGuard></LazyRoute>,
+            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><ExperienceLiveRouter /></UrbanHTXRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {

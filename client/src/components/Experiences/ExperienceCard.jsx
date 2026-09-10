@@ -329,13 +329,13 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
           }} />
           {/* Iframe container */}
           <Box sx={{
-            width: "100%", height: "100%", borderRadius: "22px", overflow: "auto",
+            width: "100%", height: "100%", borderRadius: "22px", overflow: "hidden",
             background: "#fff",
           }}>
             <iframe
               src={previewUrl}
               title="Engagement Preview"
-              style={{ width: "100%", height: "100%", border: "none" }}
+              style={{ width: "100%", height: "100%", border: "none", display: "block" }}
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"
             />
           </Box>

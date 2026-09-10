@@ -329,6 +329,31 @@ const PayoutsSection = () => {
         </Typography>
       )}
 
+      {/* Primary CTA (set up / update payout details) — moved to the right status
+          card. Hidden for a child business whose payouts are org-managed. */}
+      {!orgManaged && (
+        <Button
+          variant="contained"
+          fullWidth
+          onClick={handleStartOnboarding}
+          disabled={starting || loading || resetting}
+          startIcon={starting ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : null}
+          sx={{
+            mt: 2,
+            textTransform: 'none',
+            fontWeight: 500,
+            fontSize: '14px',
+            borderRadius: '8px',
+            padding: '9px 18px',
+            backgroundColor: '#4F46E5',
+            '&:hover': { backgroundColor: '#4338CA' },
+          }}
+          data-testid="payout-cta-button"
+        >
+          {starting ? 'Loading…' : meta.cta}
+        </Button>
+      )}
+
       {/* Reset / start over — only when there's an account to release AND this business
           owns payouts (not a child inheriting from an org). */}
       {currentStatus !== 'none' && !orgManaged && (
@@ -509,25 +534,6 @@ const PayoutsSection = () => {
           </Box>
         </Box>
       )}
-
-      <Button
-        variant="contained"
-        onClick={handleStartOnboarding}
-        disabled={starting || loading || resetting}
-        startIcon={starting ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : null}
-        sx={{
-          textTransform: 'none',
-          fontWeight: 500,
-          fontSize: '14px',
-          borderRadius: '8px',
-          padding: '9px 18px',
-          backgroundColor: '#4F46E5',
-          '&:hover': { backgroundColor: '#4338CA' },
-        }}
-        data-testid="payout-cta-button"
-      >
-        {starting ? 'Loading…' : meta.cta}
-      </Button>
 
       {/* Payout history (journal-derived) — shown once payouts are active. */}
       {currentStatus === 'enabled' && history && (

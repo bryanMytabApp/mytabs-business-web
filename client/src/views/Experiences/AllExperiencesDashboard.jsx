@@ -230,7 +230,6 @@ const AllExperiencesDashboard = () => {
 
   const handleDeleteSelected = async () => {
     if (selected.length === 0) return;
-    if (!window.confirm(`Delete ${selected.length} engagement${selected.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
     setDeleting(true);
     try {
       await Promise.all(selected.map((key) => {

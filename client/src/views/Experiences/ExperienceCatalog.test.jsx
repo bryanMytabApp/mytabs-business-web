@@ -12,7 +12,7 @@ jest.mock("../../hooks/useExperienceEntitlement", () => ({
   __esModule: true,
   default: () => ({
     isExperienceTypeAvailable: (type) => type === "raffles" || type === "live_polls",
-    getRequiredTier: (type) => (type === "raffles" ? "starter" : "pro"),
+    getRequiredTier: (type) => (type === "raffles" ? "growth" : "pro"),
     isLoading: false,
     hasSubscription: true,
     tier: "starter",

@@ -13,6 +13,11 @@ jest.mock('../../services/ticketManagementService', () => ({
   getTicketsByEvent: jest.fn(),
 }));
 
+// The card resolves the concrete business _id via getBusiness before fetching payouts.
+jest.mock('../../services/businessService', () => ({
+  getBusiness: jest.fn().mockResolvedValue({ data: { _id: 'biz1' } }),
+}));
+
 const event = {
   _id: 'ev1',
   name: '3rd Ward Back To School Drive',

@@ -300,14 +300,14 @@ describe('PayoutsSection — embedded Payouts & Banking (Req 10)', () => {
     render(<PayoutsSection />);
     await waitFor(() => expect(screen.getByTestId('payout-connect-prompt')).toBeInTheDocument());
     expect(screen.getByTestId('payout-status-card')).toBeInTheDocument();
-    // The middle column holds the Connect content (prompt + CTA), NOT the status chip.
+    // The middle column holds the Connect content (prompt), NOT the status chip or CTA.
     const prompt = screen.getByTestId('payout-connect-prompt');
-    expect(prompt).toContainElement(screen.getByTestId('payout-cta-button'));
+    expect(prompt).not.toContainElement(screen.getByTestId('payout-cta-button'));
     expect(prompt).not.toContainElement(screen.getByTestId('payout-status-chip-none'));
-    // The status chip lives in the status card.
-    expect(screen.getByTestId('payout-status-card')).toContainElement(
-      screen.getByTestId('payout-status-chip-none')
-    );
+    // The status chip AND the primary CTA live in the right-side status card.
+    const statusCard = screen.getByTestId('payout-status-card');
+    expect(statusCard).toContainElement(screen.getByTestId('payout-status-chip-none'));
+    expect(statusCard).toContainElement(screen.getByTestId('payout-cta-button'));
   });
 
   it('updates the status card to "in progress" as the user advances through onboarding', async () => {

@@ -63,8 +63,11 @@ const ExperiencesDashboard = () => {
     }
   }, [eventId, eventName]);
 
-  const fetchInstances = useCallback(async () => {
-    setLoading(true);
+  // `silent` refreshes update cards in place without triggering the full-page
+  // loading spinner. Only the initial load (and explicit retry) shows the spinner,
+  // so background polling and post-action refreshes don't blank/flash the page.
+  const fetchInstances = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await listInstances(eventId);
@@ -74,21 +77,13 @@ const ExperiencesDashboard = () => {
       const msg = err.response?.data?.message || err.message || "Failed to load engagements";
       setError(msg);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [eventId]);
 
   useEffect(() => {
     fetchInstances();
   }, [fetchInstances]);
-
-  // Auto-refresh every 10s when any experience is Live
-  useEffect(() => {
-    const hasLive = instances.some((i) => i.state === "Live");
-    if (!hasLive) return;
-    const interval = setInterval(fetchInstances, 10000);
-    return () => clearInterval(interval);
-  }, [instances, fetchInstances]);
 
   // Filtered and searched instances
   const filteredInstances = useMemo(() => {
@@ -124,7 +119,7 @@ const ExperiencesDashboard = () => {
     setActionLoading(experienceId);
     try {
       await transitionState(eventId, experienceId, { action });
-      await fetchInstances();
+      await fetchInstances({ silent: true });
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Action failed";
       setError(msg);
@@ -152,13 +147,12 @@ const ExperiencesDashboard = () => {
 
   const handleDeleteSelected = async () => {
     if (selected.length === 0) return;
-    if (!window.confirm(`Delete ${selected.length} engagement${selected.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
     setDeleting(true);
     try {
       await Promise.all(selected.map((id) => deleteInstance(eventId, id)));
       setSelected([]);
       setSelectMode(false);
-      await fetchInstances();
+      await fetchInstances({ silent: true });
     } catch (err) {
       setError(err.message || "Failed to delete");
     } finally {
@@ -212,7 +206,7 @@ const ExperiencesDashboard = () => {
                   Select
                 </Button>
               )}
-              <IconButton onClick={fetchInstances} size="small" disabled={loading} sx={{ color: ACCENT }}>
+              <IconButton onClick={() => fetchInstances({ silent: true })} size="small" disabled={loading} sx={{ color: ACCENT }}>
                 <RefreshIcon fontSize="small" />
               </IconButton>
               <Button
@@ -284,7 +278,7 @@ const ExperiencesDashboard = () => {
 
       {/* Error alert */}
       {error && (
-        <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }} action={<Button color="inherit" size="small" onClick={fetchInstances} sx={{ textTransform: "none", fontWeight: 600 }}>Retry</Button>}>
+        <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }} action={<Button color="inherit" size="small" onClick={() => fetchInstances()} sx={{ textTransform: "none", fontWeight: 600 }}>Retry</Button>}>
           {error}
         </Alert>
       )}

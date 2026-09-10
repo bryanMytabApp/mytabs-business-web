@@ -3,6 +3,7 @@ import { getEventsByUserId } from '../../services/eventService';
 import { getTicketsByEvent } from '../../services/ticketManagementService';
 import { getCurrentUserId, buildAuthenticatedReturnUrl } from '../../utils/authUtils';
 import { getEventPayouts } from '../../services/paymentService';
+import { getBusiness } from '../../services/businessService';
 import CustomerServiceView from './CustomerServiceView';
 import moment from 'moment';
 
@@ -112,7 +113,22 @@ export function TicketEventCard({ event, index, onSelectPurchase }) {
     let cancelled = false;
     (async () => {
       try {
-        const data = await getEventPayouts(event._id);
+        // Resolve the CONCRETE business _id the same way the Payouts page does:
+        // getBusiness(userId) returns the currently-selected business record (the
+        // backend picks it via the X-Business-Id header) including its real _id. We
+        // must pass that _id — NOT sessionStorage's selectedBusinessId, which for an
+        // org owner's primary is the userId and won't resolve as a business _id
+        // (that produced the "A business must be selected" 400).
+        let businessId;
+        try {
+          const userId = getCurrentUserId();
+          const res = await getBusiness(userId);
+          const biz = res?.data || res;
+          businessId = biz && biz._id ? biz._id : undefined;
+        } catch {
+          businessId = undefined; // fall back to header-based resolution
+        }
+        const data = await getEventPayouts(event._id, businessId);
         if (!cancelled) setPayouts(data || { summary: null, rows: [] });
       } catch {
         if (!cancelled) setPayouts({ summary: null, rows: [] });
@@ -365,11 +381,38 @@ const MyTicketsView = () => {
         );
 
         // Render the list immediately using the ticket config already attached
-        // to each event. Real-time sold counts and the per-buyer list are loaded
-        // lazily per event when a card is expanded (see TicketEventCard), which
-        // avoids an N+1 request fan-out that previously blocked the whole page
-        // on the slowest full-table scan.
+        // to each event. The per-buyer list is still loaded lazily per event when a
+        // card is expanded (see TicketEventCard).
         setEvents(withTickets);
+
+        // Then enrich EVERY event with its real sold counts in the BACKGROUND, in
+        // parallel — this powers the top roll-up tiles (Total Revenue / Tickets Sold /
+        // Avg. Ticket Price across ALL events) and each row's Revenue column. Running
+        // it after the initial render keeps the page from blocking on the slowest
+        // stats call (the N+1 fan-out is non-blocking here, not on the render path).
+        // Uses getTicketsByEvent — the SAME endpoint + stats.ticketTypes shape the
+        // per-card view uses — so the roll-up matches each card's numbers exactly.
+        Promise.all(
+          withTickets.map(async (ev) => {
+            try {
+              const res2 = await getTicketsByEvent(ev._id);
+              const soldByType = res2?.stats?.ticketTypes || [];
+              // Merge live sold counts into each ticket type (match by type name),
+              // mirroring the card's merge logic.
+              const mergedTickets = (ev.tickets || []).map((t) => {
+                const real = soldByType.find(
+                  (st) => (st.type || '').toLowerCase() === (t.type || '').toLowerCase()
+                );
+                return real ? { ...t, sold: real.sold, ticketsSold: real.sold } : t;
+              });
+              return { ...ev, tickets: mergedTickets };
+            } catch {
+              return ev; // leave this event's config as-is on failure
+            }
+          })
+        )
+          .then((enriched) => setEvents(enriched))
+          .catch(() => { /* background enrichment failure must not break the page */ });
       } catch (e) { console.error("Tickets load error:", e); }
       setLoading(false);
     };

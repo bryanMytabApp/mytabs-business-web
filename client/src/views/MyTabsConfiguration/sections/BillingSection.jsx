@@ -36,25 +36,43 @@ import {
 import { parseJwt } from '../../../utils/common';
 import { useStripe } from '@stripe/react-stripe-js';
 import { toast } from 'react-toastify';
+import { PLAN_LEVELS, planProductMix, PRODUCT_NAMES } from '../../../config/pricingVersions';
 
-// Plan metadata (features/descriptions) — prices come from Stripe via API
-const PLAN_META = {
-  1: {
-    name: 'Basic',
-    description: 'For individuals getting started',
-    features: ['3 ad spaces', 'Quick Ad Tool', 'Ticketing Options', 'Generate QR codes'],
-  },
-  2: {
-    name: 'Plus',
-    description: 'For growing businesses',
-    features: ['10 ad spaces', 'Dedicated ad spaces', 'All Basic features included'],
-  },
-  3: {
-    name: 'Premium',
-    description: 'For established businesses',
-    features: ['25 ad spaces', 'Tour/Season space included', 'All Plus features included'],
-  },
+// Plan metadata (names/descriptions/features) is derived from the pricing-version
+// config — the SAME source of truth the Subscribe page uses — so the Change Plan
+// modal always reflects the current subscription definition (Starter/Growth/Pro/
+// Enterprise + each plan's product mix), never a stale hardcoded list. Prices still
+// come live from Stripe via getSystemSubscriptions.
+//
+// PLAN_LEVELS is ordered Starter=1 ... Enterprise=4, so index + 1 is the numeric level.
+const PLAN_DESCRIPTIONS = {
+  Starter: 'For individuals getting started',
+  Growth: 'For growing businesses',
+  Pro: 'For established businesses',
+  Enterprise: 'For organizations and multi-location teams',
 };
+
+// Build per-level metadata (name + description + feature list) from the config.
+// Mirrors the Subscribe page: because the product mix is cumulative, each higher plan
+// shows only what it ADDS over the plan below (plus an "Everything in <lower>" note),
+// so cards stay short instead of listing all 8/15/26/30 products.
+const PLAN_META = PLAN_LEVELS.reduce((acc, planName, idx) => {
+  const level = idx + 1;
+  const prevName = idx > 0 ? PLAN_LEVELS[idx - 1] : null;
+  const prevSet = new Set(prevName ? planProductMix[prevName] || [] : []);
+  const deltaIds = (planProductMix[planName] || []).filter((pid) => !prevSet.has(pid));
+  const features = deltaIds.map((pid) => PRODUCT_NAMES[pid] || pid);
+  if (prevName) features.push(`All ${prevName} features included`);
+  acc[level] = {
+    name: planName,
+    description: PLAN_DESCRIPTIONS[planName] || '',
+    features,
+  };
+  return acc;
+}, {});
+
+// Cap feature lines per plan card so cards stay compact; the rest collapse into "+N more".
+const MAX_VISIBLE_PLAN_FEATURES = 4;
 
 // Extract the plan LEVEL name from a DynamoDB planId of the form "<YYYY-MM-DD><Level>"
 // e.g. "2026-09-01Enterprise" → "Enterprise". Returns null if nothing usable remains.
@@ -874,11 +892,16 @@ const BillingSection = () => {
                         {meta.description}
                       </Typography>
                       <Box sx={{ display: 'flex', gap: '8px', mt: 1, flexWrap: 'wrap' }}>
-                        {meta.features.map((feat, i) => (
+                        {meta.features.slice(0, MAX_VISIBLE_PLAN_FEATURES).map((feat, i) => (
                           <Typography key={i} sx={{ fontSize: '12px', color: '#9CA3AF' }}>
                             • {feat}
                           </Typography>
                         ))}
+                        {meta.features.length > MAX_VISIBLE_PLAN_FEATURES && (
+                          <Typography sx={{ fontSize: '12px', color: '#9CA3AF' }}>
+                            +{meta.features.length - MAX_VISIBLE_PLAN_FEATURES} more
+                          </Typography>
+                        )}
                       </Box>
                     </Box>
                     <Box sx={{ textAlign: 'right', mt: 1 }}>
