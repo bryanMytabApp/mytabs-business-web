@@ -1,0 +1,17 @@
+{
+  "name": "mytabs-og-tags-edge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lambda@Edge (viewer-request) that returns Open Graph / Twitter Card meta tags for keeptabs.app/e/* and /o/* so social crawlers (Facebook, etc.) render a rich event preview card. Non-crawler traffic passes through to the SPA untouched.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint ."
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
