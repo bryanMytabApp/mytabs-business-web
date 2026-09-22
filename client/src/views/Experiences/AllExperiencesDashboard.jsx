@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -15,6 +15,8 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  ListItemAvatar,
+  Avatar,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SearchIcon from "@mui/icons-material/Search";
@@ -23,7 +25,9 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import http from "../../utils/axios/http";
 import { listAllExperiences, deleteInstance } from "../../services/experienceService";
 import { getCurrentUserId, buildAuthenticatedReturnUrl } from "../../utils/authUtils";
+import { getEventPicture } from "../../utils/common";
 import ExperienceCard from "../../components/Experiences/ExperienceCard";
+import EngagementsEmptyState from "./EngagementsEmptyState";
 
 const ACCENT = "#F09925";
 const FILTER_TABS = ["All", "Draft", "Scheduled", "Live", "Paused", "Closed"];
@@ -34,6 +38,7 @@ const FILTER_TABS = ["All", "Draft", "Scheduled", "Live", "Paused", "Closed"];
  */
 const AllExperiencesDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [eventExperiences, setEventExperiences] = useState([]);
@@ -46,8 +51,10 @@ const AllExperiencesDashboard = () => {
   const [selected, setSelected] = useState([]);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true);
+  // `silent` refreshes the data in place without the full-page spinner, so
+  // returning to the page (Back / focus) doesn't blank/flash it.
+  const fetchAll = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       // Resolve the effective user id for the events fetch. This mirrors
@@ -117,8 +124,21 @@ const AllExperiencesDashboard = () => {
     }
   }, []);
 
+  // Initial load, re-run when returning to this route (e.g. Back from the
+  // catalog) so empty-vs-populated is always re-evaluated, not stale.
   useEffect(() => {
     fetchAll();
+  }, [fetchAll, location.key]);
+
+  // Silent re-check on focus / browser Back, matching the per-event dashboard.
+  useEffect(() => {
+    const recheck = () => fetchAll({ silent: true });
+    window.addEventListener("focus", recheck);
+    window.addEventListener("popstate", recheck);
+    return () => {
+      window.removeEventListener("focus", recheck);
+      window.removeEventListener("popstate", recheck);
+    };
   }, [fetchAll]);
 
   // Flatten all instances with event info for filtering/searching
@@ -290,39 +310,45 @@ const AllExperiencesDashboard = () => {
             </>
           ) : (
             <>
+              {/* When there are no engagements yet the guided empty state below
+                  carries all the primary actions (Go to Events, Add Engagement,
+                  Verify Engagements), so we keep the header to just the title +
+                  refresh to avoid duplicate buttons. */}
               {allInstances.length > 0 && (
-                <Button size="small" variant="outlined" onClick={() => setSelectMode(true)} sx={{ textTransform: "none", fontWeight: 600 }}>
-                  Select
-                </Button>
+                <>
+                  <Button size="small" variant="outlined" onClick={() => setSelectMode(true)} sx={{ textTransform: "none", fontWeight: 600 }}>
+                    Select
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={openVerifyApp}
+                    sx={{
+                      textTransform: "none",
+                      fontWeight: 700,
+                      borderRadius: 2,
+                      color: ACCENT,
+                      borderColor: ACCENT,
+                      "&:hover": { borderColor: "#D4820F", background: "rgba(240,153,37,0.08)" },
+                    }}
+                  >
+                    Verify Engagements
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddCircleOutlineIcon />}
+                    onClick={() => { setShowEventPicker(true); setEventSearchQuery(""); }}
+                    sx={{
+                      background: ACCENT,
+                      textTransform: "none",
+                      fontWeight: 700,
+                      borderRadius: 2,
+                      "&:hover": { background: "#D4820F" },
+                    }}
+                  >
+                    Add Engagement
+                  </Button>
+                </>
               )}
-              <Button
-                variant="outlined"
-                onClick={openVerifyApp}
-                sx={{
-                  textTransform: "none",
-                  fontWeight: 700,
-                  borderRadius: 2,
-                  color: ACCENT,
-                  borderColor: ACCENT,
-                  "&:hover": { borderColor: "#D4820F", background: "rgba(240,153,37,0.08)" },
-                }}
-              >
-                Verify Engagements
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddCircleOutlineIcon />}
-                onClick={() => { setShowEventPicker(true); setEventSearchQuery(""); }}
-                sx={{
-                  background: ACCENT,
-                  textTransform: "none",
-                  fontWeight: 700,
-                  borderRadius: 2,
-                  "&:hover": { background: "#D4820F" },
-                }}
-              >
-                Add Engagement
-              </Button>
               <IconButton onClick={fetchAll} size="small" sx={{ color: ACCENT }}>
                 <RefreshIcon fontSize="small" />
               </IconButton>
@@ -331,7 +357,9 @@ const AllExperiencesDashboard = () => {
         </Box>
       </Box>
 
-      {/* Search + Filter Bar */}
+      {/* Search + Filter Bar — hidden on the empty state, where there's
+          nothing to search or filter yet. */}
+      {allInstances.length > 0 && (
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3, flexWrap: "wrap" }}>
         <TextField
           size="small"
@@ -384,6 +412,7 @@ const AllExperiencesDashboard = () => {
           sx={{ fontWeight: 600, fontSize: 12, background: "#E3F2FD", color: "#1565C0", ml: "auto" }}
         />
       </Box>
+      )}
 
       {error && (
         <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
@@ -393,21 +422,11 @@ const AllExperiencesDashboard = () => {
 
       {/* Empty state */}
       {allInstances.length === 0 && !error && (
-        <Box sx={{ textAlign: "center", py: 8, border: "1.5px dashed #E0E0E0", borderRadius: 3, background: "#FAFAFA" }}>
-          <Typography sx={{ color: "#71727A", fontWeight: 600, fontSize: 16 }}>
-            No engagements yet
-          </Typography>
-          <Typography sx={{ color: "#9E9E9E", fontSize: 13, mt: 0.5, mb: 2 }}>
-            Create an event and add engagements from the catalog.
-          </Typography>
-          <Button
-            variant="contained"
-            onClick={() => navigate("/admin/my-events")}
-            sx={{ background: ACCENT, textTransform: "none", fontWeight: 700, borderRadius: 2, "&:hover": { background: "#D4820F" } }}
-          >
-            Go to Events
-          </Button>
-        </Box>
+        <EngagementsEmptyState
+          onGoToEvents={() => navigate("/admin/my-events")}
+          onAddEngagement={() => { setShowEventPicker(true); setEventSearchQuery(""); }}
+          onVerifyEngagements={openVerifyApp}
+        />
       )}
 
       {/* No results from search/filter */}
@@ -526,6 +545,7 @@ const AllExperiencesDashboard = () => {
               .map((ev) => {
                 const id = ev._id || ev.id;
                 const name = ev.name || ev.title || "Untitled Event";
+                const imgSrc = ev.imageUrl && ev.createdByAi ? ev.imageUrl : getEventPicture(id, "thumb");
                 return (
                   <ListItemButton
                     key={id}
@@ -539,6 +559,25 @@ const AllExperiencesDashboard = () => {
                       "&:hover": { background: "#FFF3E0" },
                     }}
                   >
+                    <ListItemAvatar>
+                      <Avatar
+                        variant="rounded"
+                        src={imgSrc}
+                        alt=""
+                        imgProps={{ loading: "lazy" }}
+                        sx={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 2,
+                          bgcolor: ACCENT,
+                          color: "#fff",
+                          fontWeight: 800,
+                          fontSize: 18,
+                        }}
+                      >
+                        {name.charAt(0).toUpperCase()}
+                      </Avatar>
+                    </ListItemAvatar>
                     <ListItemText
                       primary={name}
                       primaryTypographyProps={{ fontWeight: 700, fontSize: 14 }}

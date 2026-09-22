@@ -52,14 +52,17 @@ describe("AllExperiencesDashboard (smoke)", () => {
     expect(orange).toHaveStyle({ color: "#f97316" });
   });
 
-  it("renders a Verify Engagements button that opens the engage verify app with SSO params", async () => {
+  it("renders a Verify Engagements link that opens the engage verify app with SSO params", async () => {
     const openSpy = jest.spyOn(window, "open").mockImplementation(() => null);
     renderComponent();
 
-    const verifyBtn = await screen.findByRole("button", { name: /verify engagements/i });
-    expect(verifyBtn).toBeInTheDocument();
+    // With no engagements, the guided empty state carries the sole "Verify
+    // engagements" action. It's now an inline text link (not a button) but
+    // wires through to the same openVerifyApp handler.
+    const verifyLink = await screen.findByText(/verify engagements/i);
+    expect(verifyLink).toBeInTheDocument();
 
-    verifyBtn.click();
+    verifyLink.click();
 
     expect(openSpy).toHaveBeenCalledWith(
       "https://verify.engage.keeptabs.app?token=tok-abc&userId=user-123",

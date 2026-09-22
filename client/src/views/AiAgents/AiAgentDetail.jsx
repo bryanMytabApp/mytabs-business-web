@@ -34,6 +34,32 @@ import US_CITIES from "../../data/usCities";
 
 const ACCENT = "#F09925";
 
+/**
+ * Parse a draft's `date` (YYYY-MM-DD or full ISO) into a Date, matching the same
+ * normalization the card renderer uses (append T00:00:00 when there is no time part).
+ * Returns null when the date is missing or unparseable.
+ */
+const parseDraftDate = (date) => {
+  if (!date || typeof date !== "string") return null;
+  const dt = new Date(date + (date.includes("T") ? "" : "T00:00:00"));
+  return Number.isNaN(dt.getTime()) ? null : dt;
+};
+
+/**
+ * Keep only drafts whose event date is today or later, so past/old events don't show
+ * on the AI Discovery page. Drafts without a parseable date are kept (we can't tell
+ * whether they're old, and dropping them would silently hide legitimate events).
+ */
+const filterUpcomingDrafts = (list = []) => {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  return list.filter((d) => {
+    const dt = parseDraftDate(d && d.date);
+    if (!dt) return true;
+    return dt >= startOfToday;
+  });
+};
+
 const CRAWL_SCHEDULES = {
   Sourcing_Agent: ["Weekly", "Biweekly", "Monthly", "Manual"],
   Event_Creation_Agent: ["Hourly", "Every6Hours", "Daily", "Weekly", "Manual"],
@@ -135,7 +161,8 @@ const AiAgentDetail = () => {
             allDrafts = allDrafts.concat(draftsData);
             lastKey = draftsRes.data?.lastKey || null;
           } while (lastKey);
-          setDrafts(allDrafts);
+          // Hide past/old events: only surface drafts dated today or later.
+          setDrafts(filterUpcomingDrafts(allDrafts));
         } catch (e) { setDrafts([]); }
       }
     } catch (err) {

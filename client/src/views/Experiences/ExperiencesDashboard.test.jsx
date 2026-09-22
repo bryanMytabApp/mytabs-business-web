@@ -30,14 +30,15 @@ describe("ExperiencesDashboard", () => {
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
 
-  it("renders empty state when no instances exist", async () => {
+  it("renders the guided empty state when no instances exist", async () => {
     listInstances.mockResolvedValue({ data: [] });
     renderComponent();
 
+    // The per-event page now renders the shared EngagementsEmptyState card.
     await waitFor(() => {
-      expect(screen.getByText("No experiences yet")).toBeInTheDocument();
+      expect(screen.getByText("Get your first one live")).toBeInTheDocument();
     });
-    expect(screen.getByText("Browse Catalog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add engagement/i })).toBeInTheDocument();
   });
 
   it("renders instances grouped by state", async () => {
@@ -60,14 +61,31 @@ describe("ExperiencesDashboard", () => {
     expect(screen.getAllByText("Draft").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders the page title and Add Experience button", async () => {
+  it("renders the page title; header Add button is hidden while empty", async () => {
     listInstances.mockResolvedValue({ data: [] });
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText("Event Experiences")).toBeInTheDocument();
+      expect(screen.getByText("Event Engagements")).toBeInTheDocument();
     });
-    expect(screen.getByText("Add Experience")).toBeInTheDocument();
+    // While empty, the guided card carries the primary action, so the header
+    // Add button is intentionally hidden — the only Add Engagement control is
+    // the one inside the empty-state card.
+    expect(screen.getAllByRole("button", { name: /add engagement/i })).toHaveLength(1);
+  });
+
+  it("shows the header Add Engagement button once instances exist", async () => {
+    listInstances.mockResolvedValue({
+      data: [
+        { experienceId: "exp-1", name: "VIP Raffle", experienceType: "raffles", state: "Live", entryCount: 10 },
+      ],
+    });
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText("VIP Raffle")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: /add engagement/i })).toBeInTheDocument();
   });
 
   it("shows error alert on API failure", async () => {

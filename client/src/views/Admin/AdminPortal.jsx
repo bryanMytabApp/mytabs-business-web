@@ -12,6 +12,7 @@ import { PrintAssetGenerator } from '../../components/QR/PrintAssetGenerator';
 import { getBusinessPicture } from '../../utils/common';
 import PricingConsole from './PricingConsole';
 import PricingSystem from './PricingSystem';
+import AssignPlanDialog from './AssignPlanDialog';
 import { versionForDate } from '../../config/pricingVersions';
 import { subscriptionActiveState, deriveSubscriberColumns } from '../../utils/subscriptionStatus';
 import { setHelpRoute } from '../../components/TabsHelp/helpRoute';
@@ -52,6 +53,9 @@ const AdminPortal = () => {
   const [printAssetDialog, setPrintAssetDialog] = useState({ open: false, business: null });
   // The business a per-row "Pricing" action pre-selects in the pricing tab.
   const [pricingBusinessId, setPricingBusinessId] = useState(null);
+  // Per-row "Assign Plan" dialog — lets an admin pick which subscription plan a
+  // specific customer sees (and is locked to) on their subscription screen.
+  const [assignPlanDialog, setAssignPlanDialog] = useState({ open: false, business: null });
 
   // Check access on component mount
   useEffect(() => {
@@ -425,7 +429,7 @@ const AdminPortal = () => {
         ? <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>{params.value.map((a) => <Chip key={a} label={a} size="small" variant="outlined" sx={{ fontSize: '10px' }} />)}</Box>
         : <span style={{ color: '#999' }}>—</span>
     )},
-    { field: 'actions', headerName: 'Actions', width: 290, sortable: false, filterable: false, renderCell: (params) => {
+    { field: 'actions', headerName: 'Actions', width: 400, sortable: false, filterable: false, renderCell: (params) => {
       const isActive = params.row.status === 'Active';
       return (
         <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -437,6 +441,9 @@ const AdminPortal = () => {
           </Button>
           <Button size="small" variant="outlined" color="secondary" onClick={() => openPricingForBusiness(params.row)} sx={{ textTransform: 'none', fontSize: '11px' }}>
             💲 Pricing
+          </Button>
+          <Button size="small" variant="outlined" color="primary" onClick={() => setAssignPlanDialog({ open: true, business: params.row })} sx={{ textTransform: 'none', fontSize: '11px' }}>
+            📋 Assign Plan
           </Button>
         </Box>
       );
@@ -914,6 +921,13 @@ const AdminPortal = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Assign Plan Dialog — pick which subscription plan a customer sees to renew */}
+      <AssignPlanDialog
+        open={assignPlanDialog.open}
+        business={assignPlanDialog.business}
+        onClose={() => setAssignPlanDialog({ open: false, business: null })}
+      />
     </div>
   );
 };

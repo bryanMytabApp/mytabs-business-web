@@ -235,11 +235,16 @@ const EventCreate = () => {
       return
     }
 
+    const base64Response = await fetch(uploadedImage);
+    const blob = await base64Response.blob();
+    const contentType = blob.type || 'image/jpeg';
+
     let presignedUrl
     try {
       let res = await getPresignedUrlForEvent({
         id: data._id,
-        userId
+        userId,
+        contentType
       })
       presignedUrl = res.data
     } catch (error) {
@@ -249,10 +254,10 @@ const EventCreate = () => {
       return
     }
 
-    const base64Response = await fetch(uploadedImage);
-    const blob = await base64Response.blob();
     try {
-      await axios.put(presignedUrl, blob)
+      await axios.put(presignedUrl, blob, {
+        headers: { 'Content-Type': contentType },
+      })
       toast.success("image was successfully uploaded");
     } catch (error) {
       toast.error("cannot put image on");

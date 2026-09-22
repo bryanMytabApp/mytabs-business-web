@@ -1,7 +1,8 @@
 import http from "../utils/axios/http";
 
-export const getPresignedUrlForBusiness = (userId) => {
-  return http.get(`/business/${userId}/pre-signed-url`)
+export const getPresignedUrlForBusiness = (userId, contentType) => {
+  const query = contentType ? `?contentType=${encodeURIComponent(contentType)}` : '';
+  return http.get(`/business/${userId}/pre-signed-url${query}`)
 };
 
 export const getPresignedUrlForGalleryPhoto = (userId, galleryId, photoIndex) => {

@@ -417,14 +417,15 @@ const OrganizationSection = () => {
         console.log('[OrgLogo] userId:', userId);
         console.log('[OrgLogo] orgLogo length:', orgLogo?.length);
         if (!userId) throw new Error('No userId from parseJwt');
-        const res = await getPresignedUrlForBusiness(userId);
+        const base64Response = await fetch(orgLogo);
+        const blob = await base64Response.blob();
+        const contentType = blob.type || 'image/png';
+        console.log('[OrgLogo] blob size:', blob.size, 'type:', blob.type);
+        const res = await getPresignedUrlForBusiness(userId, contentType);
         console.log('[OrgLogo] presigned URL response:', res);
         const presignedUrl = res.data;
         console.log('[OrgLogo] presignedUrl:', presignedUrl);
-        const base64Response = await fetch(orgLogo);
-        const blob = await base64Response.blob();
-        console.log('[OrgLogo] blob size:', blob.size, 'type:', blob.type);
-        const uploadRes = await fetch(presignedUrl, { method: 'PUT', body: blob, headers: { 'Content-Type': blob.type || 'image/png' } });
+        const uploadRes = await fetch(presignedUrl, { method: 'PUT', body: blob, headers: { 'Content-Type': contentType } });
         console.log('[OrgLogo] upload status:', uploadRes.status, uploadRes.statusText);
       } catch (err) {
         console.error('[OrgLogo] Failed to upload org logo:', err);

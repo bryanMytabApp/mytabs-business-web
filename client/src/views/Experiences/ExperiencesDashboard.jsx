@@ -14,13 +14,13 @@ import {
 } from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import SearchIcon from "@mui/icons-material/Search";
 import { listInstances, transitionState, deleteInstance } from "../../services/experienceService";
 import { getEvent } from "../../services/eventService";
 import { parseJwt } from "../../utils/common";
 import ExperienceCard from "../../components/Experiences/ExperienceCard";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import EngagementsEmptyState from "./EngagementsEmptyState";
 
 const ACCENT = "#F09925";
 
@@ -81,8 +81,24 @@ const ExperiencesDashboard = () => {
     }
   }, [eventId]);
 
+  // Initial load. Keyed to location.key so navigating *back* to this page
+  // (e.g. from the catalog) re-runs the fetch and re-evaluates empty vs.
+  // populated, instead of restoring a stale snapshot.
   useEffect(() => {
     fetchInstances();
+  }, [fetchInstances, location.key]);
+
+  // Re-check when the tab/window regains focus or the user navigates back
+  // (popstate), so the empty-vs-populated state is always current without a
+  // manual refresh. Silent so it doesn't flash the full-page spinner.
+  useEffect(() => {
+    const recheck = () => fetchInstances({ silent: true });
+    window.addEventListener("focus", recheck);
+    window.addEventListener("popstate", recheck);
+    return () => {
+      window.removeEventListener("focus", recheck);
+      window.removeEventListener("popstate", recheck);
+    };
   }, [fetchInstances]);
 
   // Filtered and searched instances
@@ -209,20 +225,26 @@ const ExperiencesDashboard = () => {
               <IconButton onClick={() => fetchInstances({ silent: true })} size="small" disabled={loading} sx={{ color: ACCENT }}>
                 <RefreshIcon fontSize="small" />
               </IconButton>
-              <Button
-                variant="contained"
-                startIcon={<AddCircleOutlineIcon />}
-                onClick={() => navigate(`/admin/my-events/${eventId}/experiences/catalog`)}
-                sx={{ background: ACCENT, textTransform: "none", fontWeight: 700, borderRadius: 2, px: 2.5, "&:hover": { background: "#D4820F" } }}
-              >
-                Add Engagement
-              </Button>
+              {/* When empty, the guided empty state below carries the primary
+                  action, so we keep the header to just the title + refresh. */}
+              {instances.length > 0 && (
+                <Button
+                  variant="contained"
+                  startIcon={<AddCircleOutlineIcon />}
+                  onClick={() => navigate(`/admin/my-events/${eventId}/experiences/catalog`)}
+                  sx={{ background: ACCENT, textTransform: "none", fontWeight: 700, borderRadius: 2, px: 2.5, "&:hover": { background: "#D4820F" } }}
+                >
+                  Add Engagement
+                </Button>
+              )}
             </>
           )}
         </Box>
       </Box>
 
-      {/* Search + Filter Bar */}
+      {/* Search + Filter Bar — hidden on the empty state, where there's
+          nothing to search or filter yet. */}
+      {instances.length > 0 && (
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3, flexWrap: "wrap" }}>
         <TextField
           size="small"
@@ -275,6 +297,7 @@ const ExperiencesDashboard = () => {
           sx={{ fontWeight: 600, fontSize: 12, background: "#E3F2FD", color: "#1565C0", ml: "auto" }}
         />
       </Box>
+      )}
 
       {/* Error alert */}
       {error && (
@@ -283,16 +306,14 @@ const ExperiencesDashboard = () => {
         </Alert>
       )}
 
-      {/* Empty state */}
+      {/* Empty state — shared guided card, same as the all-events dashboard */}
       {instances.length === 0 && !error && (
-        <Box sx={{ textAlign: "center", py: 8, border: "1.5px dashed #E0E0E0", borderRadius: 3, background: "#FAFAFA" }}>
-          <AutoAwesomeIcon sx={{ fontSize: 48, color: "#BDBDBD", mb: 1.5 }} />
-          <Typography sx={{ color: "#71727A", fontWeight: 600, fontSize: 16 }}>No engagements yet</Typography>
-          <Typography sx={{ color: "#9E9E9E", fontSize: 13, mt: 0.5, mb: 2.5 }}>Add an engagement from the catalog to engage your attendees.</Typography>
-          <Button variant="contained" startIcon={<AddCircleOutlineIcon />} onClick={() => navigate(`/admin/my-events/${eventId}/experiences/catalog`)} sx={{ background: ACCENT, textTransform: "none", fontWeight: 700, borderRadius: 2, px: 3, "&:hover": { background: "#D4820F" } }}>
-            Browse Catalog
-          </Button>
-        </Box>
+        <EngagementsEmptyState
+          showIntro={false}
+          onGoToEvents={() => navigate("/admin/my-events")}
+          onAddEngagement={() => navigate(`/admin/my-events/${eventId}/experiences/catalog`)}
+          onVerifyEngagements={() => navigate(`/admin/my-events/${eventId}/experiences/catalog`)}
+        />
       )}
 
       {/* No results from search/filter */}

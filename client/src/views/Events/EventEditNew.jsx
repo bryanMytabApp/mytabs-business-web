@@ -157,6 +157,11 @@ const EventEditNew = () => {
           sourceUrl: ev.sourceUrl || "",
           agentId: ev.agentId || "",
           ownerUserId: ev.userId || "",
+          // Carry the publish/created timestamps so the ticket-fee preview anchors on
+          // the event's PUBLISH date (fee is locked at publish time), and so a
+          // re-save preserves the original publishedAt instead of re-stamping it.
+          publishedAt: ev.publishedAt || null,
+          createdAt: ev.createdAt || null,
         };
 
         setEventData(formData);

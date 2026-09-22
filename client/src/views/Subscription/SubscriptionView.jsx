@@ -43,7 +43,10 @@ const loadScript = (src) =>
 // source checkout charges from) so the displayed price and the "Get Started" charge
 // can never drift. Falls back to the config amount only when the catalog row for a
 // plan hasn't loaded yet (Req 4.1-4.3, 4.7).
-const buildPlanCards = (interval = "monthly", systemSubscriptions = []) =>
+// `assignedEffectiveDate` (optional): when this ACCOUNT has an admin-assigned
+// pricing version (e.g. legacy "2000-01-01"), pass it so the cards price against
+// that version's catalog rows instead of the current version.
+const buildPlanCards = (interval = "monthly", systemSubscriptions = [], assignedEffectiveDate = null) =>
   PLAN_LEVELS.map((planName, idx) => {
     const level = idx + 1; // Starter=1 ... Enterprise=4
     const monthlyCents = CURRENT_VERSION.planMonthlyCents[planName];
@@ -53,7 +56,7 @@ const buildPlanCards = (interval = "monthly", systemSubscriptions = []) =>
     // Prefer the catalog row's real amount (what Stripe will charge) over config.
     // Catalog `amount` is in cents and may be a number OR a numeric string (DynamoDB
     // stores it as a String), so coerce and validate before trusting it.
-    const catalogRow = findCatalogRow(systemSubscriptions, level, interval);
+    const catalogRow = findCatalogRow(systemSubscriptions, level, interval, assignedEffectiveDate);
     const catalogAmount = catalogRow != null ? Number(catalogRow.amount) : NaN;
     const amountCents = Number.isFinite(catalogAmount)
       ? catalogAmount
@@ -136,6 +139,9 @@ const SubscriptionView = () => {
   // A RETURNING customer whose subscription was previously canceled/expired (no
   // active sub, but Stripe shows a prior one) — greet them with a "restart" banner.
   const [hadCanceled, setHadCanceled] = useState(false);
+  // Admin-assigned pricing version for this ACCOUNT (e.g. legacy "2000-01-01").
+  // When set, the plan cards price against that version instead of the current one.
+  const [assignedEffectiveDate, setAssignedEffectiveDate] = useState(null);
   // Billing interval the customer chose (monthly | yearly). Drives the displayed
   // price AND which catalog row (priceId) checkout uses, so the charge matches.
   const [billingInterval, setBillingInterval] = useState("monthly");
@@ -144,7 +150,7 @@ const SubscriptionView = () => {
   // so the hero must make the required action — choosing a plan — immediately clear.
   const isLoggedIn = !!localStorage.getItem("idToken");
 
-  const planCards = buildPlanCards(billingInterval, systemSubscriptions);
+  const planCards = buildPlanCards(billingInterval, systemSubscriptions, assignedEffectiveDate);
   const contractAddons = buildContractAddons();
 
   // Fetch system subscriptions for plan selection
@@ -168,11 +174,21 @@ const SubscriptionView = () => {
       try {
         const userId = parseJwt(localStorage.getItem("idToken")) || localStorage.getItem("username");
         if (!userId) return;
-        const response = await getCustomerSubscription({ userId });
+        // Pass the current business so the backend resolves the ACCOUNT (org or
+        // standalone) and returns any account-scoped assigned pricing version.
+        let businessId = null;
+        try { businessId = sessionStorage.getItem("selectedBusinessId") || null; } catch (e) { businessId = null; }
+        const response = await getCustomerSubscription({ userId, businessId });
         if (response?.data?.hasSubscription) setCurrentSubscription(response.data);
         // Returning-but-canceled: no active sub, but a prior canceled/expired one.
         if (response?.data && !response.data.hasSubscription && response.data.hadCanceledSubscription) {
           setHadCanceled(true);
+        }
+        // Admin-assigned pricing version (account-scoped) — drives which version's
+        // prices the cards show (e.g. legacy).
+        const assigned = response?.data?.assignedPricing;
+        if (assigned && assigned.pricingEffectiveDate) {
+          setAssignedEffectiveDate(assigned.pricingEffectiveDate);
         }
       } catch (e) {
         /* not signed in / no subscription — show new-price cards only */
@@ -208,8 +224,9 @@ const SubscriptionView = () => {
 
     // Select the catalog row for the CHOSEN interval (monthly/yearly). This is the
     // SAME lookup buildPlanCards used to price the card, so the amount sent to Stripe
-    // matches what the customer saw. sublevel values in the catalog are "monthly"/"yearly".
-    const chosenSub = findCatalogRow(systemSubscriptions, level, billingInterval);
+    // matches what the customer saw. Includes the account's assigned pricing version
+    // (if any) so checkout resolves the same (e.g. legacy) row.
+    const chosenSub = findCatalogRow(systemSubscriptions, level, billingInterval, assignedEffectiveDate);
 
     if (!chosenSub) {
       // No catalog row for this plan at all — go to the detailed subpart page.
@@ -225,7 +242,9 @@ const SubscriptionView = () => {
         navigate("/login");
         return;
       }
-      const response = await createCheckoutSession({ userId, subscriptionId: chosenSub._id, cancelUrl: "/subscription" });
+      let businessId = null;
+      try { businessId = sessionStorage.getItem("selectedBusinessId") || null; } catch (e) { businessId = null; }
+      const response = await createCheckoutSession({ userId, businessId, subscriptionId: chosenSub._id, cancelUrl: "/subscription" });
       if (response?.url) {
         window.location.href = response.url;
       } else if (response?.sessionId) {

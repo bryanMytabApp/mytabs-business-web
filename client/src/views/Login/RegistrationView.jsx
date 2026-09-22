@@ -579,20 +579,22 @@ export default function RegistrationView() {
     }
     let userId = parseJwt(token);
     if(uploadedImage) {
+      const base64Response = await fetch(uploadedImage);
+      const blob = await base64Response.blob();
+      const contentType = blob.type || 'image/png';
+
       let presignedUrl
       try {
-        let res = await getPresignedUrlForBusiness(userId)
+        let res = await getPresignedUrlForBusiness(userId, contentType)
         presignedUrl = res.data
       } catch (error) {
         toast.error("cannot create presigned url");
         console.error(error);
         return
       }
-  
-      const base64Response = await fetch(uploadedImage);
-      const blob = await base64Response.blob();
+
       try {
-        await axios.put(presignedUrl, blob, { headers: { 'Content-Type': blob.type || 'image/png' } })
+        await axios.put(presignedUrl, blob, { headers: { 'Content-Type': contentType } })
         // Update business record with iconUpdatedAt so the image URL is cache-busted
         await updateBusiness({ userId, iconUpdatedAt: Date.now() });
         toast.success("Image was successfully uploaded");

@@ -70,6 +70,44 @@ export const cancelCustomerSubscription = async (userId) => {
   }
 }
 
+// ─── Admin: per-customer plan assignment ───────────────────────────────────────
+// Admin-only. Assigns which System_Subscriptions plan a specific customer will
+// see (and be locked to) on their subscription screen so they can renew. The
+// assignment auto-expires server-side via DynamoDB TTL. All three endpoints are
+// gated on the backend by the Cognito "admin" group; the shared `http` client
+// attaches the caller's Cognito token automatically.
+
+// assignmentData: { userId, subscriptionId, expiresInHours?, note? }
+export const assignPlanToCustomer = async (assignmentData) => {
+  try {
+    const response = await http.post("payments/admin/assign-plan", assignmentData);
+    return response.data;
+  } catch (error) {
+    console.error("Error assigning plan to customer", error.response || error);
+    throw error;
+  }
+};
+
+export const getPlanAssignment = async (userId) => {
+  try {
+    const response = await http.get(`payments/admin/assign-plan/${encodeURIComponent(userId)}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error getting plan assignment", error.response || error);
+    throw error;
+  }
+};
+
+export const clearPlanAssignment = async (userId) => {
+  try {
+    const response = await http.delete(`payments/admin/assign-plan/${encodeURIComponent(userId)}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error clearing plan assignment", error.response || error);
+    throw error;
+  }
+};
+
 export const getCustomerInvoices = async (userId) => {
   try {
     const response = await http.post("payments/invoices", { userId });

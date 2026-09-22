@@ -344,11 +344,16 @@ const EventEdit = () => {
       return
     }
     if(uploadedImage) {
+      const base64Response = await fetch(uploadedImage);
+      const blob = await base64Response.blob();
+      const contentType = blob.type || 'image/jpeg';
+
       let presignedUrl
       try {
         let res = await getPresignedUrlForEvent({
           id: data._id,
-          userId: eventOwnerUserId || userId
+          userId: eventOwnerUserId || userId,
+          contentType
         })
         presignedUrl = res.data
       } catch (error) {
@@ -356,11 +361,11 @@ const EventEdit = () => {
         console.error(error);
         return
       }
-  
-      const base64Response = await fetch(uploadedImage);
-      const blob = await base64Response.blob();
+
       try {
-        await axios.put(presignedUrl, blob)
+        await axios.put(presignedUrl, blob, {
+          headers: { 'Content-Type': contentType },
+        })
         toast.success("Image was successfully uploaded");
       } catch (error) {
         toast.error("Cannot upload image");

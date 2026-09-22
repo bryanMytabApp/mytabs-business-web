@@ -1,13 +1,21 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import usePlanData from "./usePlanData";
+import { getSystemSubscriptions, getCustomerSubscription } from "../../../services/paymentService";
+import { parseJwt } from "../../../utils/common";
 
-// Mock the payment service so no real HTTP request is made. Only
-// `getSystemSubscriptions` is consumed by the hook under test.
+// Mock the payment service so no real HTTP request is made. The hook consumes
+// `getSystemSubscriptions` (catalog) and `getCustomerSubscription` (per-user
+// assigned pricing version). jest.mock calls are hoisted above the imports.
 jest.mock("../../../services/paymentService", () => ({
   getSystemSubscriptions: jest.fn(),
+  getCustomerSubscription: jest.fn(),
 }));
 
-import usePlanData from "./usePlanData";
-import { getSystemSubscriptions } from "../../../services/paymentService";
+// parseJwt resolves the logged-in userId from the idToken. Control it per test so
+// we can exercise both anonymous (null) and logged-in-with-assignment paths.
+jest.mock("../../../utils/common", () => ({
+  parseJwt: jest.fn(() => null),
+}));
 
 // A minimal set of catalog rows (one per plan level, monthly) shaped like the
 // System_Subscriptions payload the backend returns. Amounts are arbitrary but
@@ -40,6 +48,10 @@ const expectContractAddons = (addons) => {
 describe("usePlanData", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default: anonymous visitor (no userId) and no assignment, so the override
+    // path is inert unless a test opts in.
+    parseJwt.mockReturnValue(null);
+    getCustomerSubscription.mockResolvedValue({ data: { assignedPricing: null } });
   });
 
   it("starts in the loading state with contract add-ons already present", () => {
@@ -128,5 +140,50 @@ describe("usePlanData", () => {
       expect(result.current.status).toBe("success");
     });
     expect(getSystemSubscriptions).toHaveBeenCalledTimes(2);
+  });
+
+  // Admin-assigned pricing version: a logged-in user with an active assignment
+  // sees THAT version's prices, not the current version's.
+  it("uses the admin-assigned pricing version's price for a logged-in user", async () => {
+    // Two rows for level 1 monthly: legacy (2000-01-01, $13.99) and current
+    // (2026-09-06, $187.00). With an assignment to 2000-01-01, the hook must show
+    // the legacy price.
+    const versionedRows = [
+      { level: 1, sublevel: "monthly", amount: 1399, pricingEffectiveDate: "2000-01-01" },
+      { level: 1, sublevel: "monthly", amount: 18700, pricingEffectiveDate: "2026-09-06" },
+    ];
+    getSystemSubscriptions.mockResolvedValue({ data: versionedRows });
+    parseJwt.mockReturnValue("user-eace2601");
+    getCustomerSubscription.mockResolvedValue({
+      data: { assignedPricing: { pricingEffectiveDate: "2000-01-01", allowUpdate: true } },
+    });
+
+    const { result } = renderHook(() => usePlanData("monthly"));
+
+    await waitFor(() => expect(result.current.status).toBe("success"));
+
+    const starter = result.current.plans.find((p) => p.level === 1);
+    expect(starter.amountCents).toBe(1399); // legacy, not 18700
+    expect(getCustomerSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "user-eace2601" })
+    );
+  });
+
+  it("uses current pricing (no override) when the logged-in user has no assignment", async () => {
+    const versionedRows = [
+      { level: 1, sublevel: "monthly", amount: 1399, pricingEffectiveDate: "2000-01-01" },
+      { level: 1, sublevel: "monthly", amount: 18700, pricingEffectiveDate: "2026-09-06" },
+    ];
+    getSystemSubscriptions.mockResolvedValue({ data: versionedRows });
+    parseJwt.mockReturnValue("user-noassign");
+    getCustomerSubscription.mockResolvedValue({ data: { assignedPricing: null } });
+
+    const { result } = renderHook(() => usePlanData("monthly"));
+
+    await waitFor(() => expect(result.current.status).toBe("success"));
+
+    const starter = result.current.plans.find((p) => p.level === 1);
+    // Current effective version (post-cutover) = 2026-09-06 → $187.00.
+    expect(starter.amountCents).toBe(18700);
   });
 });

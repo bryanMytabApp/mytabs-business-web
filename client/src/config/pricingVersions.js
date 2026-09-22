@@ -194,7 +194,17 @@ export const pricingVersions = [
 // backend's END_OF_TIME semantics: any date >= the current version's effectiveDate
 // resolves to it.
 export function versionForDate(date) {
-  const day = typeof date === "string" ? date.slice(0, 10) : new Date(date).toISOString().slice(0, 10);
+  // Normalize ISO/YYYY-MM-DD or JS `Date.toString()`/`moment().toString()` values
+  // (e.g. "Thu Aug 06 2026 21:59:42 GMT+0000") to a YYYY-MM-DD day string.
+  let day;
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}/.test(date)) {
+    day = date.slice(0, 10);
+  } else {
+    const parsed = new Date(date);
+    day = isNaN(parsed.getTime())
+      ? String(date).slice(0, 10)
+      : parsed.toISOString().slice(0, 10);
+  }
   return pricingVersions.find((v) => v.effectiveDate <= day && day < v.expiryDate) || null;
 }
 

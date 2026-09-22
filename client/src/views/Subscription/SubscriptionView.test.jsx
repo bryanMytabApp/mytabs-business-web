@@ -428,4 +428,33 @@ describe("SubscriptionView (Subscribe page)", () => {
     expect(await screen.findByTestId("choose-plan-banner")).toBeInTheDocument();
     expect(screen.queryByTestId("restart-banner")).not.toBeInTheDocument();
   });
+
+  it("shows the ADMIN-ASSIGNED pricing version's price (e.g. legacy) instead of the current one", async () => {
+    const legacyDate = pricingVersions[0].effectiveDate; // "2000-01-01"
+    const newDate = pricingVersions[pricingVersions.length - 1].effectiveDate;
+    // Catalog has BOTH versions for Starter monthly: legacy $13.99 and new $187.
+    getSystemSubscriptions.mockResolvedValue({
+      data: [
+        { _id: "s-m-legacy", level: 1, sublevel: "monthly", amount: 1399, priceId: "p_legacy", pricingEffectiveDate: legacyDate },
+        { _id: "s-m-new", level: 1, sublevel: "monthly", amount: 18700, priceId: "p_new", pricingEffectiveDate: newDate },
+      ],
+    });
+    localStorage.setItem("idToken", "header.payload.sig");
+    localStorage.setItem("username", "user-123");
+    // The account has an active assignment to the LEGACY pricing version.
+    getCustomerSubscription.mockResolvedValue({
+      data: {
+        hasSubscription: false,
+        assignedPricing: { pricingEffectiveDate: legacyDate, allowUpdate: true },
+      },
+    });
+
+    renderView();
+    await waitFor(() => expect(getCustomerSubscription).toHaveBeenCalled());
+
+    const starter = await screen.findByTestId("plan-card-starter");
+    // Shows the LEGACY price ($13.99), not the current ($187).
+    await waitFor(() => expect(within(starter).getByText((1399 / 100).toLocaleString())).toBeInTheDocument());
+    expect(within(starter).queryByText((18700 / 100).toLocaleString())).not.toBeInTheDocument();
+  });
 });

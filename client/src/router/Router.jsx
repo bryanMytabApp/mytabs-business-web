@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from "react";
-import { createBrowserRouter, RouterProvider, redirect, Outlet } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, redirect, Outlet, useLocation } from "react-router-dom";
 import ErrorPage from "./ErrorPage";
 import ErrorBoundary from "../components/ErrorBoundary";
 import TabsHelp from "../components/TabsHelp/TabsHelp";
@@ -22,24 +22,39 @@ const HELP_SITE_URL =
   process.env.REACT_APP_HELP_SITE_URL ||
   "https://help.keeptabs.app";
 
+// Routes where the Help panel should NOT mount. These pages have no help docs,
+// so mounting TabsHelp there just triggers a 404 on GET /help/context and
+// clutters the console. The subscribe / "Choose your Plan" page and the login
+// page are pre-auth / transactional and don't use contextual help.
+const HELP_DISABLED_PREFIXES = ["/subscription", "/subpart", "/login", "/success"];
+
+const isHelpDisabledPath = (pathname = "") =>
+  HELP_DISABLED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
 // Layout that mounts on every route. TabsHelp uses useLocation() under the
 // hood so it MUST live inside the RouterProvider tree, which is why it
 // can't go in App.jsx alongside other providers.
-const AppLayout = () => (
-  <>
-    <PageTracker />
-    <Outlet />
-    <TabsHelp
-      apiUrl={HELP_API_URL}
-      chatUrl={HELP_CHAT_URL}
-      role="business-owner"
-      brand="Help"
-      headless
-      panelTopOffset={53}
-      helpSiteUrl={HELP_SITE_URL}
-    />
-  </>
-);
+const AppLayout = () => {
+  const { pathname } = useLocation();
+  const helpEnabled = !isHelpDisabledPath(pathname);
+  return (
+    <>
+      <PageTracker />
+      <Outlet />
+      {helpEnabled && (
+        <TabsHelp
+          apiUrl={HELP_API_URL}
+          chatUrl={HELP_CHAT_URL}
+          role="business-owner"
+          brand="Help"
+          headless
+          panelTopOffset={53}
+          helpSiteUrl={HELP_SITE_URL}
+        />
+      )}
+    </>
+  );
+};
 
 // Single page-level loading state for route chunk transitions. Lives inside
 // the AppLayout's <Outlet /> Suspense boundary, so it renders within the

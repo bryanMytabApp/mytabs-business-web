@@ -51,13 +51,29 @@ export const dollars = (cents) =>
 // sends to Stripe, so its `amount` is exactly what the customer will be charged.
 // Level fields may be number or string; catalog sublevel values are
 // "monthly" / "yearly".
-export const findCatalogRow = (systemSubscriptions, level, interval) => {
+// `effectiveDateOverride` (optional): when a customer has been ADMIN-ASSIGNED a
+// specific pricing version (e.g. their legacy prices for a short window), pass its
+// `pricingEffectiveDate` here to select THAT version's rows instead of the
+// currently-effective one. When omitted, selection falls back to the cutover-
+// resolved current version (unchanged behavior).
+export const findCatalogRow = (systemSubscriptions, level, interval, effectiveDateOverride = null) => {
   const rows = Array.isArray(systemSubscriptions) ? systemSubscriptions : [];
   const wantedSublevel = interval === "yearly" ? "yearly" : "monthly";
   const forLevel = rows.filter((sub) => String(sub.level) === String(level));
   // Rows matching the chosen interval, then narrowed to the effective version.
   const forInterval = forLevel.filter((sub) => sub.sublevel === wantedSublevel);
   const candidates = forInterval.length > 0 ? forInterval : forLevel;
+
+  // When an admin-assigned pricing version is in effect for this user, prefer that
+  // version's row exactly. If the assigned version has no row for this level/
+  // interval, fall through to the normal selection rather than showing nothing.
+  if (effectiveDateOverride) {
+    const assigned = candidates.find(
+      (sub) => sub.pricingEffectiveDate === effectiveDateOverride
+    );
+    if (assigned) return assigned;
+  }
+
   return (
     // Prefer the row stamped with the currently-effective pricing version...
     candidates.find(
@@ -117,12 +133,15 @@ const includedProductsFor = (planName) =>
 // PlanView shape (see design.md → Data Models):
 //   { id, level, name, amountCents, price, interval, priceSuffix,
 //     popular, talkToSales, includedProducts }
-export const buildPlanViewModels = (rows = [], interval = "monthly") => {
+// `effectiveDateOverride` (optional): forwarded to findCatalogRow so an
+// admin-assigned pricing version's prices are shown for this user (see
+// findCatalogRow). Omit for the default cutover-resolved current version.
+export const buildPlanViewModels = (rows = [], interval = "monthly", effectiveDateOverride = null) => {
   const normalizedInterval = interval === "yearly" ? "yearly" : "monthly";
   return PLAN_LEVELS.map((planName, idx) => {
     const level = idx + 1; // Starter=1 ... Enterprise=4
     // Prefer the catalog row's real amount (what Stripe charges) over config.
-    const catalogRow = findCatalogRow(rows, level, normalizedInterval);
+    const catalogRow = findCatalogRow(rows, level, normalizedInterval, effectiveDateOverride);
     const catalogAmount = coerceAmountCents(catalogRow);
     const amountCents =
       catalogAmount != null

@@ -11,7 +11,9 @@ import { getCustomerSubscription, getSystemSubscriptions } from "../../services/
 import { getMyOrganizations, getOrganizationBusinesses } from "../../services/organizationService";
 import { getWeatherPreview } from "../../services/weatherPreviewService";
 import { setHelpRoute } from "../../components/TabsHelp/helpRoute";
+import { computeTabsFee, ticketFeeLabel, resolveScheduleDate } from "../../utils/pricing/ticketFee";
 import axios from "axios";
+import http from "../../utils/axios/http";
 const EventMembers = React.lazy(() => import("./EventMembers"));
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
@@ -521,19 +523,13 @@ function SidePanel({ f, onImageUpload, businessCode }) {
   const fileRef = useRef();
   const [showLightbox, setShowLightbox] = useState(false);
   const hasImage = !!f.media;
-  // Use real eventCode from database if available, otherwise generate a preview code
-  // When businessCode is available, use its BIZ segment for the preview
-  const bizSegment = (() => {
-    if (businessCode) {
-      const m = businessCode.match(/BIZ-([A-Z0-9]{4})/);
-      if (m) return m[1];
-      return businessCode.replace(/[^A-Z0-9]/g, '').slice(-4) || 'XXXX';
-    }
-    return 'XXXX';
-  })();
-  const eventCode = f.eventCode
-    || (f.name ? `BIZ-${bizSegment}-EVT-${f.name.replace(/[^A-Z0-9]/gi, '').slice(0, 4).toUpperCase() || 'XXXX'}` : `BIZ-${bizSegment}-EVT-XXXX`);
-  const qrValue = `https://keeptabs.app/e/${eventCode}`;
+  // Only a real, backend-registered eventCode produces a scannable QR. A code
+  // derived from the event name is NOT registered with the resolution service,
+  // so its QR resolves to "Event not found". Never fabricate one here — gate the
+  // QR/PDF on a real code and prompt the user to save when it's missing.
+  const eventCode = (typeof f.eventCode === 'string' && f.eventCode.trim()) ? f.eventCode.trim() : null;
+  const hasRealCode = !!eventCode;
+  const qrValue = hasRealCode ? `https://keeptabs.app/e/${eventCode}` : null;
 
   const handleFile = (e) => {
     const file = e.target.files[0];
@@ -541,6 +537,10 @@ function SidePanel({ f, onImageUpload, businessCode }) {
   };
 
   const handlePrintQR = async () => {
+    if (!hasRealCode) {
+      toast.info("Save the event to generate its QR code first.");
+      return;
+    }
     try {
       const { jsPDF } = await import("jspdf");
       const svg = document.getElementById("ecn-qr-code");
@@ -650,22 +650,37 @@ function SidePanel({ f, onImageUpload, businessCode }) {
 
       {/* QR Code Card */}
       <div className="ecn-side-qr">
-        <div className="ecn-side-qr-img">
-          <QRCode
-            id="ecn-qr-code"
-            size={140}
-            style={{ height: "auto", maxWidth: "100%", width: "140px" }}
-            value={qrValue}
-            viewBox="0 0 256 256"
-            level="H"
-          />
-          {/* Tabs logo overlay */}
-          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 36, height: 36, backgroundColor: "#fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px", boxShadow: "0 1px 4px rgba(0,0,0,.15)" }}>
-            <img src="/tabs-logo.svg" alt="Tabs" style={{ width: 28, height: 28 }} onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = '<span style="font-size:14px;font-weight:900;color:#f97316">T</span>'; }} />
+        {hasRealCode ? (
+          <>
+            <div className="ecn-side-qr-img">
+              <QRCode
+                id="ecn-qr-code"
+                size={140}
+                style={{ height: "auto", maxWidth: "100%", width: "140px" }}
+                value={qrValue}
+                viewBox="0 0 256 256"
+                level="H"
+              />
+              {/* Tabs logo overlay */}
+              <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 36, height: 36, backgroundColor: "#fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px", boxShadow: "0 1px 4px rgba(0,0,0,.15)" }}>
+                <img src="/tabs-logo.svg" alt="Tabs" style={{ width: 28, height: 28 }} onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = '<span style="font-size:14px;font-weight:900;color:#f97316">T</span>'; }} />
+              </div>
+            </div>
+            <div className="ecn-side-code">{eventCode}</div>
+            <button className="ecn-side-print" onClick={handlePrintQR}>Print QR Code (PDF)</button>
+          </>
+        ) : (
+          /* No registered code yet — do NOT show a fabricated (non-resolving)
+             QR. Prompt the user to save so a real code gets generated. */
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "16px 8px", textAlign: "center" }}>
+            <div style={{ width: 140, height: 140, display: "flex", alignItems: "center", justifyContent: "center", border: "2px dashed var(--ibr)", borderRadius: 12, color: "var(--mu)" }}>
+              <I n="tag" s={40} c="var(--li)" w={1.2} />
+            </div>
+            <div style={{ fontSize: 12, color: "var(--mu)", lineHeight: 1.4 }}>
+              Save the event to generate its QR code.
+            </div>
           </div>
-        </div>
-        <div className="ecn-side-code">{eventCode}</div>
-        <button className="ecn-side-print" onClick={handlePrintQR}>Print QR Code (PDF)</button>
+        )}
       </div>
     </div>
   );
@@ -1230,7 +1245,14 @@ function P_Ticketing({ f, u, next, back, steps, stepNum }) {
   const p = parseFloat(tk.price) || 0;
   const tax = p * 0.0082;
   const s2 = p + tax;
-  const tf = s2 * 0.03 + 1;
+  // The fee schedule is locked at the event's PUBLISH time. For an existing event
+  // resolve by its publishedAt (else createdAt); for a brand-new event this is today.
+  // NOT the scheduled (possibly far-future) event date.
+  const feeScheduleDate = resolveScheduleDate({ publishedAt: f.publishedAt, createdAt: f.createdAt });
+  const feeLabel = ticketFeeLabel(feeScheduleDate);
+  // Tabs fee basis is the ticket subtotal (the price), not price+tax; preview is a
+  // single ticket.
+  const tf = computeTabsFee(p, 1, feeScheduleDate);
   const sf = s2 * 0.029 + 0.30;
   const pays = s2 + tf + sf;
   const $n = n => n > 0 ? `$${n.toFixed(2)}` : "$0.00";
@@ -1380,7 +1402,7 @@ function P_Ticketing({ f, u, next, back, steps, stepNum }) {
               <div className="ecn-fee"><span>Tax:</span><span>{$n(tax)}</span></div>
               <div className="ecn-fdv" />
               <div className="ecn-fee"><span>Subtotal:</span><span>{$n(s2)}</span></div>
-              <div className="ecn-fee"><span>Tabs Fee (3% + $1.00):</span><span>{$n(tf)}</span></div>
+              <div className="ecn-fee"><span>{feeLabel}:</span><span>{$n(tf)}</span></div>
               <div className="ecn-fee"><span>Stripe Fee (~2.9% + $0.30):</span><span>{$n(sf)}</span></div>
               <div className="ecn-fdv" />
               <div className="ecn-fee fb"><span>Customer Pays:</span><span>{$n(pays)}</span></div>
@@ -2594,6 +2616,18 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
         ticketType: form.tickType === "tabs" ? "tabs" : form.tickType === "ext" ? "external" : "free",
       };
 
+      // Publish timestamp: the ticket-fee schedule is locked at PUBLISH time (not when
+      // a draft was first created, and not the scheduled event date). Stamp publishedAt
+      // the first time an event goes active; preserve it on later edits so re-saving a
+      // live event never moves its fee schedule. Drafts get no publishedAt.
+      const existingPublishedAt = editData?.publishedAt || null;
+      if (mode !== "draft") {
+        payload.publishedAt = existingPublishedAt || new Date().toISOString();
+      } else if (existingPublishedAt) {
+        // Already-published event being saved back to draft: keep the original stamp.
+        payload.publishedAt = existingPublishedAt;
+      }
+
       // Attach the selected business so events are correctly associated.
       // businessId comes from the component state (synced with sessionStorage
       // and validated against the org's business list on mount).
@@ -2675,6 +2709,39 @@ const EventCreateNew = ({ editMode = false, editData = null, eventId = null, pre
         const res = await createEvent(payload);
         data = res.data;
         toast.success(mode === "draft" ? "Draft saved!" : "Event Created!");
+      }
+
+      // ─── Register a resolvable public event code ──────────────────────────
+      // The event QR (https://keeptabs.app/e/{code}) only works if the code is
+      // registered with the resolution service (QR_Codes registry). Writing an
+      // eventCode onto the event record alone is NOT enough — the resolver reads
+      // the registry, so an unregistered code returns 404 ("Event not found").
+      // Call /api/codes/generate (idempotent: returns the existing code if one
+      // was already registered) and store the returned code on the form so the
+      // side panel renders a QR/PDF that actually resolves.
+      const savedEventId = data?._id || data?.id;
+      const bizCodeForGen = payload.businessCode;
+      if (savedEventId && bizCodeForGen && !data?.eventCode) {
+        try {
+          const genRes = await http.post("/api/codes/generate", {
+            entityType: "event",
+            entityId: savedEventId,
+            businessCode: bizCodeForGen,
+          });
+          if (genRes.data?.publicCode) {
+            data.eventCode = genRes.data.publicCode;
+          }
+        } catch (genErr) {
+          // Non-fatal: the event saved fine. The QR just won't be scannable
+          // until a code is generated (via retry on next save or the QR panel).
+          console.warn("Event code generation failed:", genErr?.response?.data || genErr?.message);
+          toast.info("Event saved. QR code will be available shortly.");
+        }
+      }
+      // Reflect the registered code in the form so the QR/PDF uses the real,
+      // resolvable code instead of a placeholder.
+      if (data?.eventCode) {
+        u("eventCode", data.eventCode);
       }
 
       // Upload image if a new file was selected

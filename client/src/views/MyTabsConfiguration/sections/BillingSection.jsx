@@ -82,6 +82,21 @@ const planLevelFromId = (planId) => {
   return m || null;
 };
 
+// Map a plan LEVEL name (e.g. "Enterprise", "starter", "Pro Monthly") to its numeric
+// level (Starter=1 … Enterprise=4). Case-insensitive and tolerant of trailing billing
+// words so legacy/exempt planIds resolve to a level even when their Stripe price is not
+// in the current catalog. Returns 0 when nothing matches.
+const levelNumberFromName = (name) => {
+  if (!name) return 0;
+  const cleaned = String(name)
+    .replace(/\s*(monthly|quarterly|yearly|annual|subscription)/gi, '')
+    .replace(/\(exempt\)/gi, '')
+    .trim()
+    .toLowerCase();
+  const idx = PLAN_LEVELS.findIndex((p) => p.toLowerCase() === cleaned);
+  return idx >= 0 ? idx + 1 : 0;
+};
+
 const tableStyles = {
   headerCell: {
     fontWeight: 600,
@@ -115,6 +130,12 @@ const BillingSection = () => {
   const [currentLevel, setCurrentLevel] = useState(0);
   const [systemSubscriptions, setSystemSubscriptions] = useState([]);
   const [changingPlan, setChangingPlan] = useState(false);
+  // Admin-assigned pricing version (if any) — returned by getCustomerSubscription
+  // as `assignedPricing` { pricingEffectiveDate, allowUpdate, expiresAt }. When
+  // set, the customer sees that version's pricing; when allowUpdate is true they
+  // may update/renew during the window (checkout is pinned to the version
+  // server-side).
+  const [assignedPricing, setAssignedPricing] = useState(null);
 
   // Fetch real subscription data
   useEffect(() => {
@@ -138,8 +159,18 @@ const BillingSection = () => {
           }
         } catch (e) { /* not in an org, continue normally */ }
 
-        const response = await getCustomerSubscription({ userId });
+        // Pass the current business so the backend resolves the owning ACCOUNT
+        // (organization when under an org, else standalone business) and returns
+        // the account-scoped assigned pricing.
+        let businessId = null;
+        try { businessId = sessionStorage.getItem('selectedBusinessId') || null; } catch (e) { businessId = null; }
+        const response = await getCustomerSubscription({ userId, businessId });
         const subData = response?.data;
+
+        // Admin-assigned pricing version (if any) — surfaced on every branch.
+        if (subData && subData.assignedPricing) {
+          setAssignedPricing(subData.assignedPricing);
+        }
 
         if (subData && subData.hasSubscription) {
           // Use the real product name from Stripe
@@ -186,18 +217,26 @@ const BillingSection = () => {
           const billingMode = premiumRow?.billingMode;
           const levelName = planLevelFromId(premiumRow?.planId);
 
+          // Resolve the numeric level from the DynamoDB planId level name so that
+          // legacy/exempt accounts (whose Stripe price is not in the current catalog)
+          // still map to their tier — the Change Plan modal can then show "Current"
+          // and label same-tier plans correctly instead of treating them as level 0.
+          const rowLevel = levelNumberFromName(levelName);
+
           if (rowIsActive && billingMode === 'exempt') {
             // Comped/enterprise grant — healthy state, managed by MyTabs.
             setPlan({
-              name: levelName || 'Active',
+              name: levelName ? `${levelName} (Exempt)` : 'Exempt Plan',
               price: 'Complimentary',
               period: '',
               status: 'active',
               nextBilling: 'N/A',
               memberLimit: subData?.memberLimit || 0,
+              level: rowLevel,
               exempt: true,
-              managedNote: 'Managed by MyTabs',
+              managedNote: 'Exempt account — managed by MyTabs. No billing applies.',
             });
+            if (rowLevel > 0) setCurrentLevel(rowLevel);
           } else if (rowIsActive && billingMode === 'paid') {
             // Safety net: entitled paid row but Stripe returned nothing.
             setPlan({
@@ -207,7 +246,9 @@ const BillingSection = () => {
               status: 'active',
               nextBilling: 'N/A',
               memberLimit: subData?.memberLimit || 0,
+              level: rowLevel,
             });
+            if (rowLevel > 0) setCurrentLevel(rowLevel);
           } else {
             setPlan({
               name: 'No Active Plan',
@@ -287,16 +328,30 @@ const BillingSection = () => {
 
   // Once we have both plan and system subscriptions, match the priceId to find current level/sublevel
   useEffect(() => {
-    if (plan?.priceId && systemSubscriptions.length > 0 && currentLevel === 0) {
-      const matchingSub = systemSubscriptions.find((s) => s.priceId === plan.priceId);
+    if (plan && currentLevel === 0) {
+      // Preferred: match the live Stripe priceId to a current catalog row.
+      const matchingSub = plan.priceId && systemSubscriptions.length > 0
+        ? systemSubscriptions.find((s) => s.priceId === plan.priceId)
+        : null;
       if (matchingSub) {
         setCurrentLevel(matchingSub.level);
         setSelectedBillingPeriod(matchingSub.sublevel || 'yearly');
+        return;
+      }
+      // Fallback for LEGACY-priced accounts: the account is on a grandfathered
+      // Stripe price that no longer exists in the current catalog, so no row matches.
+      // Resolve the tier from the plan name (or its explicit level) so the modal still
+      // shows "Current" and never mislabels the same tier as an "Upgrade".
+      const fallbackLevel = plan.level || levelNumberFromName(plan.name);
+      if (fallbackLevel > 0) {
+        setCurrentLevel(fallbackLevel);
       }
     }
   }, [plan, systemSubscriptions, currentLevel]);
 
   const handleOpenChangePlan = () => {
+    // The customer picks their own plan level; when an admin has assigned a
+    // pricing version, checkout is pinned to that version's prices server-side.
     setSelectedLevel(currentLevel || 1);
     // Keep the current billing period selected when opening
     if (!selectedBillingPeriod) {
@@ -364,8 +419,11 @@ const BillingSection = () => {
 
       if (hasNoSubscription || isUpgrading) {
         // New subscription or upgrade — create a hosted Stripe Checkout session and redirect
+        let checkoutBusinessId = null;
+        try { checkoutBusinessId = sessionStorage.getItem('selectedBusinessId') || null; } catch (e) { checkoutBusinessId = null; }
         const sessionData = {
           userId,
+          businessId: checkoutBusinessId,
           subscriptionId: matchingSub._id,
         };
 
@@ -466,6 +524,38 @@ const BillingSection = () => {
 
   return (
     <Box data-testid="section-billing">
+      {/* Admin-assigned pricing banner — an admin has pinned this customer to a
+          pricing version (e.g. their legacy pricing) for a limited window. When
+          allowUpdate is true, they can update/renew during that window and
+          checkout is pinned to the version's prices server-side. */}
+      {assignedPricing && (
+        <Alert
+          severity="info"
+          icon={<CheckCircleOutlineIcon />}
+          sx={{
+            mb: 3,
+            borderRadius: '10px',
+            '& .MuiAlert-message': { fontSize: '14px' },
+          }}
+          action={
+            assignedPricing.allowUpdate ? (
+              <Button color="inherit" size="small" onClick={handleOpenChangePlan} sx={{ textTransform: 'none', fontWeight: 600 }}>
+                Update now
+              </Button>
+            ) : null
+          }
+          data-testid="assigned-pricing-banner"
+        >
+          {assignedPricing.allowUpdate
+            ? 'Special pricing has been enabled for your account.'
+            : 'Special pricing has been set for your account.'}
+          {assignedPricing.allowUpdate ? ' You can update your subscription' : ''}
+          {assignedPricing.expiresAt
+            ? ` until ${new Date(assignedPricing.expiresAt).toLocaleDateString()}.`
+            : '.'}
+        </Alert>
+      )}
+
       {/* Past-due warning banner */}
       {plan?.status === 'past_due' && (
         <Alert
@@ -512,15 +602,35 @@ const BillingSection = () => {
                   {plan.period}
                 </Typography>
               </Box>
-              <Box sx={{ display: 'flex', gap: '16px', fontSize: '13px', opacity: 0.9, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', gap: '16px', fontSize: '13px', opacity: 0.9, flexWrap: 'wrap', alignItems: 'center' }}>
+                {plan.exempt && (
+                  <Box
+                    component="span"
+                    data-testid="plan-exempt-badge"
+                    sx={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      borderRadius: '6px',
+                      padding: '2px 8px',
+                      opacity: 1,
+                    }}
+                  >
+                    Exempt
+                  </Box>
+                )}
                 <Typography sx={{ fontSize: '13px', opacity: 0.9 }}>
-                  Status: {plan.status === 'active' ? '✓ Active' : plan.status === 'trialing' ? '⏳ Trial' : plan.status === 'canceled' ? 'Canceled' : plan.status}
+                  Status: {plan.exempt ? '✓ Exempt' : plan.status === 'active' ? '✓ Active' : plan.status === 'trialing' ? '⏳ Trial' : plan.status === 'canceled' ? 'Canceled' : plan.status}
                 </Typography>
-                <Typography sx={{ fontSize: '13px', opacity: 0.9 }}>
-                  {plan.status === 'trialing'
-                    ? `Trial ends: ${plan.nextBilling} (${plan.currentPeriodEnd ? Math.max(0, Math.ceil((plan.currentPeriodEnd * 1000 - Date.now()) / (1000 * 60 * 60 * 24))) : 0} days left)`
-                    : `Next billing: ${plan.nextBilling}`}
-                </Typography>
+                {!plan.exempt && (
+                  <Typography sx={{ fontSize: '13px', opacity: 0.9 }}>
+                    {plan.status === 'trialing'
+                      ? `Trial ends: ${plan.nextBilling} (${plan.currentPeriodEnd ? Math.max(0, Math.ceil((plan.currentPeriodEnd * 1000 - Date.now()) / (1000 * 60 * 60 * 24))) : 0} days left)`
+                      : `Next billing: ${plan.nextBilling}`}
+                  </Typography>
+                )}
                 {plan.memberLimit > 0 && (
                   <Typography sx={{ fontSize: '13px', opacity: 0.9 }}>
                     Up to {plan.memberLimit} members
