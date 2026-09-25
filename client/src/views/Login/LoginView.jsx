@@ -345,20 +345,22 @@ export default function LoginView() {
       <div class='welcome-back'>Welcome back!</div>
       <div class='log-in-to-your-account'>Log in to your account</div>
       
-      {/* Version Info */}
-      <div style={{
-        position: 'fixed',
-        bottom: '10px',
-        right: '10px',
-        fontSize: '11px',
-        color: '#999',
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        padding: '4px 8px',
-        borderRadius: '4px',
-        fontFamily: 'monospace'
-      }}>
-        v{APP_VERSION}
-      </div>
+      {/* Version Info - only shown in local/dev, hidden in production */}
+      {import.meta.env.DEV && (
+        <div style={{
+          position: 'fixed',
+          bottom: '10px',
+          right: '10px',
+          fontSize: '11px',
+          color: '#999',
+          backgroundColor: 'rgba(255,255,255,0.9)',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontFamily: 'monospace'
+        }}>
+          v{APP_VERSION}
+        </div>
+      )}
     </div>
   );
 }
