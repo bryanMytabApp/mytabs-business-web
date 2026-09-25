@@ -68,6 +68,33 @@ resources:
                     "/*"
                   ]
                 ]
+    # Security response headers applied to every viewer response.
+    # - HSTS / nosniff / frame-deny / referrer-policy are enforced (safe).
+    # - CSP is intentionally NOT sent for now: a Report-Only CSP with no
+    #   report-to endpoint had no effect and only produced console warnings.
+    #   When ready, add an ENFORCED `Content-Security-Policy` custom header here
+    #   (not report-only). The enforced HSTS/nosniff/frame-deny/referrer headers
+    #   below remain the active protections. See SECURITY_EXCEPTIONS.md (A05).
+    SecurityHeadersPolicy:
+      Type: AWS::CloudFront::ResponseHeadersPolicy
+      Properties:
+        ResponseHeadersPolicyConfig:
+          Name: ${self:custom.sitename}-security-headers
+          Comment: Security headers for mytabs-client-web
+          SecurityHeadersConfig:
+            StrictTransportSecurity:
+              AccessControlMaxAgeSec: 63072000
+              IncludeSubdomains: true
+              Preload: true
+              Override: true
+            ContentTypeOptions:
+              Override: true
+            FrameOptions:
+              FrameOption: DENY
+              Override: true
+            ReferrerPolicy:
+              ReferrerPolicy: strict-origin-when-cross-origin
+              Override: true
     cloudfront:
       Type: AWS::CloudFront::Distribution
       DependsOn: StaticSite
@@ -87,6 +114,7 @@ resources:
               - HEAD
             TargetOriginId: !Ref StaticSite
             ViewerProtocolPolicy: redirect-to-https
+            ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
             CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad #CachingDisabled
           PriceClass: PriceClass_100
           HttpVersion: http2

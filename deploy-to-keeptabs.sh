@@ -5,6 +5,11 @@
 
 set -e
 
+# Disable the AWS CLI pager. In a non-interactive shell, `aws` output that isn't
+# redirected can be piped into a pager (less), which blocks the script forever.
+# Empty AWS_PAGER forces all aws calls to print directly and return.
+export AWS_PAGER=""
+
 S3_BUCKET="mytabs-business-web-prod"
 CLOUDFRONT_ID="E1WB9UQAAX3TCW"
 AWS_REGION="us-east-1"
@@ -12,6 +17,15 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CLIENT_DIR="$SCRIPT_DIR/client"
 VERSION_FILE="$CLIENT_DIR/src/config/version.js"
 DEPLOY_VERSIONS="$SCRIPT_DIR/.deploy-versions.json"
+SECURITY_DIR="$SCRIPT_DIR/scripts/security"
+
+# Security scan toggle. Set SKIP_SCANS=1 or pass --skip-scans to bypass
+# (e.g. hotfix). SAST failures abort the deploy; DAST runs post-deploy and
+# reports without rolling back automatically.
+SKIP_SCANS="${SKIP_SCANS:-0}"
+for arg in "$@"; do
+  [ "$arg" == "--skip-scans" ] && SKIP_SCANS=1
+done
 
 # Colors
 GREEN='\033[0;32m'
@@ -26,6 +40,29 @@ err() { echo -e "${RED}[ERROR]${NC} $1"; }
 info() { echo -e "${CYAN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 step() { echo -e "\n${MAGENTA}[Step $1]${NC} $2"; }
+
+# Run an `aws` command with a hard time cap (macOS has no `timeout`). Writes
+# stdout to the file given as $1; remaining args are the aws subcommand. Returns
+# 0 on success, 124 if it exceeded the cap and was killed. Prevents a transient
+# AWS API stall from wedging the whole deploy.
+AWS_CALL_TIMEOUT="${AWS_CALL_TIMEOUT:-30}"
+aws_guarded() {
+  local out_file="$1"; shift
+  aws "$@" > "$out_file" 2>/dev/null &
+  local pid=$!
+  local waited=0
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 1
+    waited=$((waited + 1))
+    if [ "$waited" -ge "$AWS_CALL_TIMEOUT" ]; then
+      kill "$pid" 2>/dev/null
+      wait "$pid" 2>/dev/null
+      return 124
+    fi
+  done
+  wait "$pid" 2>/dev/null
+  return $?
+}
 
 # Get current version
 get_version() {
@@ -93,6 +130,22 @@ command -v node >/dev/null 2>&1 || { err "Node.js not found"; exit 1; }
 ok "Node.js: $(node --version)"
 command -v aws >/dev/null 2>&1 || { err "AWS CLI not found"; exit 1; }
 ok "AWS CLI installed"
+
+# Step 1b: SAST scan (static analysis) - gate BEFORE build/upload
+step 1b "Running SAST security scan..."
+if [ "$SKIP_SCANS" == "1" ]; then
+  warn "SAST scan skipped (--skip-scans / SKIP_SCANS=1)"
+elif [ -f "$SECURITY_DIR/sast-scan.sh" ]; then
+  if bash "$SECURITY_DIR/sast-scan.sh"; then
+    ok "SAST scan passed"
+  else
+    err "SAST scan failed - aborting deployment"
+    err "Review reports in $SCRIPT_DIR/.security-reports (or run with --skip-scans to override)"
+    exit 1
+  fi
+else
+  warn "SAST script not found at $SECURITY_DIR/sast-scan.sh - skipping"
+fi
 
 # Step 2: Install dependencies
 step 2 "Installing dependencies..."
@@ -181,6 +234,119 @@ else
   warn "Could not verify CloudFront settings - check distribution $CLOUDFRONT_ID manually"
 fi
 
+# Step 4c: Ensure a CloudFront ResponseHeadersPolicy with security headers is
+# created and attached to the default behavior (idempotent). Addresses the DAST
+# finding that the site served no HSTS/X-Content-Type-Options/X-Frame-Options/
+# Referrer-Policy. CSP is intentionally not sent (a report-only CSP without
+# report-to had no effect); add an enforced Content-Security-Policy here when
+# ready. Mirrors serverless.yml SecurityHeadersPolicy.
+SECHDR_POLICY_NAME="mytabs-business-web-${AWS_REGION}-security-headers"
+SECHDR_CONFIG_TMP="$(mktemp -t cf-sechdr.XXXXXX.json)"
+CF_CFG2_TMP="$(mktemp -t cf-config2.XXXXXX.json)"
+CF_PATCHED2_TMP="$(mktemp -t cf-patched2.XXXXXX.json)"
+trap 'rm -f "$CF_CFG_TMP" "$CF_PATCHED_TMP" "$SECHDR_CONFIG_TMP" "$CF_CFG2_TMP" "$CF_PATCHED2_TMP"' EXIT
+
+step 4c "Ensuring CloudFront security-headers policy..."
+
+# Does a policy with our name already exist? Capture its Id if so.
+# Guarded so a transient CloudFront API stall degrades to a skip, never a hang.
+SECHDR_LIST_TMP="$(mktemp -t cf-rhp-list.XXXXXX.json)"
+SECHDR_POLICY_ID=""
+SECHDR_STEP_OK=1
+if aws_guarded "$SECHDR_LIST_TMP" cloudfront list-response-headers-policies \
+     --type custom --region "$AWS_REGION" --output json; then
+  SECHDR_POLICY_ID=$(SECHDR_NAME="$SECHDR_POLICY_NAME" python3 -c "
+import json,os
+name=os.environ['SECHDR_NAME']
+try:
+    d=json.load(open('$SECHDR_LIST_TMP'))
+    items=d.get('ResponseHeadersPolicyList',{}).get('Items',[])
+    for it in items:
+        cfg=it.get('ResponseHeadersPolicy',{}).get('ResponseHeadersPolicyConfig',{})
+        if cfg.get('Name')==name:
+            print(it['ResponseHeadersPolicy']['Id']); break
+except Exception:
+    pass
+")
+else
+  SECHDR_STEP_OK=0
+  warn "CloudFront list-policies call timed out (${AWS_CALL_TIMEOUT}s) - skipping header setup this run"
+fi
+rm -f "$SECHDR_LIST_TMP"
+
+if [ "$SECHDR_STEP_OK" == "1" ] && [ -z "$SECHDR_POLICY_ID" ]; then
+  # Create the policy.
+  SECHDR_NAME="$SECHDR_POLICY_NAME" python3 <<PY > "$SECHDR_CONFIG_TMP"
+import json, os
+# CSP intentionally not sent (a report-only CSP without report-to had no effect);
+# add an enforced Content-Security-Policy here when ready.
+cfg = {
+  "Name": os.environ["SECHDR_NAME"],
+  "Comment": "Security headers for mytabs-client-web",
+  "SecurityHeadersConfig": {
+    "StrictTransportSecurity": {"Override": True, "AccessControlMaxAgeSec": 63072000, "IncludeSubdomains": True, "Preload": True},
+    "ContentTypeOptions": {"Override": True},
+    "FrameOptions": {"Override": True, "FrameOption": "DENY"},
+    "ReferrerPolicy": {"Override": True, "ReferrerPolicy": "strict-origin-when-cross-origin"},
+  },
+}
+# `create-response-headers-policy --response-headers-policy-config` expects the
+# config object directly (NOT wrapped in ResponseHeadersPolicyConfig; that
+# wrapper is only for update-distribution / CloudFormation).
+print(json.dumps(cfg))
+PY
+  SECHDR_CREATE_TMP="$(mktemp -t cf-rhp-create.XXXXXX.json)"
+  if aws_guarded "$SECHDR_CREATE_TMP" cloudfront create-response-headers-policy \
+       --response-headers-policy-config "file://$SECHDR_CONFIG_TMP" \
+       --region "$AWS_REGION" --output json; then
+    SECHDR_POLICY_ID=$(python3 -c "import json; print(json.load(open('$SECHDR_CREATE_TMP'))['ResponseHeadersPolicy']['Id'])" 2>/dev/null)
+  fi
+  rm -f "$SECHDR_CREATE_TMP"
+  if [ -n "$SECHDR_POLICY_ID" ]; then
+    ok "Created security-headers policy ($SECHDR_POLICY_ID)"
+  else
+    warn "Could not create security-headers policy (timeout or IAM) - skipping"
+  fi
+elif [ "$SECHDR_STEP_OK" == "1" ]; then
+  ok "Security-headers policy already exists ($SECHDR_POLICY_ID)"
+fi
+
+# Attach the policy to the default behavior if not already attached.
+if [ "$SECHDR_STEP_OK" == "1" ] && [ -n "$SECHDR_POLICY_ID" ] && \
+   aws_guarded "$CF_CFG2_TMP" cloudfront get-distribution-config \
+     --id "$CLOUDFRONT_ID" --region "$AWS_REGION" --output json; then
+  CF_ETAG2=$(python3 -c "import json; print(json.load(open('$CF_CFG2_TMP'))['ETag'])" 2>/dev/null)
+
+  ATTACH_NEEDED=$(SECHDR_ID="$SECHDR_POLICY_ID" python3 <<PY
+import json, os
+pid = os.environ["SECHDR_ID"]
+d = json.load(open("$CF_CFG2_TMP"))
+cfg = d["DistributionConfig"]
+dc = cfg["DefaultCacheBehavior"]
+changed = False
+if dc.get("ResponseHeadersPolicyId") != pid:
+    dc["ResponseHeadersPolicyId"] = pid
+    changed = True
+json.dump(cfg, open("$CF_PATCHED2_TMP", "w"))
+print("yes" if changed else "no")
+PY
+)
+  if [ "$ATTACH_NEEDED" == "yes" ]; then
+    SECHDR_UPD_TMP="$(mktemp -t cf-rhp-upd.XXXXXX.json)"
+    if aws_guarded "$SECHDR_UPD_TMP" cloudfront update-distribution \
+         --id "$CLOUDFRONT_ID" --region "$AWS_REGION" \
+         --distribution-config "file://$CF_PATCHED2_TMP" \
+         --if-match "$CF_ETAG2" --output json; then
+      ok "Attached security-headers policy to distribution"
+    else
+      warn "Could not attach security-headers policy (timeout) - check distribution manually"
+    fi
+    rm -f "$SECHDR_UPD_TMP"
+  else
+    ok "Security-headers policy already attached"
+  fi
+fi
+
 # Step 5: Upload versioned copy
 step 5 "Uploading v$APP_VERSION to S3..."
 aws s3 sync build/ "s3://$S3_BUCKET/versions/$APP_VERSION" \
@@ -261,6 +427,21 @@ if [ "$HTTP_CODE" == "200" ]; then
   ok "Website is live at https://keeptabs.app"
 else
   warn "Got HTTP $HTTP_CODE from keeptabs.app"
+fi
+
+# Step 11: DAST scan (dynamic analysis) against the live site
+step 11 "Running DAST security scan against live site..."
+if [ "$SKIP_SCANS" == "1" ]; then
+  warn "DAST scan skipped (--skip-scans / SKIP_SCANS=1)"
+elif [ -f "$SECURITY_DIR/dast-scan.sh" ]; then
+  if bash "$SECURITY_DIR/dast-scan.sh" "https://keeptabs.app"; then
+    ok "DAST scan passed"
+  else
+    warn "DAST scan reported findings - review $SCRIPT_DIR/.security-reports"
+    warn "Site is already live. To revert: ./deploy-to-keeptabs.sh --rollback"
+  fi
+else
+  warn "DAST script not found at $SECURITY_DIR/dast-scan.sh - skipping"
 fi
 
 # Summary
