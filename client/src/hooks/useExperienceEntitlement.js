@@ -1,5 +1,22 @@
 import { useState, useEffect } from "react";
 import { getMyServices } from "../services/entitlementService";
+import { getUserPremiumSubscription } from "../services/paymentService";
+import { getCurrentUserId } from "../utils/authUtils";
+
+/**
+ * Parse the plan tier from a Subscription row's `planId`.
+ *
+ * planId is "<YYYY-MM-DD><Tier>" (e.g. "2026-09-06Growth", "2000-01-01Pro").
+ * Returns a lowercased tier ("starter"|"growth"|"pro"|"enterprise"), normalizing
+ * "organization" → "enterprise" (alias for the top tier). Null if unparseable.
+ */
+const tierFromPlanId = (planId) => {
+  if (!planId) return null;
+  const name = String(planId).replace(/^\d{4}-\d{2}-\d{2}/, "").trim().toLowerCase();
+  if (!name) return null;
+  const normalized = name === "organization" ? "enterprise" : name;
+  return TIER_HIERARCHY.includes(normalized) ? normalized : null;
+};
 
 /**
  * Experience type tier requirements.
@@ -158,43 +175,88 @@ const useExperienceEntitlement = () => {
 
         const services = Array.isArray(response) ? response : (response?.services || []);
 
-        // Find any experience_* service entry
+        // Find any explicit experience_* service entry. When present it is the
+        // authoritative source (dedicated engagement subscription with its own
+        // tier + limits).
         const experienceService = services.find(
           (s) => (s.id || s.serviceId) && (s.id || s.serviceId).startsWith("experience_")
         );
 
-        if (!experienceService) {
+        if (experienceService) {
+          const isActive = experienceService.status === "active";
+          const isLapsed =
+            experienceService.status === "lapsed" ||
+            experienceService.status === "past_due" ||
+            experienceService.status === "canceled";
+
+          const tierConfig = TIER_LIMITS[experienceService.id || experienceService.serviceId] || null;
+
           setState({
-            hasSubscription: false,
-            isLapsed: false,
-            tier: null,
-            limits: null,
+            hasSubscription: isActive,
+            isLapsed,
+            tier: tierConfig ? tierConfig.tier : (experienceService.tier || null),
+            limits: tierConfig
+              ? {
+                  maxInstances: tierConfig.maxInstances,
+                  maxDrawingsPerInstance: tierConfig.maxDrawingsPerInstance,
+                  analyticsRetentionDays: tierConfig.analyticsRetentionDays,
+                  customBranding: tierConfig.customBranding,
+                }
+              : null,
             isLoading: false,
             error: null,
           });
           return;
         }
 
-        const isActive = experienceService.status === "active";
-        const isLapsed =
-          experienceService.status === "lapsed" ||
-          experienceService.status === "past_due" ||
-          experienceService.status === "canceled";
+        // No dedicated experience_* service — engagement entitlement is granted by
+        // the account's SUBSCRIPTION PLAN tier (Starter/Growth/Pro/Enterprise). The
+        // `entitlements/my-services` catalog does not carry the plan tier, so resolve
+        // it from the account's Subscription ROW (GET /subscription/{userId}), which
+        // returns the versioned `planId` (e.g. "2026-09-06Growth") and covers EXEMPT
+        // accounts that have no Stripe subscription. This is the common case: an
+        // account on a paid/exempt plan gets the engagement types its tier includes,
+        // without a separate experience_* subscription. An inactive/cancelled row or a
+        // Starter plan resolves to a tier that meets no engagement requirement, so
+        // those types stay correctly locked.
+        const userId = getCurrentUserId();
+        if (userId) {
+          try {
+            const subRes = await getUserPremiumSubscription(userId);
+            if (cancelled) return;
+            const row = subRes?.data || null;
+            const rowActive = row && row.isActive === true && row.isCancelled !== true;
+            const tier = rowActive ? tierFromPlanId(row.planId) : null;
+            if (tier) {
+              const tierConfig = TIER_LIMITS[`experience_${tier}`] || null;
+              setState({
+                hasSubscription: true,
+                isLapsed: false,
+                tier,
+                limits: tierConfig
+                  ? {
+                      maxInstances: tierConfig.maxInstances,
+                      maxDrawingsPerInstance: tierConfig.maxDrawingsPerInstance,
+                      analyticsRetentionDays: tierConfig.analyticsRetentionDays,
+                      customBranding: tierConfig.customBranding,
+                    }
+                  : null,
+                isLoading: false,
+                error: null,
+              });
+              return;
+            }
+          } catch (subErr) {
+            // Fall through to "no subscription" if the plan lookup fails.
+          }
+        }
 
-        const tierConfig = TIER_LIMITS[experienceService.id || experienceService.serviceId] || null;
-
+        // No experience_* service and no resolvable paid/exempt plan tier.
         setState({
-          hasSubscription: isActive,
-          isLapsed: isLapsed,
-          tier: tierConfig ? tierConfig.tier : (experienceService.tier || null),
-          limits: tierConfig
-            ? {
-                maxInstances: tierConfig.maxInstances,
-                maxDrawingsPerInstance: tierConfig.maxDrawingsPerInstance,
-                analyticsRetentionDays: tierConfig.analyticsRetentionDays,
-                customBranding: tierConfig.customBranding,
-              }
-            : null,
+          hasSubscription: false,
+          isLapsed: false,
+          tier: null,
+          limits: null,
           isLoading: false,
           error: null,
         });

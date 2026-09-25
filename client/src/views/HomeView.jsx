@@ -3,6 +3,8 @@ import {Outlet, redirect, NavLink, useLocation, useNavigate} from "react-router-
 import {ReactSVG} from "react-svg";
 import {getMyServices} from "../services/entitlementService";
 import {getMyOrganizations} from "../services/organizationService";
+import {filterNavOptions} from "./navAccess";
+import {resolveAccountPlanLevel} from "../utils/resolveAccountPlanLevel";
 import "./HomeView.css";
 import logo from "../assets/menu/HomeviewTab.svg";
 import homeInactiveIcon from "../assets/menu/homeInactive.svg";
@@ -118,8 +120,11 @@ const options = [
       active: experiencesActiveIcon,
       inactive: experiencesInactiveIcon,
     },
-    title: "Experiences",
-    requiresOrg: "UrbanHTX",
+    title: "Engagements",
+    // Visible to ALL paid plans, including Starter. The Engagement Catalog gates
+    // each engagement individually (locked card → info/upgrade modal, backend 403
+    // on create), so Starter can browse the catalog and discover what upgrading
+    // unlocks. No plan-level gate on the nav link itself.
   },
   {
     path: "/admin/configuration",
@@ -162,6 +167,10 @@ export default function HomeView() {
   const [, setServicesLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [userOrgName, setUserOrgName] = useState(null);
+  // Resolved plan level (Starter=1 … Enterprise=4; 0 = none/unknown). Drives
+  // plan-gated nav items like Engagements (Growth+). Resolved via the account's
+  // subscription (handles exempt accounts, which carry a planId but no Stripe sub).
+  const [planLevel, setPlanLevel] = useState(0);
 
   // Local UI metadata for each service (icons, descriptions, paths, etc.)
   // These fields are not returned by the API and are needed for rendering.
@@ -271,6 +280,19 @@ export default function HomeView() {
     return () => { cancelled = true; };
   }, []);
 
+  // Resolve the account's plan level so plan-gated nav items (e.g. Engagements =
+  // Growth+, level >= 2) show for the right plans — INCLUDING exempt accounts. Uses
+  // the shared resolver (same logic PlanLevelRouteGuard uses) so the nav item and the
+  // route admit identically. On failure planLevel stays 0 (plan-gated items hidden).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const lvl = await resolveAccountPlanLevel();
+      if (!cancelled && Number.isFinite(lvl) && lvl > 0) setPlanLevel(lvl);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const searchResults = headerSearch.trim()
     ? headerServices.filter((s) =>
         s.name.toLowerCase().includes(headerSearch.toLowerCase()) ||
@@ -310,40 +332,21 @@ export default function HomeView() {
     }
   };
 
-  // Filter options based on user access
+  // Filter options based on user access. The gating logic is a pure, unit-tested
+  // function (see navAccess.js) so the Subscribe/pricing plan packaging and the nav
+  // stay in sync. Engagements are gated by plan level (Growth+), not UrbanHTX org.
   const getFilteredOptions = () => {
     const userRole = getUserRole();
     const isVerifier = userRole === 'verifier' || userRole === 'scanner';
-    
+
     console.log('🔐 User role:', userRole, 'isVerifier:', isVerifier);
 
-    return options.filter(option => {
-      // Verifiers should not see any main navigation items
-      if (isVerifier) {
-        return false;
-      }
-
-      // Hide My Tickets if user doesn't have access
-      if (option.title === "My Tickets" && !userHasTicketAccess) {
-        return false;
-      }
-
-      // Hide services that require a subscription the user doesn't have
-      if (option.requiresServiceId) {
-        const svc = headerServices.find(s => s.id === option.requiresServiceId);
-        if (!svc || !svc.subscribed) return false;
-      }
-
-      // Hide org-restricted items for users not in the required org
-      if (option.requiresOrg) {
-        const normalize = (s) => (s || '').replace(/\s+/g, '').toLowerCase();
-        if (normalize(option.requiresOrg) !== normalize(userOrgName)) {
-          return false;
-        }
-      }
-
-      // Hide other restricted items (should be in bottom section only)
-      return !["Logout", "Configuration", "Team Management"].includes(option.title);
+    return filterNavOptions(options, {
+      isVerifier,
+      userHasTicketAccess,
+      headerServices,
+      userOrgName,
+      planLevel,
     });
   };
 
@@ -401,7 +404,7 @@ export default function HomeView() {
           <div className={isExpanded ? "Sidebar-expanded" : "Sidebar"}>
             <div className='Menu'>
               <div id='Menu-option-logo' style={{flex: 1}} onClick={handleExpand}>
-                <img src={logo} alt='logo' />
+                <img src={logo} alt='logo' width='30' />
                 {isExpanded && (
                   <div
                     style={{
@@ -410,7 +413,7 @@ export default function HomeView() {
                       alignSelf: "center",
                       fontSize: "24px",
                     }}>
-                    Dashboard
+                    keeptabs
                   </div>
                 )}
               </div>

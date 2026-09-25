@@ -1,10 +1,4 @@
 import { renderHook, waitFor } from "@testing-library/react";
-
-// Mock the entitlement service
-jest.mock("../services/entitlementService", () => ({
-  getMyServices: jest.fn(),
-}));
-
 import useExperienceEntitlement, {
   EXPERIENCE_TIER_REQUIREMENTS,
   TIER_HIERARCHY,
@@ -12,10 +6,36 @@ import useExperienceEntitlement, {
   meetsRequiredTier,
 } from "./useExperienceEntitlement";
 import { getMyServices } from "../services/entitlementService";
+import { getUserPremiumSubscription } from "../services/paymentService";
+import { getCurrentUserId } from "../utils/authUtils";
+
+// Mock the entitlement service.
+jest.mock("../services/entitlementService", () => ({
+  getMyServices: jest.fn(),
+}));
+
+// Mock the payment service — the hook falls back to the subscription PLAN tier
+// (parsed from the Subscription row's planId via getUserPremiumSubscription) when
+// there is no dedicated experience_* service.
+jest.mock("../services/paymentService", () => ({
+  getUserPremiumSubscription: jest.fn(),
+}));
+
+// Mock the current-user resolver used for the plan-tier fallback lookup.
+jest.mock("../utils/authUtils", () => ({
+  getCurrentUserId: jest.fn(() => "user-123"),
+}));
 
 describe("useExperienceEntitlement", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // jest.clearAllMocks() also clears the factory implementation, so re-establish
+    // the logged-in user for the plan-tier fallback lookup.
+    getCurrentUserId.mockReturnValue("user-123");
+    // Default: no resolvable Subscription row (tests that want the plan fallback
+    // override this per-case). Keeps "no experience_* service" cases resolving to
+    // no-subscription unless a plan row is explicitly provided.
+    getUserPremiumSubscription.mockResolvedValue({ data: null });
   });
 
   it("returns loading state initially", () => {
@@ -57,6 +77,91 @@ describe("useExperienceEntitlement", () => {
     expect(result.current.hasSubscription).toBe(false);
     expect(result.current.tier).toBeNull();
     expect(result.current.limits).toBeNull();
+  });
+
+  describe("plan-tier fallback (no experience_* service)", () => {
+    it("grants engagement entitlement from the Subscription row planId (Growth, exempt)", async () => {
+      getMyServices.mockResolvedValue([{ id: "business", status: "active" }]);
+      getUserPremiumSubscription.mockResolvedValue({
+        data: { isActive: true, isCancelled: false, billingMode: "exempt", planId: "2026-09-06Growth" },
+      });
+      const { result } = renderHook(() => useExperienceEntitlement());
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(result.current.hasSubscription).toBe(true);
+      expect(result.current.tier).toBe("growth");
+      // Growth-tier engagements are unlocked...
+      expect(result.current.isExperienceTypeAvailable("raffles")).toBe(true);
+      expect(result.current.isExperienceTypeAvailable("digital_coupons")).toBe(true);
+      // ...but Pro-tier ones stay locked.
+      expect(result.current.isExperienceTypeAvailable("instant_win")).toBe(false);
+    });
+
+    it("resolves a Pro planId and unlocks Pro engagements", async () => {
+      getMyServices.mockResolvedValue([]);
+      getUserPremiumSubscription.mockResolvedValue({
+        data: { isActive: true, planId: "2000-01-01Pro" },
+      });
+      const { result } = renderHook(() => useExperienceEntitlement());
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(result.current.tier).toBe("pro");
+      expect(result.current.isExperienceTypeAvailable("instant_win")).toBe(true);
+      expect(result.current.isExperienceTypeAvailable("raffles")).toBe(true);
+    });
+
+    it("normalizes an Organization planId to the enterprise tier", async () => {
+      getMyServices.mockResolvedValue([]);
+      getUserPremiumSubscription.mockResolvedValue({
+        data: { isActive: true, planId: "2026-09-06Organization" },
+      });
+      const { result } = renderHook(() => useExperienceEntitlement());
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(result.current.tier).toBe("enterprise");
+      expect(result.current.isExperienceTypeAvailable("ai_concierge")).toBe(true);
+    });
+
+    it("keeps a Starter planId locked out of all engagements", async () => {
+      getMyServices.mockResolvedValue([]);
+      getUserPremiumSubscription.mockResolvedValue({
+        data: { isActive: true, planId: "2000-01-01Starter" },
+      });
+      const { result } = renderHook(() => useExperienceEntitlement());
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(result.current.tier).toBe("starter");
+      expect(result.current.isExperienceTypeAvailable("raffles")).toBe(false);
+      expect(result.current.isExperienceTypeAvailable("live_polls")).toBe(false);
+    });
+
+    it("does NOT grant entitlement from an inactive/cancelled Subscription row", async () => {
+      getMyServices.mockResolvedValue([]);
+      getUserPremiumSubscription.mockResolvedValue({
+        data: { isActive: false, planId: "2026-09-06Growth" },
+      });
+      const { result } = renderHook(() => useExperienceEntitlement());
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(result.current.hasSubscription).toBe(false);
+      expect(result.current.tier).toBeNull();
+    });
+
+    it("stays no-subscription when there is no Subscription row", async () => {
+      getMyServices.mockResolvedValue([]);
+      getUserPremiumSubscription.mockResolvedValue({ data: null });
+      const { result } = renderHook(() => useExperienceEntitlement());
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      expect(result.current.hasSubscription).toBe(false);
+      expect(result.current.tier).toBeNull();
+    });
   });
 
   it("returns active subscription for experience_starter", async () => {

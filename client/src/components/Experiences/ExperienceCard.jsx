@@ -336,6 +336,11 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
               src={previewUrl}
               title="Engagement Preview"
               style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+              // allow: grant the embedded engagement app camera/mic so getUserMedia works
+              // for Photo Contest capture. Without this, a cross-origin iframe fails the
+              // Permissions-Policy check ("Permission policy 'Camera' check failed") and
+              // Safari blocks getUserMedia before prompting the user.
+              allow="camera; microphone; fullscreen"
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"
             />
           </Box>

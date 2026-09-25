@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Card,
@@ -9,16 +9,24 @@ import {
   Alert,
   Chip,
   Button,
+  IconButton,
+  Modal,
 } from "@mui/material";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import HighlightOffIcon from "@mui/icons-material/HighlightOff";
+import UndoOutlinedIcon from "@mui/icons-material/UndoOutlined";
 import EmojiEventsOutlinedIcon from "@mui/icons-material/EmojiEventsOutlined";
 import BrokenImageOutlinedIcon from "@mui/icons-material/BrokenImageOutlined";
+import SlideshowOutlinedIcon from "@mui/icons-material/SlideshowOutlined";
+import ScheduleOutlinedIcon from "@mui/icons-material/ScheduleOutlined";
+import CloseIcon from "@mui/icons-material/Close";
+import FavoriteIcon from "@mui/icons-material/Favorite";
 import { getLiveStats, transitionState } from "../../services/experienceService";
 
 const ACCENT = "#EC4899"; // Social & Community brand accent
 const REFRESH_INTERVAL = 2000; // 2 seconds (Requirement 11.2)
+const ADVANCE_INTERVAL = 5000; // 5 seconds big-screen auto-advance (mirrors Social Wall)
 
 // Labels for the Contest_Phase chip (Requirement 11.1). The /live-stats payload
 // may carry an explicit `phase` field; when present it drives the phase chip,
@@ -46,13 +54,22 @@ function statusCounts(stats) {
   };
 }
 
-// Resolve a Media_Reference to a displayable URL. Absolute/data URLs pass through;
-// a bare storage key can't be rendered directly, so callers fall back to a
-// placeholder when this returns a non-URL. Kept permissive so the preview never
-// throws on an unexpected shape.
-function mediaUrl(mediaReference) {
-  if (!mediaReference || typeof mediaReference !== "string") return "";
-  if (/^(https?:|data:|blob:)/i.test(mediaReference)) return mediaReference;
+// Resolve a submission's displayable photo URL. The backend hydrates the stored
+// Media_Reference (an S3 key) into a signed `mediaUrl` for display, so that is
+// preferred when present; the raw `mediaReference` is used only as a fallback and
+// only when it is already an absolute/data/blob URL (a bare storage key can't be
+// rendered directly, so callers fall back to a placeholder when this returns a
+// non-URL). Kept permissive so the preview never throws on an unexpected shape.
+function resolvePhotoUrl(item) {
+  if (!item || typeof item !== "object") return "";
+  const signed = item.mediaUrl;
+  if (typeof signed === "string" && /^(https?:|data:|blob:)/i.test(signed)) {
+    return signed;
+  }
+  const ref = item.mediaReference;
+  if (typeof ref === "string" && /^(https?:|data:|blob:)/i.test(ref)) {
+    return ref;
+  }
   return "";
 }
 
@@ -85,6 +102,7 @@ function isWinnerEntry(entry, winnerCount) {
  */
 const PhotoContestLiveDashboard = () => {
   const { eventId, experienceId } = useParams();
+  const navigate = useNavigate();
 
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +110,12 @@ const PhotoContestLiveDashboard = () => {
   // Optimistic per-submission moderation overrides applied on approve/reject
   // before the next poll reflects the server state (Requirement 11.3).
   const [moderationOverrides, setModerationOverrides] = useState({});
+  // Big-screen projection mode + the auto-advancing slide index (mirrors Social Wall).
+  const [bigScreen, setBigScreen] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
+  // Click-to-enlarge lightbox: the approved/queue item whose photo is being viewed
+  // full-size, or null when the lightbox is closed.
+  const [lightboxItem, setLightboxItem] = useState(null);
   const etagRef = useRef(null);
   const pollRef = useRef(null);
 
@@ -161,7 +185,11 @@ const PhotoContestLiveDashboard = () => {
   // until the next poll (Requirement 11.3).
   const handleModerate = useCallback(
     async (submissionId, action) => {
-      const nextStatus = action === "approve" ? "approved" : "rejected";
+      // action ∈ { 'approve', 'reject', 'unapprove' } → next Moderation_Status.
+      // 'unapprove' reverses an approval: the submission returns to the moderation
+      // queue as 'pending' so the organizer can re-review it.
+      const nextStatus =
+        action === "approve" ? "approved" : action === "unapprove" ? "pending" : "rejected";
       setModerationOverrides((prev) => ({ ...prev, [submissionId]: nextStatus }));
       try {
         await transitionState(eventId, experienceId, { action, submissionId });
@@ -180,6 +208,47 @@ const PhotoContestLiveDashboard = () => {
     [eventId, experienceId, fetchStats]
   );
 
+  // Reconcile optimistic overrides against the freshly polled server state: once
+  // the server payload reflects a submission's overridden status, drop the override
+  // so the server projections take over. Without this an override lingers forever —
+  // e.g. an `unapprove` (→ pending) override would keep filtering the submission OUT
+  // of the approved gallery even after the server returns it to the queue, so it
+  // would never reappear until a full reload. Mirrors SocialWallLiveDashboard.
+  useEffect(() => {
+    if (!stats) return;
+    const serverQueue = Array.isArray(stats.moderationQueue) ? stats.moderationQueue : [];
+    const serverApproved =
+      Array.isArray(stats.gallery) && stats.gallery.length
+        ? stats.gallery
+        : Array.isArray(stats.submissions)
+        ? stats.submissions
+        : [];
+    const pendingIds = new Set(serverQueue.map((s) => s.submissionId));
+    const approvedIds = new Set(serverApproved.map((s) => s.submissionId));
+
+    setModerationOverrides((prev) => {
+      const entries = Object.entries(prev);
+      if (entries.length === 0) return prev;
+      let changed = false;
+      const next = {};
+      for (const [submissionId, status] of entries) {
+        const settled =
+          (status === "pending" && pendingIds.has(submissionId)) ||
+          (status === "approved" && approvedIds.has(submissionId)) ||
+          // rejected: the submission is gone from BOTH visible projections.
+          (status === "rejected" &&
+            !pendingIds.has(submissionId) &&
+            !approvedIds.has(submissionId));
+        if (settled) {
+          changed = true;
+        } else {
+          next[submissionId] = status;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [stats]);
+
   const counts = statusCounts(stats);
   const totalSubmissions = num(stats?.totalSubmissions);
   const totalValidVotes = num(stats?.totalValidVotes);
@@ -193,8 +262,55 @@ const PhotoContestLiveDashboard = () => {
   // approved `submissions` list. Apply optimistic overrides and drop entries that
   // have already been moderated locally.
   const moderationQueue = (Array.isArray(stats?.moderationQueue) ? stats.moderationQueue : []).filter(
-    (item) => !moderationOverrides[item.submissionId]
+    (item) =>
+      !moderationOverrides[item.submissionId] ||
+      moderationOverrides[item.submissionId] === "pending"
   );
+
+  // The approved gallery: the approved submissions the backend projects (each with
+  // a signed mediaUrl). Prefer `gallery` (the display projection); fall back to the
+  // per-approved `submissions` projection. Apply optimistic overrides so an item
+  // just rejected/unapproved from here disappears immediately, and keep items only
+  // while they are (still) approved (Requirement 11.3 parity with Social Wall's
+  // Approved Posts section).
+  const approvedSubmissions = (
+    Array.isArray(stats?.gallery) && stats.gallery.length
+      ? stats.gallery
+      : Array.isArray(stats?.submissions)
+      ? stats.submissions
+      : []
+  ).filter(
+    (item) =>
+      !moderationOverrides[item.submissionId] ||
+      moderationOverrides[item.submissionId] === "approved"
+  );
+  const hasApprovedSubmissions = approvedSubmissions.length > 0;
+
+  // The big-screen slideshow projects the approved submissions ordered by votes
+  // (highest first) so the room sees the current leader; ties keep the gallery
+  // order. Falls back to the gallery order when no voteCount is present.
+  const bigScreenItems = [...approvedSubmissions].sort(
+    (a, b) => num(b.voteCount) - num(a.voteCount)
+  );
+
+  // Keep the big-screen slide index in range as the approved set changes (mirrors
+  // Social Wall): reset to 0 when empty, clamp to the last index otherwise.
+  useEffect(() => {
+    if (bigScreenItems.length === 0) {
+      if (slideIndex !== 0) setSlideIndex(0);
+      return;
+    }
+    if (slideIndex >= bigScreenItems.length) setSlideIndex(bigScreenItems.length - 1);
+  }, [bigScreenItems.length, slideIndex]);
+
+  // Auto-advance the big-screen projection every 5s while active (mirrors Social Wall).
+  useEffect(() => {
+    if (!bigScreen || bigScreenItems.length <= 1) return undefined;
+    const id = setInterval(() => {
+      setSlideIndex((prev) => (prev + 1) % bigScreenItems.length);
+    }, ADVANCE_INTERVAL);
+    return () => clearInterval(id);
+  }, [bigScreen, bigScreenItems.length]);
 
   const ranking = Array.isArray(stats?.ranking) ? stats.ranking : [];
   const showResults = phase === "results" && ranking.length > 0;
@@ -206,6 +322,92 @@ const PhotoContestLiveDashboard = () => {
     return (
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
         <CircularProgress sx={{ color: ACCENT }} />
+      </Box>
+    );
+  }
+
+  // Big-screen projection mode. Full-bleed overlay showing one approved photo at a
+  // time (ordered by votes), large, with its live heart vote count so a room sees
+  // the current leader as votes arrive from attendees' phones. Auto-advances every
+  // 5s; zero approved photos → empty state. (Mirrors Social Wall's big screen.)
+  if (bigScreen) {
+    const current = bigScreenItems[Math.min(slideIndex, Math.max(bigScreenItems.length - 1, 0))];
+    const currentUrl = current ? resolvePhotoUrl(current) : "";
+    return (
+      <Box
+        data-testid="big-screen"
+        sx={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 1300,
+          background: "linear-gradient(135deg, #1D1B20 0%, #4A044E 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          p: { xs: 3, md: 8 },
+        }}
+      >
+        <IconButton
+          data-testid="big-screen-close"
+          onClick={() => setBigScreen(false)}
+          sx={{ position: "absolute", top: 24, right: 24, color: "#FFFFFF" }}
+          aria-label="Exit big-screen display"
+        >
+          <CloseIcon />
+        </IconButton>
+        {hasApprovedSubmissions && current ? (
+          <Box sx={{ maxWidth: 1000, width: "100%", textAlign: "center" }}>
+            {currentUrl ? (
+              <Box
+                component="img"
+                src={currentUrl}
+                alt={current.caption || "Contest photo"}
+                data-testid="big-screen-photo"
+                sx={{
+                  maxWidth: "100%",
+                  maxHeight: "60vh",
+                  borderRadius: 4,
+                  objectFit: "contain",
+                  mb: 4,
+                }}
+              />
+            ) : (
+              <BrokenImageOutlinedIcon
+                data-testid="big-screen-photo"
+                sx={{ color: "#FFFFFF", fontSize: 120, opacity: 0.4, mb: 4 }}
+              />
+            )}
+            {current.caption && (
+              <Typography
+                data-testid="big-screen-caption"
+                sx={{ color: "#FFFFFF", fontSize: { xs: 28, md: 48 }, fontWeight: 800, lineHeight: 1.2 }}
+              >
+                {current.caption}
+              </Typography>
+            )}
+            <Box
+              sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1.5, mt: 3 }}
+            >
+              <FavoriteIcon sx={{ color: ACCENT, fontSize: { xs: 28, md: 40 } }} />
+              <Typography
+                data-testid="big-screen-votes"
+                sx={{ color: ACCENT, fontSize: { xs: 28, md: 44 }, fontWeight: 800 }}
+              >
+                {num(current.voteCount).toLocaleString()}
+              </Typography>
+            </Box>
+            <Typography sx={{ color: "#FFFFFF", opacity: 0.5, fontSize: 14, mt: 2 }}>
+              Vote for your favorite from your phone
+            </Typography>
+          </Box>
+        ) : (
+          <Typography
+            data-testid="big-screen-empty"
+            sx={{ color: "#FFFFFF", fontSize: { xs: 22, md: 36 }, fontWeight: 700, opacity: 0.8 }}
+          >
+            No approved photos to display yet.
+          </Typography>
+        )}
       </Box>
     );
   }
@@ -249,6 +451,50 @@ const PhotoContestLiveDashboard = () => {
             This experience is closed. Final metrics below.
           </Typography>
         )}
+        <Box sx={{ flex: 1 }} />
+        {/* Edit the submission/voting time windows from the report page. Navigates
+            to the shared config route, which reuses PhotoContestConfig (it hydrates
+            the current config, exposes the window date pickers, validates, and saves
+            via updateInstance). Lets an organizer open or adjust the voting window
+            without a manual data edit. */}
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<ScheduleOutlinedIcon />}
+          data-testid="edit-windows"
+          onClick={() =>
+            navigate(`/admin/my-events/${eventId}/experiences/${experienceId}/config`)
+          }
+          sx={{
+            textTransform: "none",
+            fontWeight: 700,
+            borderRadius: 2,
+            color: ACCENT,
+            borderColor: ACCENT,
+            "&:hover": { borderColor: "#DB2777", backgroundColor: "#FCE7F3" },
+          }}
+        >
+          Edit Windows
+        </Button>
+        <Button
+          size="small"
+          variant="contained"
+          startIcon={<SlideshowOutlinedIcon />}
+          data-testid="big-screen-toggle"
+          onClick={() => {
+            setSlideIndex(0);
+            setBigScreen(true);
+          }}
+          sx={{
+            textTransform: "none",
+            fontWeight: 700,
+            borderRadius: 2,
+            backgroundColor: ACCENT,
+            "&:hover": { backgroundColor: "#DB2777" },
+          }}
+        >
+          Big Screen
+        </Button>
       </Box>
 
       {/* Metrics row (Requirement 11.4). */}
@@ -351,7 +597,7 @@ const PhotoContestLiveDashboard = () => {
           ) : (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {moderationQueue.map((item) => {
-                const url = mediaUrl(item.mediaReference);
+                const url = resolvePhotoUrl(item);
                 return (
                   <Box
                     key={item.submissionId}
@@ -367,9 +613,10 @@ const PhotoContestLiveDashboard = () => {
                     }}
                   >
                     <Box
+                      onClick={url ? () => setLightboxItem(item) : undefined}
                       sx={{
-                        width: 72,
-                        height: 72,
+                        width: 96,
+                        height: 96,
                         borderRadius: 2,
                         background: "#F3F4F6",
                         display: "flex",
@@ -377,6 +624,7 @@ const PhotoContestLiveDashboard = () => {
                         justifyContent: "center",
                         overflow: "hidden",
                         flexShrink: 0,
+                        cursor: url ? "zoom-in" : "default",
                       }}
                     >
                       {url ? (
@@ -429,6 +677,127 @@ const PhotoContestLiveDashboard = () => {
                         variant="outlined"
                         startIcon={<HighlightOffIcon />}
                         data-testid={`reject-${item.submissionId}`}
+                        onClick={() => handleModerate(item.submissionId, "reject")}
+                        sx={{
+                          textTransform: "none",
+                          fontWeight: 700,
+                          borderRadius: 2,
+                          color: "#DC2626",
+                          borderColor: "#FCA5A5",
+                          "&:hover": { borderColor: "#DC2626", backgroundColor: "#FEF2F2" },
+                        }}
+                      >
+                        Reject
+                      </Button>
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Approved submissions (Requirement 11.3 parity with Social Wall). Each
+          approved photo stays visible with its signed preview and exposes an
+          Unapprove (→ back to the queue) and a Reject control, so the organizer can
+          still act on a photo after approving it. */}
+      <Card
+        elevation={0}
+        sx={{ borderRadius: 3, border: "1px solid #E8E8E8", mb: 2 }}
+        data-testid="approved-submissions"
+      >
+        <CardContent sx={{ p: 3 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: 16, color: "#1D1B20", mb: 2 }}>
+            Approved Submissions
+          </Typography>
+
+          {!hasApprovedSubmissions ? (
+            <Typography sx={{ color: "#9CA3AF", fontSize: 14 }} data-testid="approved-empty">
+              No approved submissions yet.
+            </Typography>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {approvedSubmissions.map((item) => {
+                const url = resolvePhotoUrl(item);
+                return (
+                  <Box
+                    key={item.submissionId}
+                    data-testid={`approved-item-${item.submissionId}`}
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      alignItems: "center",
+                      p: 1.5,
+                      borderRadius: 2,
+                      border: "1px solid #F0F0F0",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Box
+                      onClick={url ? () => setLightboxItem(item) : undefined}
+                      sx={{
+                        width: 96,
+                        height: 96,
+                        borderRadius: 2,
+                        background: "#F3F4F6",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        overflow: "hidden",
+                        flexShrink: 0,
+                        cursor: url ? "zoom-in" : "default",
+                      }}
+                    >
+                      {url ? (
+                        <Box
+                          component="img"
+                          src={url}
+                          alt={item.caption || "Approved photo"}
+                          data-testid={`approved-photo-${item.submissionId}`}
+                          sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <BrokenImageOutlinedIcon
+                          sx={{ color: "#9CA3AF" }}
+                          data-testid={`approved-photo-${item.submissionId}`}
+                        />
+                      )}
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 160 }}>
+                      <Typography sx={{ fontSize: 14, color: "#1D1B20", fontWeight: 600 }}>
+                        {item.caption || "(no caption)"}
+                      </Typography>
+                      <Typography
+                        sx={{ fontSize: 12, color: "#9CA3AF" }}
+                        data-testid={`approved-votes-${item.submissionId}`}
+                      >
+                        {num(item.voteCount).toLocaleString()} votes
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<UndoOutlinedIcon />}
+                        data-testid={`unapprove-${item.submissionId}`}
+                        onClick={() => handleModerate(item.submissionId, "unapprove")}
+                        sx={{
+                          textTransform: "none",
+                          fontWeight: 700,
+                          borderRadius: 2,
+                          color: "#92400E",
+                          borderColor: "#FCD34D",
+                          "&:hover": { borderColor: "#92400E", backgroundColor: "#FFFBEB" },
+                        }}
+                      >
+                        Unapprove
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<HighlightOffIcon />}
+                        data-testid={`approved-reject-${item.submissionId}`}
                         onClick={() => handleModerate(item.submissionId, "reject")}
                         sx={{
                           textTransform: "none",
@@ -517,6 +886,58 @@ const PhotoContestLiveDashboard = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Click-to-enlarge lightbox: shows the selected photo full-size over a dim
+          backdrop, with its caption + live vote count. Click the backdrop or the
+          close button to dismiss. */}
+      <Modal
+        open={Boolean(lightboxItem)}
+        onClose={() => setLightboxItem(null)}
+        data-testid="lightbox"
+        sx={{ display: "flex", alignItems: "center", justifyContent: "center", p: { xs: 2, md: 6 } }}
+      >
+        <Box
+          onClick={() => setLightboxItem(null)}
+          sx={{ position: "relative", outline: "none", textAlign: "center", maxWidth: "90vw" }}
+        >
+          <IconButton
+            data-testid="lightbox-close"
+            onClick={() => setLightboxItem(null)}
+            sx={{ position: "absolute", top: -8, right: -8, color: "#FFFFFF", background: "rgba(0,0,0,0.4)", "&:hover": { background: "rgba(0,0,0,0.6)" } }}
+            aria-label="Close enlarged photo"
+          >
+            <CloseIcon />
+          </IconButton>
+          {lightboxItem && resolvePhotoUrl(lightboxItem) && (
+            <Box
+              component="img"
+              src={resolvePhotoUrl(lightboxItem)}
+              alt={lightboxItem.caption || "Contest photo"}
+              data-testid="lightbox-photo"
+              onClick={(e) => e.stopPropagation()}
+              sx={{ maxWidth: "90vw", maxHeight: "80vh", borderRadius: 3, objectFit: "contain", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}
+            />
+          )}
+          {lightboxItem && (
+            <Box
+              onClick={(e) => e.stopPropagation()}
+              sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 2, mt: 2, color: "#FFFFFF", flexWrap: "wrap" }}
+            >
+              <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
+                {lightboxItem.caption || "(no caption)"}
+              </Typography>
+              {typeof lightboxItem.voteCount !== "undefined" && (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                  <FavoriteIcon sx={{ color: ACCENT, fontSize: 18 }} />
+                  <Typography sx={{ fontSize: 15, fontWeight: 700 }}>
+                    {num(lightboxItem.voteCount).toLocaleString()}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+        </Box>
+      </Modal>
     </Box>
   );
 };

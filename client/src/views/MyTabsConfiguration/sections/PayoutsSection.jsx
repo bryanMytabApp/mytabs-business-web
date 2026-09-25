@@ -11,6 +11,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Tabs,
+  Tab,
+  Tooltip,
 } from '@mui/material';
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
@@ -27,6 +30,7 @@ import {
   createPayoutAccountSession,
   resetPayouts,
   getPayoutHistory,
+  listEventPayouts,
 } from '../../../services/paymentService';
 import { getBusiness } from '../../../services/businessService';
 import { parseJwt } from '../../../utils/common';
@@ -74,6 +78,28 @@ const STATUS_META = {
   },
 };
 
+// Per-event payout status → chip presentation (reuses the STATUS_META chip styling
+// conventions above). `pending`/`held` read as "Held" (funds under Tabs' control until
+// the release date); `released` is paid out; `on-hold` is an Administrative_Hold;
+// `failed` needs attention; `skipped` had nothing to pay.
+const EVENT_STATUS_META = {
+  pending: { label: 'Held', bg: '#FEF3C7', color: '#D97706' },
+  held: { label: 'Held', bg: '#FEF3C7', color: '#D97706' },
+  released: { label: 'Released', bg: '#ECFDF5', color: '#059669' },
+  'on-hold': { label: 'On hold', bg: '#FEE2E2', color: '#DC2626' },
+  failed: { label: 'Action needed', bg: '#FEE2E2', color: '#DC2626' },
+  skipped: { label: 'Skipped', bg: '#F3F4F6', color: '#6B7280' },
+};
+
+// Net shown per row: pending/held funds are still held; released funds are the amount
+// actually paid out. Everything else falls back to whichever amount is present.
+const netCentsForEvent = (ev) => {
+  const status = ev?.payoutStatus;
+  if (status === 'pending' || status === 'held') return ev?.heldAmountCents || 0;
+  if (status === 'released') return ev?.releasedAmountCents || 0;
+  return ev?.releasedAmountCents || ev?.heldAmountCents || 0;
+};
+
 // Cents (integer minor units) → "$1,234.56". Payout amounts are always cents.
 const formatCents = (cents, currency = 'usd') => {
   const n = Number.isFinite(cents) ? cents : 0;
@@ -101,6 +127,14 @@ const PayoutsSection = () => {
   const [resetting, setResetting] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [history, setHistory] = useState(null); // { summary, rows } — journal-derived
+  // Tabbed layout: existing content lives under "banking"; "by-event" is the new
+  // per-event payout view. Banking is the default so the Connect onboarding state is
+  // never disturbed by tab switches.
+  const [activeTab, setActiveTab] = useState('banking');
+  const [eventPayouts, setEventPayouts] = useState(null); // { events: [...] }
+  const [eventPayoutsLoading, setEventPayoutsLoading] = useState(false);
+  const [eventPayoutsError, setEventPayoutsError] = useState(false);
+  const eventPayoutsFetchedRef = useRef(false); // fetch once on first visit to the tab
   // Below this width the two columns stack (status card drops below the Connect content).
   const isNarrow = useMediaQuery('(max-width:900px)');
   // The ConnectJS instance is created once we have an account session; mounting the
@@ -175,6 +209,34 @@ const PayoutsSection = () => {
       cancelled = true;
     };
   }, [status?.status, resolveBusinessId]);
+
+  // Load the per-event payout list the first time the "Payouts by Event" tab is opened
+  // (scoped to the selected business). Fetched on tab-select rather than on mount so the
+  // Banking tab stays lightweight; refetch is not needed for a smoke view.
+  useEffect(() => {
+    if (activeTab !== 'by-event' || eventPayoutsFetchedRef.current) return;
+    eventPayoutsFetchedRef.current = true;
+    let cancelled = false;
+    (async () => {
+      setEventPayoutsLoading(true);
+      setEventPayoutsError(false);
+      try {
+        const businessId = await resolveBusinessId();
+        const data = await listEventPayouts(businessId);
+        if (!cancelled) setEventPayouts(data || { events: [] });
+      } catch (err) {
+        if (!cancelled) {
+          setEventPayouts({ events: [] });
+          setEventPayoutsError(true);
+        }
+      } finally {
+        if (!cancelled) setEventPayoutsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, resolveBusinessId]);
 
   // Begin embedded onboarding: fetch an account session, init ConnectJS, mount inline.
   const handleStartOnboarding = async () => {
@@ -619,9 +681,140 @@ const PayoutsSection = () => {
     </Box>
   );
 
-  return (
+  // ── "Payouts by Event" tab content ──
+  // A per-event payout table scoped to the selected business. Never renders raw
+  // connected-account (acct_) or Stripe payout (po_) ids.
+  const events = eventPayouts?.events || [];
+  const byEventContent = (
+    <SettingsCard
+      title="Payouts by event"
+      subtitle="Each event's payout is released about 10 business days after it ends. Track what's held and what's been paid out here."
+      loading={false}
+    >
+      {eventPayoutsError ? (
+        <Alert
+          severity="warning"
+          icon={<WarningAmberIcon />}
+          sx={{
+            borderRadius: '10px',
+            backgroundColor: '#FFFBEB',
+            border: '1px solid #FDE68A',
+            '& .MuiAlert-message': { fontSize: '14px', color: '#92400E' },
+          }}
+          data-testid="event-payouts-error"
+        >
+          We couldn't load your event payouts. Please refresh and try again.
+        </Alert>
+      ) : eventPayoutsLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }} data-testid="event-payouts-loading">
+          <CircularProgress size={22} sx={{ color: '#4F46E5' }} />
+        </Box>
+      ) : events.length === 0 ? (
+        <Typography
+          sx={{ fontSize: '13px', color: '#9CA3AF', py: 2 }}
+          data-testid="event-payouts-empty"
+        >
+          No event payouts yet. Once you sell tickets, each event's payout will appear here
+          with its release date.
+        </Typography>
+      ) : (
+        <Box
+          sx={{ border: '1px solid #EEF0F3', borderRadius: '10px', overflow: 'hidden' }}
+          data-testid="event-payouts-table"
+        >
+          {/* Header row */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '10px 14px',
+              backgroundColor: '#FAFBFC',
+              borderBottom: '1px solid #EEF0F3',
+            }}
+          >
+            <Typography sx={{ flex: 2, fontSize: '12px', fontWeight: 600, color: '#6B7280' }}>Event</Typography>
+            <Typography sx={{ flex: 1, fontSize: '12px', fontWeight: 600, color: '#6B7280' }}>Release date</Typography>
+            <Typography sx={{ flex: 1, fontSize: '12px', fontWeight: 600, color: '#6B7280' }}>Status</Typography>
+            <Typography sx={{ flex: 1, fontSize: '12px', fontWeight: 600, color: '#6B7280', textAlign: 'right' }}>Net</Typography>
+          </Box>
+
+          {events.map((ev) => {
+            const chipMeta = EVENT_STATUS_META[ev.payoutStatus] || EVENT_STATUS_META.skipped;
+            const netCents = netCentsForEvent(ev);
+            return (
+              <Box
+                key={ev.eventId}
+                data-testid="event-payout-row"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 14px',
+                  borderBottom: '1px solid #F3F4F6',
+                  '&:last-child': { borderBottom: 'none' },
+                }}
+              >
+                {/* Event name + date */}
+                <Box sx={{ flex: 2, minWidth: 0 }}>
+                  <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>
+                    {ev.eventName || 'Event'}
+                  </Typography>
+                  <Typography sx={{ fontSize: '12px', color: '#9CA3AF' }}>
+                    {formatDate(ev.eventDate)}
+                  </Typography>
+                </Box>
+
+                {/* Release date */}
+                <Typography sx={{ flex: 1, fontSize: '13px', color: '#374151' }}>
+                  {formatDate(ev.releaseDate)}
+                </Typography>
+
+                {/* Status chip (with an on-hold indicator when a hold is active) */}
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                  <Chip
+                    label={chipMeta.label}
+                    size="small"
+                    sx={{
+                      backgroundColor: chipMeta.bg,
+                      color: chipMeta.color,
+                      fontWeight: 500,
+                      fontSize: '12px',
+                      height: '22px',
+                    }}
+                    data-testid={`event-payout-status-chip-${ev.payoutStatus}`}
+                  />
+                  {ev.holdActive && ev.payoutStatus !== 'on-hold' && (
+                    <Tooltip title={ev.holdReason ? `On hold: ${ev.holdReason}` : 'On hold'}>
+                      <Box
+                        component="span"
+                        data-testid="event-payout-hold-indicator"
+                        sx={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          backgroundColor: '#DC2626',
+                          flexShrink: 0,
+                        }}
+                      />
+                    </Tooltip>
+                  )}
+                </Box>
+
+                {/* Net */}
+                <Typography sx={{ flex: 1, fontSize: '14px', fontWeight: 600, color: '#111827', textAlign: 'right' }}>
+                  {formatCents(netCents, eventPayouts?.currency)}
+                </Typography>
+              </Box>
+            );
+          })}
+        </Box>
+      )}
+    </SettingsCard>
+  );
+
+  const bankingContent = (
     <Box
-      data-testid="section-payouts"
       sx={{
         display: 'flex',
         flexDirection: isNarrow ? 'column' : 'row',
@@ -712,6 +905,33 @@ const PayoutsSection = () => {
           </Button>
         </DialogActions>
       </Dialog>
+    </Box>
+  );
+
+  return (
+    <Box data-testid="section-payouts">
+      {/* Tab bar: existing content ("Banking") + new "Payouts by Event" view. Both
+          tabs stay mounted at the component level, so switching does NOT remount the
+          Connect instance or reset onboarding state. */}
+      <Tabs
+        value={activeTab}
+        onChange={(_e, next) => setActiveTab(next)}
+        sx={{
+          mb: 3,
+          minHeight: '40px',
+          '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, fontSize: '14px', minHeight: '40px' },
+          '& .Mui-selected': { color: '#4F46E5 !important' },
+          '& .MuiTabs-indicator': { backgroundColor: '#4F46E5' },
+        }}
+      >
+        <Tab value="banking" label="Banking" data-testid="payouts-tab-banking" />
+        <Tab value="by-event" label="Payouts by Event" data-testid="payouts-tab-by-event" />
+      </Tabs>
+
+      {/* Keep Banking mounted (hidden when inactive) so the embedded Connect instance is
+          never torn down by a tab switch; only render the by-event view on demand. */}
+      <Box sx={{ display: activeTab === 'banking' ? 'block' : 'none' }}>{bankingContent}</Box>
+      {activeTab === 'by-event' && byEventContent}
     </Box>
   );
 };

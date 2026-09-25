@@ -67,6 +67,8 @@ const DEFAULT_FORM = {
   moderationMode: "require_approval",
   submissionsPerAttendeeLimit: 3,
   votesPerAttendeeLimit: 20,
+  // Self-voting is OFF by default (preserves contest integrity); organizer opt-in.
+  allowSelfVote: false,
   allowedMediaConstraints: {
     allowedFileTypes: ["image/jpeg", "image/png", "image/webp"],
     maxFileSize: 10485760, // 10 MiB default
@@ -282,6 +284,7 @@ const PhotoContestConfig = () => {
               : "require_approval",
             submissionsPerAttendeeLimit: cfg.submissionsPerAttendeeLimit ?? 3,
             votesPerAttendeeLimit: cfg.votesPerAttendeeLimit ?? 20,
+            allowSelfVote: cfg.allowSelfVote === true,
             allowedMediaConstraints: {
               allowedFileTypes:
                 cfg.allowedMediaConstraints?.allowedFileTypes?.length
@@ -357,6 +360,7 @@ const PhotoContestConfig = () => {
         moderationMode: form.moderationMode,
         submissionsPerAttendeeLimit: Number(form.submissionsPerAttendeeLimit),
         votesPerAttendeeLimit: Number(form.votesPerAttendeeLimit),
+        allowSelfVote: !!form.allowSelfVote,
         allowedMediaConstraints: {
           allowedFileTypes: [...form.allowedMediaConstraints.allowedFileTypes],
           maxFileSize: Number(form.allowedMediaConstraints.maxFileSize),
@@ -447,6 +451,21 @@ const PhotoContestConfig = () => {
                 {errors["moderationMode"]}
               </Typography>
             )}
+
+            {/* Allow self-voting — organizer opt-in. Default OFF preserves contest
+                integrity (attendees can't vote for their own photo). */}
+            <FormControlLabel
+              sx={{ mt: 1.5 }}
+              control={
+                <Checkbox
+                  checked={!!form.allowSelfVote}
+                  onChange={(e) => updateField("allowSelfVote", e.target.checked)}
+                  sx={{ "&.Mui-checked": { color: ACCENT } }}
+                  data-testid="allow-self-vote"
+                />
+              }
+              label="Allow attendees to vote for their own submission"
+            />
           </FormControl>
         </Box>
       </Box>

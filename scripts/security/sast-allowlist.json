@@ -1,0 +1,139 @@
+{
+  "_comment": [
+    "Accepted npm-audit exceptions for the SAST gate (scripts/security/sast-scan.sh).",
+    "This file is the machine-readable mirror of client/SECURITY_EXCEPTIONS.md.",
+    "A high/critical advisory only stops blocking the deploy if its package name is",
+    "listed here. Any high/critical finding on a package NOT listed here still fails",
+    "the gate, so newly introduced production vulnerabilities are caught.",
+    "Keep this in sync with client/SECURITY_EXCEPTIONS.md; review quarterly."
+  ],
+  "lastReviewed": "2026-09-22",
+  "nextReview": "2026-12-22",
+  "acceptedPackages": [
+    {
+      "name": "react-scripts",
+      "reason": "CRA build tool. Transitive build/test toolchain vulns are not in the shipped bundle; only fix is a breaking react-scripts@0.0.0 downgrade. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "@svgr/webpack",
+      "reason": "Transitive via react-scripts (svgo). Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "@svgr/plugin-svgo",
+      "reason": "Transitive via react-scripts (svgo). Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "svgo",
+      "reason": "Transitive via react-scripts. Build-time SVG optimization, not shipped. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "workbox-webpack-plugin",
+      "reason": "Transitive via react-scripts. Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "workbox-build",
+      "reason": "Transitive via react-scripts (workbox). Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "rollup-plugin-terser",
+      "reason": "Transitive via workbox-build. Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "serialize-javascript",
+      "reason": "Transitive via react-scripts (css-minimizer / rollup-plugin-terser). Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "css-minimizer-webpack-plugin",
+      "reason": "Transitive via react-scripts. Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "browserslist",
+      "reason": "Transitive via react-scripts build toolchain. Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "js-yaml",
+      "reason": "Transitive via eslint/react-scripts dev tooling. Build/lint-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "shell-quote",
+      "reason": "Transitive via react-scripts dev tooling. Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "websocket-driver",
+      "reason": "Transitive via dev server tooling. Dev-time only, not shipped. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "ws",
+      "reason": "Transitive via dev server tooling. Dev-time only, not shipped. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "nanoid",
+      "reason": "Transitive via react-scripts build toolchain. Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "postcss",
+      "reason": "Transitive via react-scripts (resolve-url-loader). Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "bfj",
+      "reason": "Transitive via react-scripts. Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "jsonpath",
+      "reason": "Transitive via bfj (react-scripts). Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "underscore",
+      "reason": "Transitive via jsonpath/bfj (react-scripts). Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "brace-expansion",
+      "reason": "Transitive via dev/build tooling. Build/test-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "fast-uri",
+      "reason": "Transitive via dev/build tooling. Build/test-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "form-data",
+      "reason": "Transitive via jsdom (jest test env). Test-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "http-proxy-middleware",
+      "reason": "Transitive via webpack-dev-server; direct dev dependency. Dev-time only, not shipped. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "resolve-url-loader",
+      "reason": "Transitive via react-scripts. Build-time only. SECURITY_EXCEPTIONS.md #2.",
+      "scope": "build"
+    },
+    {
+      "name": "xlsx",
+      "reason": "Production dep with no public npm fix (SheetJS publishes fixes to their own CDN only). App exports xlsx rather than parsing untrusted uploads; do not feed untrusted files. SECURITY_EXCEPTIONS.md #3.",
+      "scope": "runtime"
+    }
+  ]
+}

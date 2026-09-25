@@ -27,7 +27,7 @@ const PLAN_FOR = {
 
 // Short highlight bullets per plan (design copy).
 const PLAN_HIGHLIGHTS = {
-  Starter: ["Events, ticketing & check-in", "Basic reporting", "6–12 events per year"],
+  Starter: ["Events, ticketing & check-in", "Basic reporting", "Unlimited events"],
   Growth: ["Promotion campaigns", "Advanced analytics", "Polls, coupons & check-in challenges"],
   Pro: ["Sponsor promotions & loyalty", "Raffles, trivia & leaderboards", "Full engagement suite"],
   Enterprise: ["Multiple locations & teams", "Governance & consolidated billing", "Contracted integrations"],
@@ -113,8 +113,10 @@ function PlanCards({ plans, status }) {
             key={plan.id}
             data-plan={plan.id}
           >
-            {plan.popular && <div className="price-badge">Most popular</div>}
-            <h3>{plan.name}</h3>
+            <div className="price-card__head">
+              <h3>{plan.name}</h3>
+              {plan.popular && <div className="price-badge">Most popular</div>}
+            </div>
             <div className="amt">
               {plan.talkToSales || !plan.price ? (
                 <span>Custom</span>

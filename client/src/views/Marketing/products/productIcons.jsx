@@ -59,6 +59,17 @@ export const PRODUCT_ICONS = {
       </>
     ),
   },
+  "business-advertising": {
+    gradient: "linear-gradient(135deg, var(--amber), var(--cyan))",
+    render: (
+      <>
+        {/* Storefront awning + shop */}
+        <path d="M4 9l1-4h14l1 4" />
+        <path d="M4 9h16v11H4z" />
+        <path d="M10 20v-6h4v6" />
+      </>
+    ),
+  },
 };
 
 export default PRODUCT_ICONS;

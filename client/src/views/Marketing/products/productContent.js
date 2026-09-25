@@ -49,6 +49,7 @@ export const PRODUCT_SLUGS = [
   "market-intelligence",
   "ai-discovery",
   "organizations",
+  "business-advertising",
 ];
 
 /**
@@ -632,6 +633,89 @@ export const productContent = {
       title: "Organizations — Multi-location console for teams | Tabs",
       description:
         "Manage multiple locations, user roles and governance, and consolidated reporting and billing from one Organizations console. Built for scale.",
+    },
+  },
+
+  "business-advertising": {
+    slug: "business-advertising",
+    productName: "Business Advertising",
+    headline: "Put your business in front of the people already looking.",
+    subhead:
+      "Business Advertising gives any business a branded home on the Tabs platform — not just event organizers. Show off your profile, menus, and featured items, and hand out a QR code that drops customers straight onto your page. It runs on the same audience and discovery that powers the rest of Tabs, so the people browsing events find your business too.",
+    description:
+      "Give any business a branded presence on the Tabs platform. Business Advertising showcases your profile, menus, and featured food items, and generates a QR code customers scan for instant access to your business info.",
+    problemsIntro:
+      "Most local businesses are invisible to the people who'd love them — scattered across a dozen apps, none of which send anyone through the door.",
+    problems: [
+      {
+        title: "Your business is hard to find",
+        body: "A social page and a maps pin don't tell the story. There's no single, branded place that shows who you are, what you offer, and why to visit.",
+      },
+      {
+        title: "Menus and specials live everywhere but one place",
+        body: "PDFs on one site, photos on another, today's special in a story that vanishes — customers can't quickly see what you actually serve.",
+      },
+      {
+        title: "Nothing connects a passer-by to your page",
+        body: "A customer at your counter or table has no fast way to pull up your profile, follow you, or see what's coming — the moment passes.",
+      },
+    ],
+    featureRows: [
+      {
+        heading: "Get a branded business profile on the platform",
+        body: "Every business gets a public presence that showcases who you are, where you are, and what you offer — discoverable by the same audience already browsing events on Tabs, not a generic directory listing.",
+        points: [
+          "Branded public profile for any business",
+          "Discoverable in the Tabs app audience",
+          "Follow, share, call, and directions built in",
+        ],
+      },
+      {
+        heading: "Advertise menus and featured food items",
+        body: "Publish your menus and highlight featured food items with photos and prices, so customers see what you serve before they arrive — and keep it current without rebuilding a webpage.",
+        points: [
+          "Upload menus customers can browse",
+          "Feature individual food items with photos and prices",
+          "Update anytime — no website rebuild",
+        ],
+      },
+      {
+        heading: "Hand out a QR code for instant access",
+        body: "Every business gets a QR code that opens its profile the moment it's scanned. Put it on a table tent, window, receipt, or flyer so customers reach your info, menu, and events in one tap.",
+        points: [
+          "Scannable QR that opens your business page",
+          "Great for tables, windows, receipts, and flyers",
+          "Customers reach your info, menu, and events instantly",
+        ],
+      },
+      {
+        heading: "Turn discovery into repeat visits",
+        body: "Because it runs on the same platform as events and engagements, a customer who finds your business can follow it, see your upcoming events, and come back — instead of forgetting you after one visit.",
+        points: [
+          "Followers who see your updates and events",
+          "Ties into events and engagements",
+          "One presence across everything you run",
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "Do I need to run events to use Business Advertising?",
+        a: "No. Business Advertising is for any business that wants a branded presence on the platform — even if you never publish an event. If you do run events, they show up on the same profile automatically.",
+      },
+      {
+        q: "What can I show on my business profile?",
+        a: "Your profile, contact details and directions, menus, featured food items with photos and prices, a photo gallery, and any events you run — all in one branded page customers can follow and share.",
+      },
+      {
+        q: "How does the QR code work?",
+        a: "Each business gets a QR code that opens its profile when scanned. Print it on table tents, windows, receipts, or flyers so customers reach your info, menu, and events in one tap.",
+      },
+    ],
+    seo: {
+      title: "Business Advertising — Market your business on Tabs | Tabs",
+      description:
+        "Give any business a branded presence on Tabs: profile, menus, featured food items, and a QR code customers scan for instant access to your business info.",
     },
   },
 };

@@ -65,9 +65,11 @@ describe("PricingSystem (system-wide pricing controls)", () => {
     render(<PricingSystem />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
-    // Status panel with the real plan prices.
+    // Status panel with the real plan prices (derived from the current version so the
+    // assertion tracks price changes instead of hardcoding a stale amount).
     expect(await screen.findByTestId("pricing-status-panel")).toBeInTheDocument();
-    expect(screen.getByTestId("plan-price-pro")).toHaveTextContent("1,221");
+    const proDollars = (CURRENT_VERSION.planMonthlyCents.Pro / 100).toLocaleString();
+    expect(screen.getByTestId("plan-price-pro")).toHaveTextContent(proDollars);
 
     // The system controls live here now.
     expect(screen.getByTestId("author-btn")).toBeInTheDocument();

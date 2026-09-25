@@ -104,7 +104,7 @@ export default function ProductPage() {
           <p className="mkt-page__lede">{description}</p>
           <div className="mkt-page__ctas">
             <Link className="btn btn--primary" to="/register">Join Tabs</Link>
-            <Link className="btn btn--ghost" to="/#pricing">See pricing</Link>
+            <Link className="btn btn--ghost" to="/pricing">See pricing</Link>
           </div>
         </header>
 

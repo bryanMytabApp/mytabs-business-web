@@ -211,6 +211,72 @@ describe("SocialWallLiveDashboard", () => {
     });
   });
 
+  // Unapprove: an approved post exposes an Unapprove control that sends the
+  // 'unapprove' action (returns the post to the moderation queue as pending) and
+  // optimistically drops it from the approved feed.
+  it("renders an unapprove control for approved posts and calls the moderation action", async () => {
+    // First poll: post-a is approved. After unapprove, the follow-up poll returns
+    // post-a back in the moderation queue as pending and gone from the approved
+    // feed — mirroring the server recompute (the background refresh).
+    const approvedResponse = mockStatsResponse();
+    const afterUnapproveResponse = mockStatsResponse({
+      // Different ETag so the poll returns 200 (not 304) and re-renders.
+      // (headers overridden below.)
+    });
+    // post-a leaves the feed and joins the moderation queue as pending.
+    afterUnapproveResponse.headers = { etag: 'W/"social-wall-v2"' };
+    afterUnapproveResponse.data.data.feed = afterUnapproveResponse.data.data.feed.filter(
+      (p) => p.postId !== "post-a"
+    );
+    afterUnapproveResponse.data.data.moderationQueue = [
+      ...afterUnapproveResponse.data.data.moderationQueue,
+      {
+        postId: "post-a",
+        text: "Loving the main stage vibes",
+        mediaReference: "https://cdn.example.com/social/post-a.jpg",
+        createdAt: "2024-06-01T18:30:00.000Z",
+      },
+    ];
+    afterUnapproveResponse.data.data.postsByStatus = {
+      pending: 6,
+      approved: 11,
+      hidden: 2,
+      removed: 1,
+    };
+
+    getLiveStats
+      .mockResolvedValueOnce(approvedResponse) // initial load
+      .mockResolvedValue(afterUnapproveResponse); // the refresh after unapprove (and later polls)
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("approved-item-post-a")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("unapprove-post-a")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("unapprove-post-a"));
+    await waitFor(() => {
+      expect(transitionState).toHaveBeenCalledWith(EVENT_ID, EXPERIENCE_ID, {
+        action: "unapprove",
+        postId: "post-a",
+      });
+    });
+
+    // Removed from the approved feed (moved back to pending)...
+    await waitFor(() => {
+      expect(screen.queryByTestId("approved-item-post-a")).not.toBeInTheDocument();
+    });
+
+    // ...and the background refresh brings it into the moderation queue, where it
+    // renders (the optimistic 'pending' override is reconciled/cleared once the
+    // server payload lists it there).
+    await waitFor(() => {
+      expect(screen.getByTestId("moderation-item-post-a")).toBeInTheDocument();
+    });
+  });
+
   // 13.5 — provided metrics render total posts, per-status counts, and total
   // reactions.
   it("renders total posts, per-status counts, and total reactions", async () => {

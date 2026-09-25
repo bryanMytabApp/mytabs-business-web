@@ -12,7 +12,11 @@ import {
   TextField,
 } from '@mui/material';
 import { isSuperAdmin } from '../../utils/authUtils';
-import { PLAN_LEVELS, PRODUCT_NAMES } from '../../config/pricingVersions';
+import {
+  PLAN_LEVELS,
+  PRODUCT_NAMES,
+  versionForNewSignup,
+} from '../../config/pricingVersions';
 import config from '../../config.json';
 
 // ---------------------------------------------------------------------------
@@ -210,7 +214,23 @@ const PricingSystem = () => {
     return null;
   }
 
-  const activeVersion = status?.activeVersion || status?.version || null;
+  // The pricing-version registry (config/pricingVersions.js) is the front-end's
+  // date-ordered source of truth and is what the public Subscribe page resolves
+  // from. Resolve the version in effect for TODAY the same way here.
+  const configCurrent = versionForNewSignup();
+
+  // What the backend reported as active (may be stale if the backend registry
+  // hasn't been updated to the latest version).
+  const backendVersion = status?.activeVersion || status?.version || null;
+
+  // The version currently in effect BY DATE is the source of truth for display.
+  // If the backend agrees on the effectiveDate, keep its (identical) payload;
+  // otherwise fall back to the config's current version so the admin panel always
+  // shows the pricing that is actually current today (never a superseded card).
+  const activeVersion =
+    backendVersion && backendVersion.effectiveDate === configCurrent?.effectiveDate
+      ? backendVersion
+      : configCurrent || backendVersion;
   const testCutover = status?.cutover?.test ?? status?.testCutoverAt ?? null;
   const liveCutover = status?.cutover?.live ?? status?.liveCutoverAt ?? null;
 

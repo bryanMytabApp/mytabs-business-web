@@ -2,34 +2,30 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useNavigate} from "react-router-dom";
 import { getToken } from "../services/authService";
-import { getCustomerSubscription } from "../services/paymentService";
-import { getMyOrganizations } from "../services/organizationService";
+import { resolveAccountEntitlement } from "../utils/resolveAccountEntitlement";
 import { isValidReturnUrl, buildAuthenticatedReturnUrl } from "../utils/authUtils";
 import { registerSession } from "../services/sessionService";
 import http from "../utils/axios/http";
 
-// Helper: check subscription or org membership before redirecting
+// Helper: check subscription or org membership before redirecting.
+//
+// This MUST recognize the same allow-signals as SubscriptionGuard (the /admin route
+// guard). Otherwise an account the guard would admit is bounced to /subscription here,
+// on login, before the guard ever runs. An account counts as subscribed when ANY of:
+//   1. A live Stripe subscription (getCustomerSubscription → hasSubscription + priceId).
+//   2. Organization membership (org members ride the org's plan).
+//   3. An active DynamoDB Subscription row — INCLUDING exempt (billingMode='exempt'):
+//      exempt accounts have a real, never-charged subscription and full access but NO
+//      Stripe subscription, so the Stripe-only check (#1) misses them.
 const checkSubscriptionOrOrg = async (userIdFromToken, navigate) => {
-  try {
-    const subscriptionResponse = await getCustomerSubscription({ userId: userIdFromToken });
-    if (subscriptionResponse.data.hasSubscription && subscriptionResponse.data.priceId) {
-      navigate("/admin/home");
-      return;
-    }
-  } catch (e) { /* no subscription */ }
-
-  // No individual subscription — check if user is part of an org
-  try {
-    const myOrgsRes = await getMyOrganizations();
-    const orgs = myOrgsRes?.data?.organizations || myOrgsRes?.data || [];
-    if (orgs.length > 0) {
-      navigate("/admin/home");
-      return;
-    }
-  } catch (e) { /* no org */ }
-
-  // No subscription and no org — go to subscription page
-  navigate("/subscription");
+  // Entitlement (paid | org | active/exempt row) is resolved by the SHARED resolver
+  // so this post-login redirect and SubscriptionGuard admit exactly the same accounts.
+  // The resolver probes multiple candidate account ids (login id, session business
+  // ids, and the business resolved via getBusiness) so an exempt account whose row is
+  // keyed under the business owner id — not the login token id — still gets in on a
+  // cold login instead of being bounced to /subscription.
+  const entitled = await resolveAccountEntitlement(userIdFromToken);
+  navigate(entitled ? "/admin/home" : "/subscription");
 };
 
 const useLogin = () => {

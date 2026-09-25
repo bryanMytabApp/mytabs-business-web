@@ -46,7 +46,7 @@ export const SEGMENTS = [
     useCaseSlug: "venues-promoters",
   },
   {
-    name: "Hospitality & nightlife",
+    name: "Restaurants & Hospitality",
     description:
       "Bars, clubs, and hospitality venues program ticketed nights, manage guest lists, and build a loyalty loop that turns big nights into regulars.",
     useCaseSlug: "hospitality-nightlife",

@@ -137,7 +137,7 @@ const AiAgentSubscribe = lazy(() => import("../views/AiAgents/AiAgentSubscribe")
 const AiAgentDashboard = lazy(() => import("../views/AiAgents/AiAgentDashboard"));
 const AiAgentDetail = lazy(() => import("../views/AiAgents/AiAgentDetail"));
 const AiAgentRouteGuard = lazy(() => import("../components/AiAgentRouteGuard"));
-const UrbanHTXRouteGuard = lazy(() => import("../components/UrbanHTXRouteGuard"));
+const PlanLevelRouteGuard = lazy(() => import("../components/PlanLevelRouteGuard"));
 const SubscriptionGuard = lazy(() => import("../components/SubscriptionGuard"));
 
 // Experience views (admin dashboard)
@@ -395,7 +395,10 @@ const router = createBrowserRouter([
           },
           {
             path: "experiences",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Tab Engagements across events"><AllExperiencesDashboard /></UrbanHTXRouteGuard></LazyRoute>,
+            // Browse route: open to all paid plans (minLevel 1). Per-engagement
+            // gating lives in the catalog (locked card → upgrade modal) + backend
+            // create guard, so Starter can browse and discover engagements.
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={1} featureName="Tab Engagements across events"><AllExperiencesDashboard /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
@@ -415,62 +418,66 @@ const router = createBrowserRouter([
           },
           {
             path: "my-events/:eventId/experiences",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><ExperiencesDashboard /></UrbanHTXRouteGuard></LazyRoute>,
+            // Browse route: open to all paid plans; catalog gates each engagement.
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={1} featureName="Event Engagements"><ExperiencesDashboard /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
             path: "my-events/:eventId/experiences/catalog",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><ExperienceCatalog /></UrbanHTXRouteGuard></LazyRoute>,
+            // Browse route: open to all paid plans. The catalog itself locks each
+            // engagement per the account's tier (info/upgrade modal); the backend
+            // create endpoint enforces the tier as the anti-bypass safety net.
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={1} featureName="Event Engagements"><ExperienceCatalog /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
             path: "my-events/:eventId/experiences/:experienceId/config",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><ExperienceConfigRouter /></UrbanHTXRouteGuard></LazyRoute>,
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={2} featureName="Event Engagements"><ExperienceConfigRouter /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
             path: "my-events/:eventId/experiences/:experienceId/live",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><ExperienceLiveRouter /></UrbanHTXRouteGuard></LazyRoute>,
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={2} featureName="Event Engagements"><ExperienceLiveRouter /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
             path: "my-events/:eventId/experiences/:experienceId/drawings",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><DrawingHistory /></UrbanHTXRouteGuard></LazyRoute>,
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={2} featureName="Event Engagements"><DrawingHistory /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
             path: "my-events/:eventId/experiences/:experienceId/draw-report",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><DrawComplianceReport /></UrbanHTXRouteGuard></LazyRoute>,
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={2} featureName="Event Engagements"><DrawComplianceReport /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
             path: "my-events/:eventId/experiences/:experienceId/entries",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><EntryManagement /></UrbanHTXRouteGuard></LazyRoute>,
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={2} featureName="Event Engagements"><EntryManagement /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
             path: "my-events/:eventId/experiences/:experienceId/fulfillment",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><FulfillmentManagement /></UrbanHTXRouteGuard></LazyRoute>,
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={2} featureName="Event Engagements"><FulfillmentManagement /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
             path: "my-events/:eventId/experiences/:experienceId/analytics",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><ExperienceAnalytics /></UrbanHTXRouteGuard></LazyRoute>,
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={2} featureName="Event Engagements"><ExperienceAnalytics /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
             path: "my-events/:eventId/experiences/:experienceId/sponsors",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><SponsorManagement /></UrbanHTXRouteGuard></LazyRoute>,
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={2} featureName="Event Engagements"><SponsorManagement /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
             path: "my-events/:eventId/experiences/:experienceId/permissions",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><PermissionsPanel /></UrbanHTXRouteGuard></LazyRoute>,
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={2} featureName="Event Engagements"><PermissionsPanel /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {
             path: "my-events/:eventId/experiences/:experienceId/compliance",
-            element: <LazyRoute><UrbanHTXRouteGuard featureName="Event Engagements"><CompliancePanel /></UrbanHTXRouteGuard></LazyRoute>,
+            element: <LazyRoute><PlanLevelRouteGuard minLevel={2} featureName="Event Engagements"><CompliancePanel /></PlanLevelRouteGuard></LazyRoute>,
             loader: () => routerHandler(true),
           },
           {

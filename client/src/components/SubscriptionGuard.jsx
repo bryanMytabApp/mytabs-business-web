@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Box, CircularProgress } from "@mui/material";
 import { Navigate } from "react-router-dom";
 import { getCurrentUserId, isSuperAdmin } from "../utils/authUtils";
-import { getCustomerSubscription, getUserPremiumSubscription } from "../services/paymentService";
-import { getMyOrganizations } from "../services/organizationService";
+import { resolveAccountEntitlement } from "../utils/resolveAccountEntitlement";
 
 /**
  * SubscriptionGuard — gates the authenticated app shell.
@@ -35,36 +34,17 @@ const SubscriptionGuard = ({ children }) => {
         if (isSuperAdmin()) return settle("allowed");
       } catch { /* fall through */ }
 
-      const userId = getCurrentUserId();
-
-      // 2. Live Stripe subscription (paid).
-      if (userId) {
-        try {
-          const res = await getCustomerSubscription({ userId });
-          if (cancelled) return;
-          if (res?.data?.hasSubscription && res.data.priceId) return settle("allowed");
-        } catch { /* no Stripe subscription */ }
-      }
-
-      // 3. Organization membership.
+      // 2. Entitlement (paid | org | active/exempt row) via the SHARED resolver — the
+      // SAME logic useLogin uses, so the login redirect and this route gate admit
+      // exactly the same accounts. The resolver probes multiple candidate account ids
+      // (login id, session business ids, and the business resolved via getBusiness) so
+      // an exempt account whose row is keyed under the business owner id — not the
+      // login token id — reaches the app instead of being bounced to /subscription.
       try {
-        const orgsRes = await getMyOrganizations();
+        const entitled = await resolveAccountEntitlement(getCurrentUserId());
         if (cancelled) return;
-        const orgs = orgsRes?.data?.organizations || orgsRes?.data || [];
-        if (Array.isArray(orgs) && orgs.length > 0) return settle("allowed");
-      } catch { /* not in an org */ }
-
-      // 4. Active DynamoDB Subscription row — including EXEMPT (no Stripe sub).
-      if (userId) {
-        try {
-          const res = await getUserPremiumSubscription(userId);
-          if (cancelled) return;
-          const row = res?.data || null;
-          const active = row && row.isActive === true;
-          const exempt = row && row.billingMode === "exempt";
-          if (active || exempt) return settle("allowed");
-        } catch { /* no DynamoDB subscription row */ }
-      }
+        if (entitled) return settle("allowed");
+      } catch { /* fall through to blocked */ }
 
       // No subscription (paid, org, or exempt) — send to the subscription page.
       settle("blocked");

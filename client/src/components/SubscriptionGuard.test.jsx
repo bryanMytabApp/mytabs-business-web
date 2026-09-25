@@ -2,12 +2,8 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
-jest.mock("../services/paymentService", () => ({
-  getCustomerSubscription: jest.fn(),
-  getUserPremiumSubscription: jest.fn(),
-}));
-jest.mock("../services/organizationService", () => ({
-  getMyOrganizations: jest.fn(),
+jest.mock("../utils/resolveAccountEntitlement", () => ({
+  resolveAccountEntitlement: jest.fn(),
 }));
 jest.mock("../utils/authUtils", () => ({
   getCurrentUserId: jest.fn(() => "user-1"),
@@ -15,8 +11,7 @@ jest.mock("../utils/authUtils", () => ({
 }));
 
 import SubscriptionGuard from "./SubscriptionGuard";
-import { getCustomerSubscription, getUserPremiumSubscription } from "../services/paymentService";
-import { getMyOrganizations } from "../services/organizationService";
+import { resolveAccountEntitlement } from "../utils/resolveAccountEntitlement";
 import { getCurrentUserId, isSuperAdmin } from "../utils/authUtils";
 
 const renderGuard = () =>
@@ -36,72 +31,44 @@ const renderGuard = () =>
     </MemoryRouter>
   );
 
-// Default: no access anywhere.
-const denyAll = () => {
-  isSuperAdmin.mockReturnValue(false);
-  getCurrentUserId.mockReturnValue("user-1");
-  getCustomerSubscription.mockResolvedValue({ data: { hasSubscription: false, priceId: null } });
-  getMyOrganizations.mockResolvedValue({ data: [] });
-  getUserPremiumSubscription.mockResolvedValue({ data: null });
-};
-
 describe("SubscriptionGuard", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    denyAll();
+    sessionStorage.clear();
+    isSuperAdmin.mockReturnValue(false);
+    getCurrentUserId.mockReturnValue("user-1");
+    resolveAccountEntitlement.mockResolvedValue(false);
   });
 
-  it("shows a spinner while the checks are in flight", () => {
-    getCustomerSubscription.mockReturnValue(new Promise(() => {})); // never resolves
+  it("shows a spinner while the entitlement check is in flight", () => {
+    resolveAccountEntitlement.mockReturnValue(new Promise(() => {})); // never resolves
     renderGuard();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
     expect(screen.queryByText("Protected App")).not.toBeInTheDocument();
   });
 
-  it("REDIRECTS to /subscription when there is no subscription, org, or exempt row", async () => {
+  it("REDIRECTS to /subscription when the account is not entitled", async () => {
+    resolveAccountEntitlement.mockResolvedValue(false);
     renderGuard();
     await waitFor(() => expect(screen.getByText("Subscription Page")).toBeInTheDocument());
     expect(screen.queryByText("Protected App")).not.toBeInTheDocument();
   });
 
-  it("allows a super admin straight through", async () => {
+  it("allows a super admin straight through (no entitlement lookup needed)", async () => {
     isSuperAdmin.mockReturnValue(true);
     renderGuard();
     await waitFor(() => expect(screen.getByText("Protected App")).toBeInTheDocument());
+    expect(resolveAccountEntitlement).not.toHaveBeenCalled();
   });
 
-  it("allows an account WITH a live Stripe subscription", async () => {
-    getCustomerSubscription.mockResolvedValue({ data: { hasSubscription: true, priceId: "price_1" } });
+  it("allows an entitled account (paid | org | active/exempt, resolved by the shared resolver)", async () => {
+    resolveAccountEntitlement.mockResolvedValue(true);
     renderGuard();
     await waitFor(() => expect(screen.getByText("Protected App")).toBeInTheDocument());
   });
 
-  it("allows an ORG member (rides the org plan)", async () => {
-    getMyOrganizations.mockResolvedValue({ data: [{ id: "org-1", name: "Urban HTX" }] });
-    renderGuard();
-    await waitFor(() => expect(screen.getByText("Protected App")).toBeInTheDocument());
-  });
-
-  it("allows an EXEMPT account (billingMode='exempt' DynamoDB row, no Stripe sub)", async () => {
-    getUserPremiumSubscription.mockResolvedValue({
-      data: { isActive: true, billingMode: "exempt", planId: "2026-09-01Enterprise" },
-    });
-    renderGuard();
-    await waitFor(() => expect(screen.getByText("Protected App")).toBeInTheDocument());
-  });
-
-  it("allows an account with an active (paid) DynamoDB subscription row", async () => {
-    getUserPremiumSubscription.mockResolvedValue({
-      data: { isActive: true, billingMode: "paid", planId: "2026-09-01Growth" },
-    });
-    renderGuard();
-    await waitFor(() => expect(screen.getByText("Protected App")).toBeInTheDocument());
-  });
-
-  it("REDIRECTS when every check errors (fails closed)", async () => {
-    getCustomerSubscription.mockRejectedValue(new Error("net"));
-    getMyOrganizations.mockRejectedValue(new Error("net"));
-    getUserPremiumSubscription.mockRejectedValue(new Error("net"));
+  it("REDIRECTS (fails closed) when the entitlement resolver throws", async () => {
+    resolveAccountEntitlement.mockRejectedValue(new Error("net"));
     renderGuard();
     await waitFor(() => expect(screen.getByText("Subscription Page")).toBeInTheDocument());
     expect(screen.queryByText("Protected App")).not.toBeInTheDocument();

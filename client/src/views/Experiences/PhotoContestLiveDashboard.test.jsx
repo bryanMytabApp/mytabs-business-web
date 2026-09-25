@@ -48,7 +48,10 @@ const mockStatsResponse = (overrides = {}) => ({
       moderationQueue: [
         {
           submissionId: "sub-1",
-          mediaReference: "https://cdn.example.com/photos/sub-1.jpg",
+          // Signed display URL the backend hydrates from the stored S3 key; the raw
+          // mediaReference is a bare storage key that can't be rendered directly.
+          mediaReference: "photo-contest-submissions/exp/sub-1/photo.jpg",
+          mediaUrl: "https://signed.example.com/photos/sub-1.jpg?sig=abc",
           caption: "Sunset over the main stage",
           submittedAt: "2024-06-01T18:30:00.000Z",
         },
@@ -57,6 +60,16 @@ const mockStatsResponse = (overrides = {}) => ({
           mediaReference: "storage-key-only",
           caption: "Crowd shot",
           submittedAt: "2024-06-01T19:00:00.000Z",
+        },
+      ],
+      gallery: [
+        {
+          submissionId: "sub-app-1",
+          mediaReference: "photo-contest-submissions/exp/sub-app-1/photo.jpg",
+          mediaUrl: "https://signed.example.com/photos/sub-app-1.jpg?sig=xyz",
+          caption: "Approved fireworks",
+          voteCount: 7,
+          rank: 1,
         },
       ],
       ...overrides,
@@ -262,6 +275,7 @@ describe("PhotoContestLiveDashboard", () => {
         uniqueSubmitters: 0,
         uniqueVoters: 0,
         moderationQueue: [],
+        gallery: [],
       })
     );
     renderComponent();
@@ -292,9 +306,208 @@ describe("PhotoContestLiveDashboard", () => {
     expect(getLiveStats).toHaveBeenCalledTimes(1);
   });
 
+  // The moderation-queue photo renders from the backend-signed `mediaUrl`, not the
+  // bare stored `mediaReference` (which is an unrenderable S3 key).
+  it("renders the moderation photo from the signed mediaUrl", async () => {
+    getLiveStats.mockResolvedValue(mockStatsResponse());
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("moderation-photo-sub-1")).toBeInTheDocument();
+    });
+    const img = screen.getByTestId("moderation-photo-sub-1");
+    expect(img.tagName).toBe("IMG");
+    expect(img).toHaveAttribute(
+      "src",
+      "https://signed.example.com/photos/sub-1.jpg?sig=abc"
+    );
+  });
+
+  // The Approved Submissions section renders each approved photo with its signed
+  // preview and exposes Unapprove + Reject controls that call the moderation action.
+  it("renders approved submissions with unapprove/reject controls and calls the moderation action", async () => {
+    getLiveStats.mockResolvedValue(mockStatsResponse());
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("approved-item-sub-app-1")).toBeInTheDocument();
+    });
+
+    const item = screen.getByTestId("approved-item-sub-app-1");
+    expect(within(item).getByText("Approved fireworks")).toBeInTheDocument();
+    const img = screen.getByTestId("approved-photo-sub-app-1");
+    expect(img).toHaveAttribute(
+      "src",
+      "https://signed.example.com/photos/sub-app-1.jpg?sig=xyz"
+    );
+    expect(screen.getByTestId("approved-votes-sub-app-1")).toHaveTextContent("7");
+
+    // Unapprove sends it back to the queue as pending.
+    fireEvent.click(screen.getByTestId("unapprove-sub-app-1"));
+    await waitFor(() => {
+      expect(transitionState).toHaveBeenCalledWith(EVENT_ID, EXPERIENCE_ID, {
+        action: "unapprove",
+        submissionId: "sub-app-1",
+      });
+    });
+    // Optimistically removed from the approved section immediately.
+    expect(screen.queryByTestId("approved-item-sub-app-1")).not.toBeInTheDocument();
+  });
+
+  // Rejecting an approved submission calls the moderation action with `reject`.
+  it("rejects an approved submission from the approved section", async () => {
+    getLiveStats.mockResolvedValue(mockStatsResponse());
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("approved-reject-sub-app-1")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("approved-reject-sub-app-1"));
+    await waitFor(() => {
+      expect(transitionState).toHaveBeenCalledWith(EVENT_ID, EXPERIENCE_ID, {
+        action: "reject",
+        submissionId: "sub-app-1",
+      });
+    });
+  });
+
+  // Zero approved submissions renders the approved-section empty state.
+  it("shows an empty state in the approved section when there are none", async () => {
+    getLiveStats.mockResolvedValue(mockStatsResponse({ gallery: [] }));
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("approved-empty")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("approved-empty")).toHaveTextContent(
+      "No approved submissions yet."
+    );
+  });
+
   it("renders a default export for lazy loading", async () => {
     const module = await import("./PhotoContestLiveDashboard");
     expect(module.default).toBeDefined();
     expect(typeof module.default).toBe("function");
+  });
+
+  // ─── Big Screen mode ──────────────────────────────────────────────────────
+  describe("Big Screen mode", () => {
+    it("toggles into a full-bleed big-screen showing the top approved photo with its vote count", async () => {
+      getLiveStats.mockResolvedValue(mockStatsResponse());
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("big-screen-toggle")).toBeInTheDocument();
+      });
+      // Not in big-screen mode yet.
+      expect(screen.queryByTestId("big-screen")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId("big-screen-toggle"));
+
+      // Overlay renders the approved photo (from the signed mediaUrl) + its vote count.
+      expect(screen.getByTestId("big-screen")).toBeInTheDocument();
+      const photo = screen.getByTestId("big-screen-photo");
+      expect(photo).toHaveAttribute(
+        "src",
+        "https://signed.example.com/photos/sub-app-1.jpg?sig=xyz"
+      );
+      expect(screen.getByTestId("big-screen-votes")).toHaveTextContent("7");
+
+      // Exit returns to the dashboard.
+      fireEvent.click(screen.getByTestId("big-screen-close"));
+      expect(screen.queryByTestId("big-screen")).not.toBeInTheDocument();
+      expect(screen.getByTestId("total-submissions")).toBeInTheDocument();
+    });
+
+    it("shows a big-screen empty state when there are no approved photos", async () => {
+      getLiveStats.mockResolvedValue(mockStatsResponse({ gallery: [] }));
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("big-screen-toggle")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByTestId("big-screen-toggle"));
+
+      expect(screen.getByTestId("big-screen-empty")).toBeInTheDocument();
+      expect(screen.queryByTestId("big-screen-photo")).not.toBeInTheDocument();
+    });
+  });
+
+  // ─── Click-to-enlarge lightbox ────────────────────────────────────────────
+  describe("Lightbox", () => {
+    it("opens a full-size lightbox when an approved photo is clicked and closes it", async () => {
+      getLiveStats.mockResolvedValue(mockStatsResponse());
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("approved-photo-sub-app-1")).toBeInTheDocument();
+      });
+      // Lightbox closed initially.
+      expect(screen.queryByTestId("lightbox-photo")).not.toBeInTheDocument();
+
+      // Click the approved thumbnail's container to enlarge.
+      fireEvent.click(screen.getByTestId("approved-photo-sub-app-1"));
+
+      const enlarged = screen.getByTestId("lightbox-photo");
+      expect(enlarged).toHaveAttribute(
+        "src",
+        "https://signed.example.com/photos/sub-app-1.jpg?sig=xyz"
+      );
+
+      // Close via the close button.
+      fireEvent.click(screen.getByTestId("lightbox-close"));
+      await waitFor(() => {
+        expect(screen.queryByTestId("lightbox-photo")).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  // Edit Windows — the report page must offer a way to change the submission/
+  // voting time windows, navigating to the shared config route (which reuses
+  // PhotoContestConfig's window editor). Without this an organizer can't open or
+  // adjust the voting window except via a manual data edit.
+  describe("Edit Windows affordance", () => {
+    // Render with a /config route marker so we can assert navigation lands there.
+    const renderWithConfigRoute = () =>
+      render(
+        <MemoryRouter
+          initialEntries={[`/admin/my-events/${EVENT_ID}/experiences/${EXPERIENCE_ID}/live`]}
+        >
+          <Routes>
+            <Route
+              path="/admin/my-events/:eventId/experiences/:experienceId/live"
+              element={<PhotoContestLiveDashboard />}
+            />
+            <Route
+              path="/admin/my-events/:eventId/experiences/:experienceId/config"
+              element={<div data-testid="config-route">config screen</div>}
+            />
+          </Routes>
+        </MemoryRouter>
+      );
+
+    it("renders an Edit Windows button on the report page", async () => {
+      getLiveStats.mockResolvedValue(mockStatsResponse());
+      renderComponent();
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-windows")).toBeInTheDocument();
+      });
+      expect(screen.getByTestId("edit-windows")).toHaveTextContent(/edit windows/i);
+    });
+
+    it("navigates to the config route when Edit Windows is clicked", async () => {
+      getLiveStats.mockResolvedValue(mockStatsResponse());
+      renderWithConfigRoute();
+      await waitFor(() => {
+        expect(screen.getByTestId("edit-windows")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId("edit-windows"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("config-route")).toBeInTheDocument();
+      });
+    });
   });
 });

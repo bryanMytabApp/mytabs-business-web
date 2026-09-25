@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import SubscriptionView from "./SubscriptionView";
+import SubscriptionView, { buildPlanCards } from "./SubscriptionView";
 import {
   getSystemSubscriptions,
   getCustomerSubscription,
@@ -34,6 +34,51 @@ const renderView = () =>
       <SubscriptionView />
     </MemoryRouter>
   );
+
+describe("buildPlanCards yearly fallback (annual discount, no catalog rows)", () => {
+  // When the backend catalog hasn't loaded, the yearly card MUST fall back to the
+  // discounted annual price (12x monthly minus annualDiscountPercent), NOT a plain
+  // 12x. This keeps the Subscribe page consistent with the provisioned Stripe yearly
+  // prices and the marketing pricing page.
+  const discountPct = Number(CURRENT_VERSION.annualDiscountPercent) || 0;
+
+  it("applies the annual discount AND rounds down to whole dollars in the yearly fallback", () => {
+    const cards = buildPlanCards("yearly", [] /* empty catalog → fallback path */);
+    const byName = Object.fromEntries(cards.map((c) => [c.name, c]));
+
+    ["Starter", "Growth", "Pro"].forEach((name) => {
+      const monthly = CURRENT_VERSION.planMonthlyCents[name];
+      // 12x monthly, minus the annual discount, floored to whole dollars (customer benefit).
+      const expected = Math.floor((monthly * 12 * (1 - discountPct / 100)) / 100) * 100;
+      expect(byName[name].amountCents).toBe(expected);
+      // Whole dollars only — no awkward cents.
+      expect(byName[name].amountCents % 100).toBe(0);
+      // And it must NOT be the un-discounted 12x when a discount is configured.
+      if (discountPct > 0) {
+        expect(byName[name].amountCents).toBeLessThan(monthly * 12);
+      }
+    });
+  });
+
+  it("monthly fallback is unchanged (equals the version monthly cents)", () => {
+    const cards = buildPlanCards("monthly", []);
+    const byName = Object.fromEntries(cards.map((c) => [c.name, c]));
+    ["Starter", "Growth", "Pro"].forEach((name) => {
+      expect(byName[name].amountCents).toBe(CURRENT_VERSION.planMonthlyCents[name]);
+    });
+  });
+
+  it("prefers a real catalog row's amount over the fallback (yearly)", () => {
+    // A whole-dollar discounted yearly row (e.g. Starter $662 = 66200c) must win.
+    const rows = [
+      { _id: "s-y", level: 1, sublevel: "yearly", amount: 66200, pricingEffectiveDate: CURRENT_VERSION.effectiveDate },
+    ];
+    const cards = buildPlanCards("yearly", rows);
+    const starter = cards.find((c) => c.name === "Starter");
+    expect(starter.amountCents).toBe(66200);
+    expect(starter.price).toBe("$662");
+  });
+});
 
 describe("SubscriptionView (Subscribe page)", () => {
   beforeEach(() => {
@@ -187,21 +232,24 @@ describe("SubscriptionView (Subscribe page)", () => {
     });
     expect(screen.getAllByText("99").length).toBeGreaterThan(0);
   });
-  it("has a Monthly/Yearly toggle; switching to Yearly updates the displayed price (12x)", async () => {
+  it("has a Monthly/Yearly toggle; switching to Yearly shows the discounted annual price", async () => {
     renderView();
     await waitFor(() => expect(getSystemSubscriptions).toHaveBeenCalled());
 
     const toggle = screen.getByTestId("billing-interval-toggle");
     expect(toggle).toBeInTheDocument();
 
-    // Monthly (default): Starter shows $187.
+    // Monthly (default): Starter shows its monthly amount.
     const starter = screen.getByTestId("plan-card-starter");
     expect(within(starter).getByText((CURRENT_VERSION.planMonthlyCents.Starter / 100).toString())).toBeInTheDocument();
 
-    // Switch to Yearly → Starter shows 12x ($2,244), formatted with a comma.
+    // Switch to Yearly → Starter shows 12x monthly MINUS the version's annual discount
+    // (fallback path; catalog is empty in this test), formatted with locale grouping.
     const user = userEvent.setup();
     await user.click(screen.getByTestId("billing-yearly"));
-    const yearly = (CURRENT_VERSION.planMonthlyCents.Starter * 12 / 100).toLocaleString();
+    const discountPct = Number(CURRENT_VERSION.annualDiscountPercent) || 0;
+    const yearlyCents = Math.floor((CURRENT_VERSION.planMonthlyCents.Starter * 12 * (1 - discountPct / 100)) / 100) * 100;
+    const yearly = (yearlyCents / 100).toLocaleString();
     await waitFor(() => expect(within(screen.getByTestId("plan-card-starter")).getByText(yearly)).toBeInTheDocument());
   });
 
@@ -389,8 +437,11 @@ describe("SubscriptionView (Subscribe page)", () => {
     // (used by the page) must return the pre-migration version before it and the new
     // version on/after it — so displayed prices always match what checkout pins.
     const newVersion = pricingVersions[pricingVersions.length - 1];
-    const preVersion = pricingVersions[0];
-    const cutover = newVersion.effectiveDate; // e.g. "2026-09-06"
+    // The version immediately BEFORE the newest one. With a multi-version registry,
+    // the day before the newest cutover falls in the preceding version's window
+    // (not necessarily the oldest legacy version).
+    const preVersion = pricingVersions[pricingVersions.length - 2];
+    const cutover = newVersion.effectiveDate; // e.g. "2026-09-24"
 
     const dayBefore = new Date(new Date(cutover + "T00:00:00Z").getTime() - 86400000)
       .toISOString().slice(0, 10);

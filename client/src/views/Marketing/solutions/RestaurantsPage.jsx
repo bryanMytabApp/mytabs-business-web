@@ -6,6 +6,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import useDocumentMeta from "../hooks/useDocumentMeta";
+import usePlanData from "../hooks/usePlanData";
 
 const PROBLEMS = [
   { title: "Off-peak nights stay empty", body: "A Tuesday trivia night or a Wednesday happy hour needs consistent promotion — not a one-off post that disappears in a day." },
@@ -36,9 +37,14 @@ const FEATURES = [
   },
 ];
 
+// Restaurant-specific display metadata for the mini pricing cards. The PRICE is
+// pulled live from the subscription API (usePlanData → getSystemSubscriptions), the
+// SAME source of truth as the full /pricing page and checkout, so it never drifts.
+// `fallbackPrice`/`fallbackSuffix` are shown only if the API is still loading, empty,
+// or errored, so the cards never render a blank price.
 const PLANS = [
-  { name: "Starter", price: "$187", suffix: "/mo", forWho: "A weekly event or two, one location", popular: false },
-  { name: "Growth", price: "$563", suffix: "/mo", forWho: "Multiple recurring nights, building loyalty", popular: true },
+  { name: "Starter", forWho: "A weekly event or two, one location", popular: false, fallbackPrice: "$187", fallbackSuffix: "/mo" },
+  { name: "Growth", forWho: "Multiple recurring nights, building loyalty", popular: true, fallbackPrice: "$563", fallbackSuffix: "/mo" },
 ];
 
 export default function RestaurantsPage() {
@@ -47,6 +53,17 @@ export default function RestaurantsPage() {
     description:
       "Turn slow nights into your busiest nights. Tabs gives restaurants and bars one place to promote recurring events, sell tickets, run loyalty, and see what works.",
   });
+
+  // Live monthly prices from the subscription catalog API (same source as /pricing
+  // and checkout). Map plan name -> its view-model so the mini cards can read the
+  // real price. When status !== "success" (loading/empty/error), `plans` is [] and
+  // each card falls back to its hardcoded reference price so nothing renders blank.
+  const { plans } = usePlanData("monthly");
+  const planByName = React.useMemo(() => {
+    const map = {};
+    (plans || []).forEach((p) => { map[p.name] = p; });
+    return map;
+  }, [plans]);
 
   return (
     <main className="mkt-page mkt-restaurants" role="main" aria-labelledby="rest-title">
@@ -61,7 +78,7 @@ export default function RestaurantsPage() {
           </p>
           <div className="mkt-page__ctas">
             <Link className="btn btn--primary" to="/register">Join Tabs</Link>
-            <Link className="btn btn--ghost" to="/#pricing">See pricing</Link>
+            <Link className="btn btn--ghost" to="/pricing">See pricing</Link>
           </div>
         </header>
 
@@ -108,18 +125,28 @@ export default function RestaurantsPage() {
             recurring nights they run.
           </p>
           <div className="mkt-card-grid mkt-card-grid--2">
-            {PLANS.map((p) => (
-              <div className={`mkt-plan${p.popular ? " mkt-plan--popular" : ""}`} key={p.name}>
-                {p.popular && <span className="mkt-plan__badge">Most popular for restaurants</span>}
-                <h3>{p.name}</h3>
-                <p className="mkt-plan__price">
-                  <span className="mkt-plan__amount">{p.price}</span>
-                  <span className="mkt-plan__suffix">{p.suffix}</span>
-                </p>
-                <p className="mkt-plan__for">{p.forWho}</p>
-                <Link className={`btn ${p.popular ? "btn--primary" : "btn--ghost"}`} to="/register">Join Tabs</Link>
-              </div>
-            ))}
+            {PLANS.map((p) => {
+              // Live price from the API; fall back to the reference price when the
+              // catalog hasn't resolved (loading/empty/error).
+              const live = planByName[p.name];
+              const amount = live?.price || p.fallbackPrice;
+              const suffix = live?.priceSuffix || p.fallbackSuffix;
+              return (
+                <div className={`mkt-plan${p.popular ? " mkt-plan--popular" : ""}`} key={p.name}>
+                  {p.popular && <span className="mkt-plan__badge">Most popular for restaurants</span>}
+                  <h3>{p.name}</h3>
+                  <p className="mkt-plan__price">
+                    <span className="mkt-plan__amount">{amount}</span>
+                    <span className="mkt-plan__suffix">{suffix}</span>
+                  </p>
+                  <p className="mkt-plan__for">{p.forWho}</p>
+                  <Link className={`btn ${p.popular ? "btn--primary" : "btn--ghost"}`} to="/register">Join Tabs</Link>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mkt-section__actions">
+            <Link className="btn btn--ghost" to="/pricing">See full pricing</Link>
           </div>
           <p className="mkt-footnote">
             Running more than one location? Ask about Enterprise for consolidated billing across your group.

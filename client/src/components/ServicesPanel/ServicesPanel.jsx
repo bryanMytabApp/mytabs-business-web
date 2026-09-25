@@ -98,7 +98,9 @@ const services = [
     icon: experiencesIcon,
     path: "/admin/experiences",
     category: "Engagement",
-    orgRestriction: "UrbanHTX",
+    // Engagements are a Growth+ plan feature (not UrbanHTX-only). The launcher is
+    // visible to all; PlanLevelRouteGuard on /admin/experiences enforces the plan
+    // level (Growth+), showing an upgrade prompt for Starter.
   },
 ];
 

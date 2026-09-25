@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import UndoOutlinedIcon from "@mui/icons-material/UndoOutlined";
 import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import SlideshowOutlinedIcon from "@mui/icons-material/SlideshowOutlined";
@@ -147,9 +148,17 @@ const SocialWallLiveDashboard = () => {
   // the next poll (Requirement 13.3/13.4).
   const handleModerate = useCallback(
     async (postId, action) => {
-      // action ∈ { 'approve', 'hide', 'remove' } → next Moderation_Status.
+      // action ∈ { 'approve', 'unapprove', 'hide', 'remove' } → next Moderation_Status.
+      // 'unapprove' reverses an approval: the post returns to the moderation queue
+      // as 'pending' (off the feed/big-screen) without being hidden or removed.
       const nextStatus =
-        action === "approve" ? "approved" : action === "hide" ? "hidden" : "removed";
+        action === "approve"
+          ? "approved"
+          : action === "unapprove"
+          ? "pending"
+          : action === "hide"
+          ? "hidden"
+          : "removed";
       setModerationOverrides((prev) => ({ ...prev, [postId]: nextStatus }));
       try {
         await transitionState(eventId, experienceId, { action, postId });
@@ -173,11 +182,50 @@ const SocialWallLiveDashboard = () => {
   const totalReactions = num(stats?.totalReactions);
   const uniquePosters = num(stats?.uniquePosters);
 
+  // Reconcile optimistic overrides against the freshly polled server state: once
+  // the server payload reflects a post's overridden status, drop the override so
+  // the server projections take over. Without this, an override lingers forever —
+  // in particular an `unapprove` (→ pending) override would keep filtering the
+  // post OUT of the moderation queue even after the server returns it there,
+  // so the post would never reappear until a full reload.
+  useEffect(() => {
+    if (!stats) return;
+    const serverQueue = Array.isArray(stats.moderationQueue) ? stats.moderationQueue : [];
+    const serverFeed = Array.isArray(stats.feed) ? stats.feed : [];
+    const pendingIds = new Set(serverQueue.map((p) => p.postId));
+    const approvedIds = new Set(serverFeed.map((p) => p.postId));
+
+    setModerationOverrides((prev) => {
+      const entries = Object.entries(prev);
+      if (entries.length === 0) return prev;
+      let changed = false;
+      const next = {};
+      for (const [postId, status] of entries) {
+        // The server now agrees with the optimistic status → the override has
+        // done its job and can be cleared.
+        const settled =
+          (status === "pending" && pendingIds.has(postId)) ||
+          (status === "approved" && approvedIds.has(postId)) ||
+          // hidden/removed: the post is gone from BOTH visible projections.
+          ((status === "hidden" || status === "removed") &&
+            !pendingIds.has(postId) &&
+            !approvedIds.has(postId));
+        if (settled) {
+          changed = true;
+        } else {
+          next[postId] = status;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [stats]);
+
   // The moderation queue is a dedicated pending-post projection the payload
-  // carries. Apply optimistic overrides and drop entries that have already been
-  // moderated locally (Requirement 13.3).
+  // carries. Apply optimistic overrides: hide entries optimistically moderated
+  // AWAY from pending, and surface entries optimistically moved TO pending (an
+  // `unapprove`) even if a stale poll hasn't listed them yet (Requirement 13.3).
   const moderationQueue = (Array.isArray(stats?.moderationQueue) ? stats.moderationQueue : []).filter(
-    (item) => !moderationOverrides[item.postId]
+    (item) => !moderationOverrides[item.postId] || moderationOverrides[item.postId] === "pending"
   );
 
   // The approved feed is the approved-only projection used by both the
@@ -587,6 +635,23 @@ const SocialWallLiveDashboard = () => {
                       </Typography>
                     </Box>
                     <Box sx={{ display: "flex", gap: 1 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<UndoOutlinedIcon />}
+                        data-testid={`unapprove-${item.postId}`}
+                        onClick={() => handleModerate(item.postId, "unapprove")}
+                        sx={{
+                          textTransform: "none",
+                          fontWeight: 700,
+                          borderRadius: 2,
+                          color: "#92400E",
+                          borderColor: "#FCD34D",
+                          "&:hover": { borderColor: "#92400E", backgroundColor: "#FFFBEB" },
+                        }}
+                      >
+                        Unapprove
+                      </Button>
                       <Button
                         size="small"
                         variant="outlined"

@@ -1353,10 +1353,14 @@
 .marketing-root .price-card.featured .amt,
 .marketing-root .price-card.featured .for,
 .marketing-root .price-card.featured li { color: #fff; }
+.marketing-root .price-card__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px;
+}
 .marketing-root .price-badge {
   display: inline-block; font-size: 0.72rem; font-weight: 800; padding: 5px 12px; border-radius: 999px;
-  background: var(--amber); color: var(--ink); margin-bottom: 14px; width: fit-content;
+  background: var(--amber); color: var(--ink); width: fit-content; white-space: nowrap; flex-shrink: 0;
 }
+.marketing-root .price-card__head h3 { margin: 0; }
 .marketing-root .price-card h3 { font-size: 1.2rem; font-weight: 900; margin: 0 0 6px; }
 .marketing-root .price-card .amt { font-size: 2.1rem; font-weight: 900; margin: 6px 0 2px; letter-spacing: -0.02em; }
 .marketing-root .price-card .amt .cycle { font-size: 0.9rem; font-weight: 700; opacity: 0.7; margin-left: 2px; }

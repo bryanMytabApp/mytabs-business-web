@@ -311,7 +311,28 @@ export default function PasswordRecovery() {
         <div className='Actions'></div>
 
         <div className='Footer'>
-          <div style={{display: "flex", flex: 5}}></div>
+          <div
+            style={{
+              display: "flex",
+              flex: 5,
+              marginLeft: "10px",
+              boxSizing: "border-box",
+              alignItems: "center",
+              paddingLeft: "20px",
+            }}>
+            <span>
+              <span class='agree-text'>By continuing, you agree to My Tabs </span>
+              <a href="https://www.mytabs.app/terms" target="_blank" rel="noopener noreferrer">
+                <span class='agree-text-underline'>terms of service</span>
+              </a>
+              <span class='agree-text'> </span>
+              <span class='agree-text'>and </span>
+              <a href="https://www.mytabs.app/privacy" target="_blank" rel="noopener noreferrer">
+                <span class='agree-text-underline'> privacy notice</span>
+              </a>
+              <span class='agree-text'>.</span>
+            </span>
+          </div>
 
           {part === 0 && (
             <MTBButton

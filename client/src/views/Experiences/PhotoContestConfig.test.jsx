@@ -238,6 +238,8 @@ describe("PhotoContestConfig — render + interaction (Requirement 10)", () => {
     expect(config.submissionsPerAttendeeLimit).toBe(3);
     expect(config.votesPerAttendeeLimit).toBe(20);
     expect(config.winnerCount).toBe(3);
+    // Self-voting defaults to OFF unless the organizer opts in.
+    expect(config.allowSelfVote).toBe(false);
     expect(config.allowedMediaConstraints).toEqual({
       allowedFileTypes: ["image/jpeg", "image/png", "image/webp"],
       maxFileSize: 10485760,
@@ -249,6 +251,23 @@ describe("PhotoContestConfig — render + interaction (Requirement 10)", () => {
     await waitFor(() => {
       expect(screen.getByText("Engagements Dashboard")).toBeInTheDocument();
     });
+  });
+
+  it("saves allowSelfVote:true when the organizer enables self-voting", async () => {
+    renderComponent();
+    fillValidWindows();
+
+    // Toggle the Allow self-voting checkbox on (Windows & Moderation step).
+    goToStep(0);
+    const selfVote = within(screen.getByTestId("allow-self-vote")).getByRole("checkbox");
+    fireEvent.click(selfVote);
+
+    goToStep(2);
+    clickSave();
+
+    await waitFor(() => expect(updateInstance).toHaveBeenCalledTimes(1));
+    const { config } = updateInstance.mock.calls[0][2];
+    expect(config.allowSelfVote).toBe(true);
   });
 
   it("renders a default export for lazy loading", async () => {

@@ -165,7 +165,7 @@ export const pricingVersions = [
   },
   {
     "effectiveDate": "2026-09-06",
-    "expiryDate": "9999-12-31",
+    "expiryDate": "2026-09-24",
     "ticketFee": {
       "percent": 4,
       "perTicketCents": 89,
@@ -187,6 +187,32 @@ export const pricingVersions = [
       "Pro": 122100,
       "Enterprise": 281900
     }
+  },
+  {
+    "effectiveDate": "2026-09-24",
+    "expiryDate": "9999-12-31",
+    "ticketFee": {
+      "percent": 4,
+      "perTicketCents": 89,
+      "basis": "subtotal"
+    },
+    "aiDiscovery": {
+      "model": "contract",
+      "baselineCents": 18800,
+      "interval": "month"
+    },
+    "marketIntel": {
+      "model": "contract",
+      "baselineCents": 1200000,
+      "interval": "year"
+    },
+    "planMonthlyCents": {
+      "Starter": 6900,
+      "Growth": 34500,
+      "Pro": 58700,
+      "Enterprise": 647600
+    },
+    "annualDiscountPercent": 20
   }
 ];
 
@@ -209,10 +235,11 @@ export function versionForDate(date) {
 }
 
 // The version a NEW signup on `today` is pinned to (mirrors the backend's
-// planForNewSubscription): simply the version effective on the signup date. The
-// migration version's effectiveDate IS the go-live cutover (2026-09-06), so before
-// then this resolves to the pre-migration version and on/after to the new one — the
-// displayed prices always match what checkout will pin + charge.
+// planForNewSubscription): simply the version effective on the signup date. Each
+// version's effectiveDate IS its go-live cutover, so a signup resolves to whichever
+// version is effective on that date (currently the 2026-09-24 price card; earlier
+// signups stay on the 2026-09-06 or legacy versions) — the displayed prices always
+// match what checkout will pin + charge.
 export function versionForNewSignup(today = new Date()) {
   return versionForDate(today) || pricingVersions[pricingVersions.length - 1] || null;
 }

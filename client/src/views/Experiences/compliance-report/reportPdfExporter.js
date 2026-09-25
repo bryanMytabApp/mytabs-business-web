@@ -5,7 +5,7 @@
  * with all report sections, tables, and cryptographic proof details.
  */
 import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 const PAGE_MARGIN = 20;
 const CONTENT_WIDTH = 170; // A4 width (210) - 2*margin (40)
@@ -186,7 +186,7 @@ export async function generateAndDownloadPDF(reportData, filename) {
       if (w.entryCode) winnerPrizeMap[w.entryCode] = w.prizeAssigned || "Winner";
     }
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
       head: [["Draw Position", "First Name", "Last Name", "Entry Code", "Entry Timestamp", "Entry Channel", "Consent Status", "Prize Won"]],
@@ -217,7 +217,7 @@ export async function generateAndDownloadPDF(reportData, filename) {
   if (winners.length === 0) {
     y = addParagraph(doc, "No winners selected", y, { style: "italic" });
   } else {
-    doc.autoTable({
+    autoTable(doc, {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
       head: [["Position", "Full Name", "Entry Code", "Prize", "Claim Status", "Timestamp"]],
@@ -288,7 +288,7 @@ export async function generateAndDownloadPDF(reportData, filename) {
       return participant?.entryId || "";
     }));
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
       head: [["Position", "Entry ID", "Result"]],
@@ -320,7 +320,7 @@ export async function generateAndDownloadPDF(reportData, filename) {
     const sortedTrail = [...trail].sort((a, b) =>
       (a.timestamp || "").localeCompare(b.timestamp || "")
     );
-    doc.autoTable({
+    autoTable(doc, {
       startY: y,
       margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
       head: [["Timestamp", "Type", "Description", "Actor"]],

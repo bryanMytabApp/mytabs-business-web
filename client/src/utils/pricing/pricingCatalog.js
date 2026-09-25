@@ -108,12 +108,18 @@ const coerceAmountCents = (row) => {
 };
 
 // Config-derived fallback amount (cents) for a plan + interval, used only when the
-// catalog row for a plan hasn't loaded / is absent. Yearly = 12x monthly (matches
-// the provisioned Stripe yearly prices).
-const fallbackAmountCents = (planName, interval) => {
+// catalog row for a plan hasn't loaded / is absent. Yearly = 12x monthly, minus the
+// version's `annualDiscountPercent` (e.g. 20 -> 20% off annual) when present; absent
+// or 0 means plain 12x (matches the provisioned Stripe yearly prices for that version).
+export const fallbackAmountCents = (planName, interval) => {
   const monthlyCents = CURRENT_VERSION?.planMonthlyCents?.[planName];
   if (!Number.isFinite(Number(monthlyCents))) return null;
-  return interval === "yearly" ? monthlyCents * 12 : monthlyCents;
+  if (interval !== "yearly") return monthlyCents;
+  const discountPct = Number(CURRENT_VERSION?.annualDiscountPercent) || 0;
+  const discounted = monthlyCents * 12 * (1 - discountPct / 100);
+  // Round DOWN to whole dollars (customer benefit) so the yearly fallback matches
+  // the whole-dollar Stripe/catalog prices and never shows awkward cents.
+  return Math.floor(discounted / 100) * 100;
 };
 
 // Human-readable display names for every product included in a plan, derived from the

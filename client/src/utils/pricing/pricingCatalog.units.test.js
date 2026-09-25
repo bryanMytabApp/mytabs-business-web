@@ -90,15 +90,19 @@ describe("buildPlanViewModels", () => {
       });
     });
 
-    it("uses '/yr' suffix and yearly config fallback = 12x monthly", () => {
+    it("uses '/yr' suffix and yearly config fallback = 12x monthly minus the annual discount, floored to whole dollars", () => {
       const views = buildPlanViewModels([], "yearly");
       const growth = viewFor(views, "Growth");
-      const expectedYearly = CURRENT_VERSION.planMonthlyCents.Growth * 12;
+      const discountPct = Number(CURRENT_VERSION.annualDiscountPercent) || 0;
+      // 12x monthly, apply the version's annual discount, floor to whole dollars (customer benefit).
+      const expectedYearly = Math.floor((CURRENT_VERSION.planMonthlyCents.Growth * 12 * (1 - discountPct / 100)) / 100) * 100;
 
       expect(growth.interval).toBe("yearly");
       expect(growth.priceSuffix).toBe("/yr");
       expect(growth.amountCents).toBe(expectedYearly);
       expect(growth.price).toBe(dollars(expectedYearly));
+      // Whole dollars only — no awkward cents in the fallback.
+      expect(growth.amountCents % 100).toBe(0);
     });
 
     it("uses the yearly catalog row (sublevel 'yearly') when present", () => {

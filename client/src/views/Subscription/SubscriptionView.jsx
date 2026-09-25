@@ -17,6 +17,7 @@ import {
   CURRENT_VERSION,
   dollars,
   findCatalogRow,
+  fallbackAmountCents,
   baselineLabel,
 } from "../../utils/pricing/pricingCatalog";
 import { clearSession } from "../../utils/auth/session";
@@ -46,13 +47,14 @@ const loadScript = (src) =>
 // `assignedEffectiveDate` (optional): when this ACCOUNT has an admin-assigned
 // pricing version (e.g. legacy "2000-01-01"), pass it so the cards price against
 // that version's catalog rows instead of the current version.
-const buildPlanCards = (interval = "monthly", systemSubscriptions = [], assignedEffectiveDate = null) =>
+export const buildPlanCards = (interval = "monthly", systemSubscriptions = [], assignedEffectiveDate = null) =>
   PLAN_LEVELS.map((planName, idx) => {
     const level = idx + 1; // Starter=1 ... Enterprise=4
-    const monthlyCents = CURRENT_VERSION.planMonthlyCents[planName];
-    // Config-derived fallback for when the catalog hasn't loaded.
-    // Yearly = 12x monthly (matches the provisioned Stripe yearly prices).
-    const fallbackCents = interval === "yearly" ? monthlyCents * 12 : monthlyCents;
+    // Config-derived fallback for when the catalog hasn't loaded. Uses the SHARED
+    // fallbackAmountCents so the Subscribe page and the marketing pricing page can
+    // never diverge: yearly = 12x monthly minus the version's annualDiscountPercent
+    // (e.g. 20% off), rounded — matching the provisioned Stripe yearly prices.
+    const fallbackCents = fallbackAmountCents(planName, interval);
     // Prefer the catalog row's real amount (what Stripe will charge) over config.
     // Catalog `amount` is in cents and may be a number OR a numeric string (DynamoDB
     // stores it as a String), so coerce and validate before trusting it.

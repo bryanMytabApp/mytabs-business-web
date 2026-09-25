@@ -87,7 +87,7 @@ describe("ExperienceCatalog", () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByText("Experience Catalog")).toBeInTheDocument();
+      expect(screen.getByText("Engagement Catalog")).toBeInTheDocument();
     });
   });
 

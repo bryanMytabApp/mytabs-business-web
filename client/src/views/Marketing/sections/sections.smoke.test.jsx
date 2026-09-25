@@ -64,14 +64,15 @@ describe("Homepage section smoke tests", () => {
   });
 
   describe("ProductsSection", () => {
-    it("renders the seven product names and the advertising card (Req 4.1, 4.2)", () => {
+    it("renders every product name and the advertising card (Req 4.1, 4.2)", () => {
       renderWithRouter(<ProductsSection />);
 
-      // The seven product names come from the shared content model.
+      // The product names come from the shared content model (count is derived
+      // from PRODUCT_SLUGS so adding a product doesn't require editing this test).
       const productNames = PRODUCT_SLUGS.map(
         (slug) => productContent[slug].productName
       );
-      expect(productNames).toHaveLength(7);
+      expect(productNames).toHaveLength(PRODUCT_SLUGS.length);
 
       productNames.forEach((name) => {
         // Use getAllByText: some names (e.g. "Market Intelligence") may also
@@ -136,7 +137,7 @@ describe("Homepage section smoke tests", () => {
       const segmentNames = [
         "Promoters",
         "Venues",
-        "Hospitality & nightlife",
+        "Restaurants & Hospitality",
         "Agencies",
         "Universities",
         "Tourism boards & cities",

@@ -210,6 +210,24 @@ export const getPayoutHistory = async (businessId) => {
   }
 };
 
+// Per-event payout state for the caller's own business — "Payouts by Event" tab.
+// LIST (plural) endpoint: one entry per ticketed event with its release date, payout
+// status, held/released amounts. Distinct from getEventPayouts (singular, GET
+// /payouts/event) which returns the journal rows for ONE event.
+// Returns { businessId, currency, events: [...] }.
+export const listEventPayouts = async (businessId) => {
+  try {
+    const response = await http.get("payouts/events", {
+      baseURL: PAYOUTS_BASE_URL,
+      params: businessId ? { businessId } : {},
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error loading event payouts list", error.response || error);
+    throw error;
+  }
+};
+
 // Payout details for a specific event — Ticket Management page.
 // Returns { eventId, summary, rows }.
 export const getEventPayouts = async (eventId, businessId) => {

@@ -39,7 +39,7 @@ const PRODUCT_CARDS = PRODUCT_SLUGS.map((slug) => ({
 export const ADVERTISING_CARD = {
   name: "Advertising, sponsorships & managed experiences",
   description:
-    "Beyond the seven products, Tabs powers advertising, sponsorships, and fully managed experiences — turning your events into revenue channels for partners and brands.",
+    "Beyond the core products, Tabs powers advertising, sponsorships, and fully managed experiences — turning your events into revenue channels for partners and brands.",
 };
 
 /**
@@ -53,7 +53,7 @@ export default function ProductsSection() {
       aria-labelledby="marketing-products-heading"
     >
       <h2 id="marketing-products-heading" className="marketing-products__heading">
-        Seven connected products
+        Connected products
       </h2>
 
       <ul className="marketing-products__grid">

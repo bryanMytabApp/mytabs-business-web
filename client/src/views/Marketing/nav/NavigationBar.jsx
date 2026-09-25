@@ -53,6 +53,7 @@ const PRODUCT_SUBTITLES = {
   "market-intelligence": "Decision-ready reporting",
   "ai-discovery": "Supervised event sourcing",
   organizations: "Multi-location, one account",
+  "business-advertising": "Menus, food items & QR code",
 };
 
 // Per-product icons (gradient + SVG path data) are defined once in

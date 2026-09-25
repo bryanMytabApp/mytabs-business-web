@@ -40,6 +40,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CasinoOutlinedIcon from "@mui/icons-material/CasinoOutlined";
 import { getCatalog, getFilteredCatalog, createInstance } from "../../services/experienceService";
 import useExperienceEntitlement from "../../hooks/useExperienceEntitlement";
+import LockedEngagementModal from "./LockedEngagementModal";
 
 const ACCENT = "#F09925";
 
@@ -105,6 +106,8 @@ const ExperienceCatalog = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [wizardOpen, setWizardOpen] = useState(false);
+  // The locked engagement currently shown in the info/upgrade modal (null = closed).
+  const [lockedInfo, setLockedInfo] = useState(null);
 
   const fetchCatalog = useCallback(async () => {
     setLoading(true);
@@ -137,6 +140,22 @@ const ExperienceCatalog = () => {
    */
   const handleSelectType = async (type) => {
     const typeKey = type.typeId || type.id || type.key;
+
+    // Entitlement gate: an engagement is locked ONLY when the account's own
+    // subscription tier does not include it. `isExperienceTypeAvailable` resolves
+    // that from the real subscription plan (via useExperienceEntitlement) — the same
+    // single source of truth the card's visual lock uses, so the click behavior and
+    // the lock badge never disagree. We intentionally do NOT OR in the API's
+    // `type.locked` flag: it is derived from the Cognito `custom:subscription_tier`
+    // claim, which can be stale/missing and would then wrongly lock an engagement the
+    // plan actually includes. The backend still enforces the tier on create as a
+    // safety net. When entitlement is still loading, treat as available (don't flash
+    // a lock) — the backend guard covers the race.
+    const locked = !entitlementLoading && !isExperienceTypeAvailable(typeKey);
+    if (locked) {
+      setLockedInfo(type);
+      return;
+    }
 
     setCreating(typeKey);
     try {
@@ -315,7 +334,10 @@ const ExperienceCatalog = () => {
       <Grid container spacing={2.5}>
         {filteredTypes.map((type) => {
           const typeKey = type.typeId || type.id || type.key;
-          const isAvailable = isExperienceTypeAvailable(typeKey);
+          // Locked strictly by the account's subscription tier (single source of
+          // truth). While entitlement is still loading, treat as available so we
+          // don't flash a lock badge before the plan resolves.
+          const isAvailable = entitlementLoading || isExperienceTypeAvailable(typeKey);
           // Prefer the entitlement hook's tier; fall back to the catalog item's
           // own tier (from the API) so the "Upgrade to <tier>" label is never blank.
           const requiredTier = getRequiredTier(typeKey) || type.requiredTier || type.tier || null;
@@ -469,7 +491,9 @@ const ExperienceCatalog = () => {
                         component="span"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate("/admin/settings/subscription");
+                          // Show the info/upgrade modal (value + how-it-works) rather
+                          // than jumping straight to billing.
+                          setLockedInfo(type);
                         }}
                         sx={{
                           display: "inline-flex",
@@ -521,6 +545,28 @@ const ExperienceCatalog = () => {
         onClose={() => setWizardOpen(false)}
         onSelectType={handleWizardSelect}
         catalogTypes={catalogTypes}
+      />
+
+      {/* Locked engagement info/upgrade modal — shown when a locked engagement is
+          clicked. Explains the engagement, its value, and how it works, and offers
+          an upgrade path. Never creates the engagement. */}
+      <LockedEngagementModal
+        open={Boolean(lockedInfo)}
+        type={lockedInfo}
+        requiredTier={
+          lockedInfo
+            ? getRequiredTier(lockedInfo.typeId || lockedInfo.id || lockedInfo.key) ||
+              lockedInfo.requiredTier ||
+              lockedInfo.tier ||
+              null
+            : null
+        }
+        accentColor={lockedInfo ? CATEGORY_COLORS[lockedInfo.category] || ACCENT : ACCENT}
+        onClose={() => setLockedInfo(null)}
+        onUpgrade={() => {
+          setLockedInfo(null);
+          navigate("/admin/settings/subscription");
+        }}
       />
     </Box>
   );

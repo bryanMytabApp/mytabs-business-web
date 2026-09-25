@@ -20,10 +20,10 @@ const STATUS_PAYLOAD = {
     effectiveDate: CURRENT_VERSION.effectiveDate,
     ticketFee: CURRENT_VERSION.ticketFee,
     plans: {
-      Starter: { monthlyCents: CURRENT_VERSION.planMonthlyCents.Starter, yearlyCents: 187000 },
-      Growth: { monthlyCents: CURRENT_VERSION.planMonthlyCents.Growth, yearlyCents: 563000 },
-      Pro: { monthlyCents: CURRENT_VERSION.planMonthlyCents.Pro, yearlyCents: 1221000 },
-      Enterprise: { monthlyCents: CURRENT_VERSION.planMonthlyCents.Enterprise, yearlyCents: 2819000 },
+      Starter: { monthlyCents: CURRENT_VERSION.planMonthlyCents.Starter, yearlyCents: CURRENT_VERSION.planMonthlyCents.Starter * 12 },
+      Growth: { monthlyCents: CURRENT_VERSION.planMonthlyCents.Growth, yearlyCents: CURRENT_VERSION.planMonthlyCents.Growth * 12 },
+      Pro: { monthlyCents: CURRENT_VERSION.planMonthlyCents.Pro, yearlyCents: CURRENT_VERSION.planMonthlyCents.Pro * 12 },
+      Enterprise: { monthlyCents: CURRENT_VERSION.planMonthlyCents.Enterprise, yearlyCents: CURRENT_VERSION.planMonthlyCents.Enterprise * 12 },
     },
     aiDiscovery: CURRENT_VERSION.aiDiscovery,
     marketIntel: CURRENT_VERSION.marketIntel,
@@ -170,12 +170,14 @@ describe("PricingConsole (guided stepped workflow)", () => {
     render(<PricingConsole selectedSubscribers={[]} businesses={[]} />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
+    // Prices derive from the current version so these assertions track price changes.
+    const dollarsOf = (name) => (CURRENT_VERSION.planMonthlyCents[name] / 100).toLocaleString();
     const starterChip = await screen.findByTestId("plan-price-starter");
-    expect(starterChip).toHaveTextContent("187");
+    expect(starterChip).toHaveTextContent(dollarsOf("Starter"));
     expect(starterChip).not.toHaveTextContent("$—");
-    expect(screen.getByTestId("plan-price-growth")).toHaveTextContent("563");
-    expect(screen.getByTestId("plan-price-pro")).toHaveTextContent("1,221");
-    expect(screen.getByTestId("plan-price-enterprise")).toHaveTextContent("2,819");
+    expect(screen.getByTestId("plan-price-growth")).toHaveTextContent(dollarsOf("Growth"));
+    expect(screen.getByTestId("plan-price-pro")).toHaveTextContent(dollarsOf("Pro"));
+    expect(screen.getByTestId("plan-price-enterprise")).toHaveTextContent(dollarsOf("Enterprise"));
 
     const calledUrl = global.fetch.mock.calls[0][0];
     expect(calledUrl).toContain("16psjhr9ni.execute-api.us-east-1.amazonaws.com");
@@ -305,9 +307,12 @@ describe("PricingConsole (guided stepped workflow)", () => {
     await advance(user, 2); // → step 3 (plan defaults to Pro)
     const panel = await screen.findByTestId("pc-panel-3");
 
-    // New (2026-09-06) Pro = $1,221/mo (from the live status endpoint).
-    expect(within(panel).getByTestId("version-2026-09-06")).toHaveTextContent("New (2026-09-06)");
-    expect(within(panel).getByTestId("version-price-2026-09-06")).toHaveTextContent("$1,221/mo");
+    // New (current version) Pro price — derived from the current version so it never drifts.
+    const newDate = CURRENT_VERSION.effectiveDate;
+    const newProCents = CURRENT_VERSION.planMonthlyCents.Pro;
+    const newProLabel = `$${(newProCents / 100).toLocaleString(undefined, { minimumFractionDigits: newProCents % 100 ? 2 : 0, maximumFractionDigits: 2 })}/mo`;
+    expect(within(panel).getByTestId(`version-${newDate}`)).toHaveTextContent(`New (${newDate})`);
+    expect(within(panel).getByTestId(`version-price-${newDate}`)).toHaveTextContent(newProLabel);
 
     // Legacy (2000-01-01) Pro — the REAL pre-migration price from the registry
     // mirror (verified against Stripe), read from config so it never drifts.
@@ -330,7 +335,13 @@ describe("PricingConsole (guided stepped workflow)", () => {
 
     // For each level: jump back to the (completed) step 2, choose the level,
     // Next to step 3, and confirm the New-version price is the real amount.
-    const expected = { Starter: "$187/mo", Growth: "$563/mo", Pro: "$1,221/mo", Enterprise: "$2,819/mo" };
+    // Expected New-version prices derived from the current version (tracks price changes).
+    const newDate = CURRENT_VERSION.effectiveDate;
+    const labelFor = (name) => {
+      const cents = CURRENT_VERSION.planMonthlyCents[name];
+      return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 })}/mo`;
+    };
+    const expected = { Starter: labelFor("Starter"), Growth: labelFor("Growth"), Pro: labelFor("Pro"), Enterprise: labelFor("Enterprise") };
     for (const [level, price] of Object.entries(expected)) {
       // eslint-disable-next-line no-await-in-loop
       await user.click(screen.getByTestId("pc-step-2"));
@@ -340,7 +351,7 @@ describe("PricingConsole (guided stepped workflow)", () => {
       await user.click(screen.getByTestId("pc-next")); // → step 3
       // eslint-disable-next-line no-await-in-loop
       const panel = await screen.findByTestId("pc-panel-3");
-      expect(within(panel).getByTestId("version-price-2026-09-06")).toHaveTextContent(price);
+      expect(within(panel).getByTestId(`version-price-${newDate}`)).toHaveTextContent(price);
     }
   });
 
@@ -363,7 +374,7 @@ describe("PricingConsole (guided stepped workflow)", () => {
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
     await advance(user, 2); // → step 3, current version = Legacy
-    await user.click(await screen.findByTestId("version-2026-09-06")); // pick New
+    await user.click(await screen.findByTestId(`version-${CURRENT_VERSION.effectiveDate}`)); // pick New (current version)
 
     expect(await screen.findByTestId("grandfathered-warning")).toHaveTextContent(/grandfathered/i);
   });

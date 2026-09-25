@@ -91,7 +91,7 @@ export const useCaseContent = {
 
   "hospitality-nightlife": {
     slug: "hospitality-nightlife",
-    segmentName: "Hospitality & nightlife",
+    segmentName: "Restaurants & Hospitality",
     problems: [
       "Quiet weeknights and unpredictable covers with no reliable way to drive traffic.",
       "Guest lists, reservations, and promotions living in disconnected apps and group chats.",

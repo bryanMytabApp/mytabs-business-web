@@ -6,6 +6,7 @@ import {
   createPayoutAccountSession,
   resetPayouts,
   getPayoutHistory,
+  listEventPayouts,
 } from '../../../services/paymentService';
 import { getBusiness } from '../../../services/businessService';
 
@@ -15,6 +16,7 @@ jest.mock('../../../services/paymentService', () => ({
   createPayoutAccountSession: jest.fn(),
   resetPayouts: jest.fn(),
   getPayoutHistory: jest.fn(),
+  listEventPayouts: jest.fn(),
 }));
 
 // The component resolves the SPECIFIC selected business _id via getBusiness before
@@ -66,6 +68,8 @@ describe('PayoutsSection — embedded Payouts & Banking (Req 10)', () => {
     getBusiness.mockResolvedValue({ data: { _id: 'b3acf234', name: 'Urban HTX' } });
     // History defaults to empty so existing tests don't hit an unmocked call.
     getPayoutHistory.mockResolvedValue({ summary: { outstandingPayableCents: 0, lifetimeEarnedCents: 0, lifetimePaidOutCents: 0, currency: 'usd' }, rows: [] });
+    // Per-event payout list defaults to empty so the new tab has a safe default.
+    listEventPayouts.mockResolvedValue({ businessId: 'b3acf234', currency: 'usd', events: [] });
   });
 
   it('renders the section title once loaded', async () => {
@@ -387,5 +391,119 @@ describe('PayoutsSection — embedded Payouts & Banking (Req 10)', () => {
 
     fireEvent.click(screen.getByTestId('payout-reset-cancel'));
     expect(resetPayouts).not.toHaveBeenCalled();
+  });
+
+  // ── Tabbed layout: Banking (existing) + Payouts by Event (new) ──────────────
+  describe('Payouts by Event tab (Req 9.2–9.5)', () => {
+    const eventsPayload = {
+      businessId: 'b3acf234',
+      currency: 'usd',
+      events: [
+        {
+          eventId: 'ev_1',
+          eventName: 'Summer Fest',
+          eventDate: '2025-06-13',
+          releaseDate: '2025-06-30',
+          payoutStatus: 'pending',
+          holdActive: false,
+          heldAmountCents: 45000,
+          releasedAmountCents: 0,
+          stripePayoutId: null,
+          reason: null,
+        },
+        {
+          eventId: 'ev_2',
+          eventName: 'Fall Gala',
+          eventDate: '2025-10-01',
+          releaseDate: '2025-10-15',
+          payoutStatus: 'released',
+          holdActive: false,
+          heldAmountCents: 0,
+          releasedAmountCents: 78900,
+          stripePayoutId: 'po_SECRET456',
+          reason: null,
+        },
+        {
+          eventId: 'ev_3',
+          eventName: 'Held Show',
+          eventDate: '2025-11-01',
+          releaseDate: '2025-11-14',
+          payoutStatus: 'on-hold',
+          holdActive: true,
+          heldAmountCents: 12000,
+          releasedAmountCents: 0,
+          stripePayoutId: null,
+          reason: 'litigation',
+        },
+      ],
+    };
+
+    it('renders both the Banking and Payouts by Event tabs, with Banking active by default (backward compatible)', async () => {
+      getPayoutStatus.mockResolvedValue({ status: 'enabled', payoutsEnabled: true, accountId: 'acct_1' });
+      render(<PayoutsSection />);
+
+      // Both tabs exist.
+      expect(await screen.findByTestId('payouts-tab-banking')).toBeInTheDocument();
+      expect(screen.getByTestId('payouts-tab-by-event')).toBeInTheDocument();
+
+      // With Banking active (default), the existing Banking data-testids remain reachable.
+      expect(screen.getByTestId('section-payouts')).toBeInTheDocument();
+      expect(screen.getByTestId('payout-status-card')).toBeInTheDocument();
+      expect(await screen.findByTestId('payout-status-chip-enabled')).toBeInTheDocument();
+
+      // The new tab's table is NOT shown while Banking is active.
+      expect(screen.queryByTestId('event-payouts-table')).not.toBeInTheDocument();
+    });
+
+    it('switching to "Payouts by Event" renders a row per event with a status chip and Net formatted via formatCents', async () => {
+      getPayoutStatus.mockResolvedValue({ status: 'enabled', payoutsEnabled: true, accountId: 'acct_1' });
+      listEventPayouts.mockResolvedValue(eventsPayload);
+      render(<PayoutsSection />);
+
+      fireEvent.click(await screen.findByTestId('payouts-tab-by-event'));
+
+      // Scoped to the selected business _id.
+      await waitFor(() => expect(listEventPayouts).toHaveBeenCalledWith('b3acf234'));
+
+      // Table with one row per event.
+      expect(await screen.findByTestId('event-payouts-table')).toBeInTheDocument();
+      const rows = screen.getAllByTestId('event-payout-row');
+      expect(rows.length).toBe(3);
+
+      // Status chips per status.
+      expect(screen.getByTestId('event-payout-status-chip-pending')).toBeInTheDocument();
+      expect(screen.getByTestId('event-payout-status-chip-released')).toBeInTheDocument();
+      expect(screen.getByTestId('event-payout-status-chip-on-hold')).toBeInTheDocument();
+
+      // Net formatted via formatCents: pending → held (450.00), released → released (789.00).
+      expect(rows[0]).toHaveTextContent('Summer Fest');
+      expect(rows[0]).toHaveTextContent('450.00');
+      expect(rows[1]).toHaveTextContent('Fall Gala');
+      expect(rows[1]).toHaveTextContent('789.00');
+    });
+
+    it('renders the empty state when there are no event payouts', async () => {
+      getPayoutStatus.mockResolvedValue({ status: 'enabled', payoutsEnabled: true, accountId: 'acct_1' });
+      listEventPayouts.mockResolvedValue({ businessId: 'b3acf234', currency: 'usd', events: [] });
+      render(<PayoutsSection />);
+
+      fireEvent.click(await screen.findByTestId('payouts-tab-by-event'));
+
+      expect(await screen.findByTestId('event-payouts-empty')).toBeInTheDocument();
+      expect(screen.queryByTestId('event-payout-row')).not.toBeInTheDocument();
+    });
+
+    it('never renders the raw acct_ id or the Stripe payout id in the by-event tab', async () => {
+      getPayoutStatus.mockResolvedValue({ status: 'enabled', payoutsEnabled: true, accountId: 'acct_SECRET123' });
+      listEventPayouts.mockResolvedValue(eventsPayload);
+      render(<PayoutsSection />);
+
+      fireEvent.click(await screen.findByTestId('payouts-tab-by-event'));
+
+      expect(await screen.findByTestId('event-payouts-table')).toBeInTheDocument();
+      // Neither the connected-account id nor the Stripe payout id is surfaced.
+      expect(screen.queryByText(/acct_/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/po_SECRET456/i)).not.toBeInTheDocument();
+    });
   });
 });

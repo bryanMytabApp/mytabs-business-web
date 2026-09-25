@@ -294,7 +294,7 @@ export default function LoginView() {
             }}>
             <span>
               <span class='agree-text'>By continuing, you agree to My Tabs </span>
-              <a href="https://www.mytabs.app/terms-comnditions" target="_blank" rel="noopener noreferrer">
+              <a href="https://www.mytabs.app/terms" target="_blank" rel="noopener noreferrer">
                 <span class='agree-text-underline'>terms of service</span>
               </a>
               <span class='agree-text'> </span>
