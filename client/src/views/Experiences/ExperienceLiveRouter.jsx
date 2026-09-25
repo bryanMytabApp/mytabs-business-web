@@ -1,7 +1,8 @@
 import React, { Suspense, lazy, useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
 import { getInstance } from "../../services/experienceService";
+import { setHelpRoute } from "../../components/TabsHelp/helpRoute";
 
 // The live route (my-events/:eventId/experiences/:experienceId/live) is generic
 // across experience types. This dispatcher reads the instance's experienceType
@@ -36,6 +37,7 @@ const Loader = () => (
  */
 const ExperienceLiveRouter = () => {
   const { eventId, experienceId } = useParams();
+  const location = useLocation();
   const [experienceType, setExperienceType] = useState(null);
   const [resolved, setResolved] = useState(false);
 
@@ -56,6 +58,18 @@ const ExperienceLiveRouter = () => {
       cancelled = true;
     };
   }, [eventId, experienceId]);
+
+  // Scope the Help panel to THIS engagement type. The /live path renders 16
+  // different dashboards depending on experienceType, so the help doc key is the
+  // pathname plus a `#<experienceType>` hash (e.g. .../live#raffles). React
+  // Router can't see this hash (we never navigate to it), so push it explicitly
+  // via setHelpRoute, which also survives the SDK not being loaded yet (the
+  // route is buffered and replayed on boot). Falls back to the bare path until
+  // the type resolves.
+  useEffect(() => {
+    if (!experienceType) return;
+    setHelpRoute(location.pathname + `#${experienceType}`);
+  }, [experienceType, location.pathname]);
 
   if (!resolved) return <Loader />;
 
