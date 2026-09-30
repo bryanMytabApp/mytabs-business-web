@@ -15,6 +15,8 @@ CLOUDFRONT_ID="E1WB9UQAAX3TCW"
 AWS_REGION="us-east-1"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CLIENT_DIR="$SCRIPT_DIR/client"
+CONFIG_JSON="$CLIENT_DIR/src/config.json"
+PROD_ENGAGE_URL="https://engage.keeptabs.app"
 VERSION_FILE="$CLIENT_DIR/src/config/version.js"
 DEPLOY_VERSIONS="$SCRIPT_DIR/.deploy-versions.json"
 SECURITY_DIR="$SCRIPT_DIR/scripts/security"
@@ -40,6 +42,46 @@ err() { echo -e "${RED}[ERROR]${NC} $1"; }
 info() { echo -e "${CYAN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 step() { echo -e "\n${MAGENTA}[Step $1]${NC} $2"; }
+
+# ─── Prod config rewrite (keep localhost in source for dev) ───────────────────
+# It is fine for config.json to point engagementWebUrl at a localhost dev server
+# during development. This deploy rewrites it to the prod URL for the build, then
+# ALWAYS restores the original file (via an EXIT trap) so the working copy is
+# unchanged whether the deploy succeeds, fails, or is interrupted.
+CONFIG_BACKUP=""
+restore_config() {
+  if [ -n "$CONFIG_BACKUP" ] && [ -f "$CONFIG_BACKUP" ]; then
+    mv -f "$CONFIG_BACKUP" "$CONFIG_JSON"
+    CONFIG_BACKUP=""
+    info "Restored local config.json (engagementWebUrl left as-is for dev)"
+  fi
+}
+
+rewrite_config_for_prod() {
+  [ -f "$CONFIG_JSON" ] || { warn "config.json not found at $CONFIG_JSON - skipping URL rewrite"; return 0; }
+  local current
+  current=$(grep -E '"engagementWebUrl"' "$CONFIG_JSON" | head -1 | sed -E 's/.*"engagementWebUrl"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
+  if [ "$current" == "$PROD_ENGAGE_URL" ]; then
+    ok "engagementWebUrl already set to prod ($PROD_ENGAGE_URL)"
+    return 0
+  fi
+  # Back up the original and register restore for every exit path.
+  CONFIG_BACKUP="$(mktemp -t config-json.XXXXXX)"
+  cp "$CONFIG_JSON" "$CONFIG_BACKUP"
+  trap 'restore_config' EXIT INT TERM
+  # Replace whatever engagementWebUrl is (e.g. http://localhost:3005) with prod.
+  python3 - "$CONFIG_JSON" "$PROD_ENGAGE_URL" <<'PY'
+import json, sys
+path, prod = sys.argv[1], sys.argv[2]
+with open(path) as f:
+    d = json.load(f)
+d["engagementWebUrl"] = prod
+with open(path, "w") as f:
+    json.dump(d, f, indent=2)
+    f.write("\n")
+PY
+  ok "Rewrote engagementWebUrl for prod: '$current' -> '$PROD_ENGAGE_URL'"
+}
 
 # Run an `aws` command with a hard time cap (macOS has no `timeout`). Writes
 # stdout to the file given as $1; remaining args are the aws subcommand. Returns
@@ -153,6 +195,10 @@ cd "$CLIENT_DIR"
 npm install --legacy-peer-deps --silent 2>/dev/null
 ok "Dependencies installed"
 
+# Step 2b: Rewrite engagementWebUrl to prod for the build (restored on exit)
+step 2b "Setting engagementWebUrl to prod for the build..."
+rewrite_config_for_prod
+
 # Step 3: Build
 step 3 "Building for production..."
 BUILD_START=$(date +%s)
@@ -190,7 +236,7 @@ CF_CACHING_DISABLED_ID="4135ea2d-6df8-44a3-9df3-4b5a84be39ad"   # AWS managed
 step 4b "Ensuring CloudFront compression + caching policy..."
 CF_CFG_TMP="$(mktemp -t cf-config.XXXXXX.json)"
 CF_PATCHED_TMP="$(mktemp -t cf-patched.XXXXXX.json)"
-trap 'rm -f "$CF_CFG_TMP" "$CF_PATCHED_TMP"' EXIT
+trap 'rm -f "$CF_CFG_TMP" "$CF_PATCHED_TMP"; restore_config' EXIT
 
 aws cloudfront get-distribution-config \
   --id "$CLOUDFRONT_ID" --region "$AWS_REGION" --output json > "$CF_CFG_TMP" 2>/dev/null
@@ -244,7 +290,7 @@ SECHDR_POLICY_NAME="mytabs-business-web-${AWS_REGION}-security-headers"
 SECHDR_CONFIG_TMP="$(mktemp -t cf-sechdr.XXXXXX.json)"
 CF_CFG2_TMP="$(mktemp -t cf-config2.XXXXXX.json)"
 CF_PATCHED2_TMP="$(mktemp -t cf-patched2.XXXXXX.json)"
-trap 'rm -f "$CF_CFG_TMP" "$CF_PATCHED_TMP" "$SECHDR_CONFIG_TMP" "$CF_CFG2_TMP" "$CF_PATCHED2_TMP"' EXIT
+trap 'rm -f "$CF_CFG_TMP" "$CF_PATCHED_TMP" "$SECHDR_CONFIG_TMP" "$CF_CFG2_TMP" "$CF_PATCHED2_TMP"; restore_config' EXIT
 
 step 4c "Ensuring CloudFront security-headers policy..."
 

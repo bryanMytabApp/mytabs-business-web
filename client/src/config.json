@@ -2,6 +2,7 @@
   "backendUrl": "https://16psjhr9ni.execute-api.us-east-1.amazonaws.com/prod/",
   "payoutsUrl": "https://kmxiz6g1uf.execute-api.us-east-1.amazonaws.com/prod/",
   "bucketUrl": "https://mytabs-core-prod.s3.amazonaws.com/",
+  "engagementWebUrl": "http://localhost:3005",
   "env": "prod",
   "userPoolData": {
     "UserPoolId": "us-east-1_MAXS6xo4n",

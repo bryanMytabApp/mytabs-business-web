@@ -19,6 +19,12 @@ import CardGiftcardOutlinedIcon from "@mui/icons-material/CardGiftcardOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CasinoOutlinedIcon from "@mui/icons-material/CasinoOutlined";
 import LifecycleActions from "./LifecycleActions";
+import config from "../../config.json";
+
+// Base URL of the engagement web app used for the in-card preview iframe.
+// Sourced from config.json so it can be pointed at a local dev server
+// (e.g. "http://localhost:3005") for testing without code changes.
+const ENGAGEMENT_WEB_URL = (config.engagementWebUrl || "https://engage.keeptabs.app").replace(/\/+$/, "");
 
 const ACCENT = "#00A9D6";
 const NAVY = "#0D1B20";
@@ -113,7 +119,7 @@ const ExperienceCard = ({ instance, onAction, onClick }) => {
     if (onClick) onClick(instance);
   };
 
-  const previewUrl = `https://engage.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId || ''}&type=${encodeURIComponent(experienceType || '')}&userToken=${encodeURIComponent(localStorage.getItem('idToken') || '')}`;
+  const previewUrl = `${ENGAGEMENT_WEB_URL}/e/${experienceId}/enter?test=true&eventId=${eventId || ''}&type=${encodeURIComponent(experienceType || '')}&userToken=${encodeURIComponent(localStorage.getItem('idToken') || '')}`;
   const configureUrl = `/admin/my-events/${eventId}/experiences/${experienceId}/config?embedded=true`;
 
   return (

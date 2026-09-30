@@ -31,6 +31,12 @@ import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
 import { updateInstance, transitionState, getInstance } from "../../services/experienceService";
 import { getEvent } from "../../services/eventService";
 import { parseJwt } from "../../utils/common";
+import config from "../../config.json";
+
+// Base URL of the engagement web app used for the demo preview iframe.
+// Sourced from config.json so it can be pointed at a local dev server
+// (e.g. "http://localhost:3005") for testing without code changes.
+const ENGAGEMENT_WEB_URL = (config.engagementWebUrl || "https://engage.keeptabs.app").replace(/\/+$/, "");
 
 const STEPS = [
   "Raffle Type",
@@ -2823,7 +2829,7 @@ Return JSON with keys: entryConfirmation, drawingReminder, winnerAnnouncement, c
                 } catch (e) {
                   console.warn("Preview: draft save failed, opening with last saved config", e.message);
                 }
-                const previewUrl = `https://engage.keeptabs.app/e/${experienceId}/enter?test=true&eventId=${eventId}&eventName=${encodeURIComponent(eventData?.name || '')}&accentColor=${encodeURIComponent(form.accentColor)}&bannerStyle=${encodeURIComponent(form.bannerStyle)}&prizeName=${encodeURIComponent(form.prizes[0]?.name || '')}&infoCollection=${encodeURIComponent(form.infoCollection)}&prizes=${encodeURIComponent(JSON.stringify(form.prizes.map(p => ({ name: p.name, description: p.description, value: p.value, imageUrl: p.imageUrl || '', bannerStyle: p.bannerStyle || '' }))))}&eligibilityRules=${encodeURIComponent(JSON.stringify(form.eligibilityRules))}&accessCodes=${encodeURIComponent(form.eligibilityRules.includes('access_code') ? form.accessCodes : '')}`;
+                const previewUrl = `${ENGAGEMENT_WEB_URL}/e/${experienceId}/enter?test=true&eventId=${eventId}&eventName=${encodeURIComponent(eventData?.name || '')}&accentColor=${encodeURIComponent(form.accentColor)}&bannerStyle=${encodeURIComponent(form.bannerStyle)}&prizeName=${encodeURIComponent(form.prizes[0]?.name || '')}&infoCollection=${encodeURIComponent(form.infoCollection)}&prizes=${encodeURIComponent(JSON.stringify(form.prizes.map(p => ({ name: p.name, description: p.description, value: p.value, imageUrl: p.imageUrl || '', bannerStyle: p.bannerStyle || '' }))))}&eligibilityRules=${encodeURIComponent(JSON.stringify(form.eligibilityRules))}&accessCodes=${encodeURIComponent(form.eligibilityRules.includes('access_code') ? form.accessCodes : '')}`;
                 setDemoPreviewUrl(previewUrl);
                 setShowDemoPreview(true);
               }}
